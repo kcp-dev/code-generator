@@ -70,7 +70,7 @@ type Generator struct {
 // Run validates the input from the flags and sets default values, after which
 // it calls the custom client genrator to create wrappers
 func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
-	if err := g.validateFlags(f); err != nil {
+	if err := validateFlags(f); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 
 // validateFlags checks if the inputs provided through flags are valid and
 // if so, sets defaults.
-func (g *Generator) validateFlags(f flag.Flags) error {
+func validateFlags(f flag.Flags) error {
 	if f.InputDir == "" {
 		return errors.New("input path to API definition is required.")
 	}
@@ -132,7 +132,7 @@ func (g *Generator) getGV(f flag.Flags) error {
 	for _, gv := range gvs {
 		// arr[0] -> group, arr[1] -> version
 		arr := strings.Split(gv, ":")
-		if len(arr) < 2 {
+		if len(arr) != 2 {
 			return fmt.Errorf("input to --group-version must be in <group>:<version> format, ex: rbac:v1. Got %q", gv)
 		}
 
