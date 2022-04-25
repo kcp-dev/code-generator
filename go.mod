@@ -1,4 +1,4 @@
-module github.com/kcp-dev/client-gen
+module github.com/kcp-dev/client-gen/listerpoc
 
 go 1.18
 
