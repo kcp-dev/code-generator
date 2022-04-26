@@ -25,11 +25,12 @@ import (
 	appsapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/apps/v1"
 	appsv1 "k8s.io/client-gen/kubernetes/typed/apps/v1"
 
-	"github.com/kcp-dev/kcp-client-wrappers/kcp"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 )
 
 type wrappedAppsV1 struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate appsv1.AppsV1Interface
 }
 
@@ -55,7 +56,7 @@ func (w *wrappedAppsV1) Deployments() appsv1.DeploymentInterface {
 }
 
 type wrappedDeployment struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate apps.DeploymentInterface
 }
 

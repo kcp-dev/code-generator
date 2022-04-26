@@ -20,7 +20,8 @@ const wrappedInterfacesTempl = `
 package generated
 
 import (
-	"github.com/kcp-dev/kcp-client-wrappers/kcp"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 
@@ -53,7 +54,7 @@ type ClusterClient struct {
 	delegate {{.InterfaceName}}.Interface
 }
 
-func (c *ClusterClient) Cluster(cluster string) {{.InterfaceName}}.Interface {
+func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) {{.InterfaceName}}.Interface {
 	return &wrappedInterface{
 		cluster:  cluster,
 		delegate: c.delegate,
@@ -61,8 +62,8 @@ func (c *ClusterClient) Cluster(cluster string) {{.InterfaceName}}.Interface {
 }
 
 type wrappedInterface struct {
-	cluster  string
-	delegate kubernetes.Interface
+	cluster  logicalcluster.LogicalCluster
+	delegate {{.InterfaceName}}.Interface
 }
 
 func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
@@ -88,11 +89,12 @@ import (
 	{{.Name}}api{{.Version}} "{{.APIPath}}"
 	{{.Name}}{{.Version}} "{{.ClientPath}}typed/{{.Name}}/{{.Version}}"
 
-	"github.com/kcp-dev/kcp-client-wrappers/kcp"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 )
 
 type wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
 }
 
@@ -120,7 +122,7 @@ func (w *wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s() {{.Pk
 }
 
 type wrapped{{.Name}} struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate {{.PkgName}}.{{.Name}}Interface
 }
 

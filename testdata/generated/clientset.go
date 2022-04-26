@@ -22,7 +22,8 @@ limitations under the License.
 package generated
 
 import (
-	"github.com/kcp-dev/kcp-client-wrappers/kcp"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 
@@ -54,7 +55,7 @@ type ClusterClient struct {
 	delegate kubernetes.Interface
 }
 
-func (c *ClusterClient) Cluster(cluster string) kubernetes.Interface {
+func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) kubernetes.Interface {
 	return &wrappedInterface{
 		cluster:  cluster,
 		delegate: c.delegate,
@@ -62,7 +63,7 @@ func (c *ClusterClient) Cluster(cluster string) kubernetes.Interface {
 }
 
 type wrappedInterface struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate kubernetes.Interface
 }
 

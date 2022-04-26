@@ -25,11 +25,12 @@ import (
 	rbacapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/rbac/v1"
 	rbacv1 "k8s.io/client-gen/kubernetes/typed/rbac/v1"
 
-	"github.com/kcp-dev/kcp-client-wrappers/kcp"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 )
 
 type wrappedRbacV1 struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate rbacv1.RbacV1Interface
 }
 
@@ -55,7 +56,7 @@ func (w *wrappedRbacV1) ClusterRoles() rbacv1.ClusterRoleInterface {
 }
 
 type wrappedClusterRole struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate rbac.ClusterRoleInterface
 }
 
@@ -131,7 +132,7 @@ func (w *wrappedRbacV1) ClusterRoleBindings() rbacv1.ClusterRoleBindingInterface
 }
 
 type wrappedClusterRoleBinding struct {
-	cluster  string
+	cluster  logicalcluster.LogicalCluster
 	delegate rbac.ClusterRoleBindingInterface
 }
 
