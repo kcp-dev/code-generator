@@ -96,7 +96,7 @@ func validateFlags(f flag.Flags) error {
 		return errors.New("specifying interface name is required currently.")
 	}
 
-	if len(*f.GroupVersions) == 0 {
+	if len(f.GroupVersions) == 0 {
 		return errors.New("list of group versions for which the clients are to be generated is required.")
 	}
 
@@ -123,33 +123,34 @@ func (g *Generator) setDefaults(f flag.Flags) error {
 
 // getGV parses the Group Versions provided in the input through flags
 // and creates a list of []types.GroupVersions.
-// Note: Though each type.GroupVersions is allowed to have multiple versions,
-// we are restricting it to one currently.
-// Hence, for ex: only "rbac:v1" is accepted, instead of "rbac:v1,v2,v3".
 func (g *Generator) getGV(f flag.Flags) error {
 	// Its already validated that list of group versions cannot be empty.
-	gvs := *f.GroupVersions
+	gvs := f.GroupVersions
 	for _, gv := range gvs {
-		// arr[0] -> group, arr[1] -> version
+		// arr[0] -> group, arr[1] -> versions
 		arr := strings.Split(gv, ":")
 		if len(arr) != 2 {
-			return fmt.Errorf("input to --group-version must be in <group>:<version> format, ex: rbac:v1. Got %q", gv)
+			return fmt.Errorf("input to --group-version must be in <group>:<versions> format, ex: rbac:v1. Got %q", gv)
 		}
 
-		// input path is converted to <inputDir>/pkg/apis/<group>/<version>.
-		// example for input directory of "k8s.io/client-go/kubernetes", it would
-		// be converted to "k8s.io/client-go/kubernetes/pkg/apis/rbac/v1".
-		input := filepath.Join(f.InputDir, "pkg", "apis", arr[0], arr[1])
-		groups := []types.GroupVersions{}
-		builder := args.NewGroupVersionsBuilder(&groups)
-		_ = args.NewGVPackagesValue(builder, []string{input})
+		versions := strings.Split(arr[1], ",")
+		for _, v := range versions {
+			// input path is converted to <inputDir>/pkg/apis/<group>/<version>.
+			// example for input directory of "k8s.io/client-go/kubernetes", it would
+			// be converted to "k8s.io/client-go/kubernetes/pkg/apis/rbac/v1".
+			input := filepath.Join(f.InputDir, "pkg", "apis", arr[0], v)
+			groups := []types.GroupVersions{}
+			builder := args.NewGroupVersionsBuilder(&groups)
+			_ = args.NewGVPackagesValue(builder, []string{input})
 
-		g.groupVersions = append(g.groupVersions, groups...)
+			g.groupVersions = append(g.groupVersions, groups...)
+
+		}
 	}
 	return nil
 }
 
-// generate first genrates the wrapper for all the interfaces provided in the input.
+// generate first generates the wrapper for all the interfaces provided in the input.
 // Then for each type defined in the input, it recursively wraps the subsequent
 // interfaces to be kcp-aware.
 func (g *Generator) generate(ctx *genall.GenerationContext) error {
@@ -161,12 +162,12 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 }
 
 func (g *Generator) writeWrappedClientSet() error {
-	out := new(bytes.Buffer)
-	if err := wrtieHeader(out); err != nil {
+	var out bytes.Buffer
+	if err := writeHeader(&out); err != nil {
 		return err
 	}
 
-	wrappedInf, err := internal.NewInterfaceWrapper(g.interfaceName, g.inputDir, g.groupVersions, out)
+	wrappedInf, err := internal.NewInterfaceWrapper(g.interfaceName, g.inputDir, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -212,7 +213,7 @@ func (g *Generator) writeContent(outBytes []byte, filename string) error {
 	return nil
 }
 
-func wrtieHeader(out io.Writer) error {
+func writeHeader(out io.Writer) error {
 	n, err := out.Write([]byte(internal.HeaderText))
 	if err != nil {
 		return err
@@ -226,9 +227,9 @@ func wrtieHeader(out io.Writer) error {
 
 func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 	for _, gv := range g.groupVersions {
-		// the group version flag from input is allowed to have only one version
-		// for now.
-		// TODO: modify this to accept a list instead
+		// Each types.GroupVersions will have only one version.
+		// Even if there are multiple versions for same group, we will have separate types.GroupVersions
+		// for it. Hence length of gv.Versions will always be one.
 		version := gv.Versions[0]
 		path := filepath.Join(g.inputDir, "pkg", "apis", gv.Group.String(), string(version.Version))
 
@@ -244,12 +245,9 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			byType := make(map[string][]byte)
 
 			outCommonContent := new(bytes.Buffer)
-			pkgmg, err := internal.NewPacakges(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, outCommonContent)
-			if err != nil {
-				return err
-			}
+			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, outCommonContent)
 
-			if err := wrtieHeader(outCommonContent); err != nil {
+			if err := writeHeader(outCommonContent); err != nil {
 				return err
 			}
 			err = pkgmg.WriteContent()
@@ -259,14 +257,14 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 
 			var e error
 			e = markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
-				outContent := new(bytes.Buffer)
+				var outContent bytes.Buffer
 
 				// if not enabled for this type, skip
 				if !isEnabledForMethod(info) {
 					return
 				}
 
-				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, outContent)
+				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, &outContent)
 				if err != nil {
 					e = err
 					return

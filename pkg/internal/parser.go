@@ -38,7 +38,7 @@ type interfaceWrapper struct {
 	// APIs wrap each of the type
 	APIs []api
 	// writer wherein outputs are written
-	wr *io.Writer
+	writer *io.Writer
 }
 
 // api contains info about each type
@@ -46,7 +46,7 @@ type api struct {
 	Name    string
 	Version string
 	PkgName string
-	wr      io.Writer
+	writer  io.Writer
 
 	PkgNameUpperFirst string
 	VersionUpperFirst string
@@ -61,17 +61,17 @@ type packages struct {
 	NameUpperFirst    string
 	VersionUpperFirst string
 	Version           string
-	wr                io.Writer
+	writer            io.Writer
 }
 
 // NewInterfaceWrapper returns a interfaceWrapper which can fill the templates to wrtie clientset wrappers.
-func NewInterfaceWrapper(interfaceName string, inputPath string, gvs []gentype.GroupVersions, wr io.Writer) (*interfaceWrapper, error) {
+func NewInterfaceWrapper(interfaceName string, inputPath string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
 	apis := groupVersionsToApis(gvs)
 	return &interfaceWrapper{
 		InputPath:     inputPath,
 		InterfaceName: interfaceName,
 		APIs:          apis,
-		wr:            &wr,
+		writer:        &w,
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (w *interfaceWrapper) WriteContent() error {
 	if err != nil {
 		return err
 	}
-	return templ.Execute(*w.wr, w)
+	return templ.Execute(*w.writer, w)
 }
 
 // groupVersionToApis converts a list of types.GroupVersions to api type which can then be used for
@@ -127,17 +127,17 @@ func upperFirst(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-// NewPacakges returns a new packages instance which is used to write wrapper content.
-func NewPacakges(root *loader.Package, apiPath, clientPath, version, group string, wr io.Writer) (*packages, error) {
+// NewPackages returns a new packages instance which is used to write wrapper content.
+func NewPackages(root *loader.Package, apiPath, clientPath, version, group string, w io.Writer) *packages {
 	p := &packages{
 		Name:       group,
 		APIPath:    apiPath,
 		Version:    version,
 		ClientPath: clientPath,
-		wr:         wr,
+		writer:     w,
 	}
 	p.setCased()
-	return p, nil
+	return p
 }
 
 func (p *packages) WriteContent() error {
@@ -145,10 +145,10 @@ func (p *packages) WriteContent() error {
 	if err != nil {
 		return err
 	}
-	return templ.Execute(p.wr, p)
+	return templ.Execute(p.writer, p)
 }
 
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, wr io.Writer) (*api, error) {
+func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, w io.Writer) (*api, error) {
 	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
 	if typeInfo == types.Typ[types.Invalid] {
 		return nil, fmt.Errorf("unknown type: %s", info.Name)
@@ -158,7 +158,7 @@ func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string,
 		Name:    info.RawSpec.Name.Name,
 		Version: version,
 		PkgName: group,
-		wr:      wr,
+		writer:  w,
 	}
 
 	api.setCased()
@@ -170,5 +170,5 @@ func (a *api) WriteContent() error {
 	if err != nil {
 		return err
 	}
-	return templ.Execute(a.wr, a)
+	return templ.Execute(a.writer, a)
 }

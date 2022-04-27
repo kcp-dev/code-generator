@@ -36,8 +36,7 @@ var _ = Describe("Test generator funcs", func() {
 			f.InputDir = "test"
 			f.ClientsetAPIPath = "testdata/"
 			f.InterfaceName = "testInterface"
-			gv := []string{"apps:v1"}
-			f.GroupVersions = &gv
+			f.GroupVersions = []string{"apps:v1"}
 		})
 
 		It("Should not error when input in set right", func() {
@@ -62,8 +61,7 @@ var _ = Describe("Test generator funcs", func() {
 		})
 
 		It("verify group version list", func() {
-			gvNone := []string{}
-			f.GroupVersions = &gvNone
+			f.GroupVersions = []string{}
 			err := validateFlags(f)
 			Expect(err.Error()).To(ContainSubstring("list of group versions for which the clients are to be generated is required."))
 		})
@@ -79,8 +77,7 @@ var _ = Describe("Test generator funcs", func() {
 			f.ClientsetAPIPath = "testdata"
 			f.InterfaceName = "testInterface"
 			f.OutputDir = "testdata"
-			gv := []string{"apps:v1"}
-			f.GroupVersions = &gv
+			f.GroupVersions = []string{"apps:v1"}
 
 			g = &Generator{}
 		})
@@ -115,8 +112,7 @@ var _ = Describe("Test generator funcs", func() {
 		BeforeEach(func() {
 			f = flag.Flags{}
 			f.InputDir = "test"
-			gv := []string{"apps:v1", "rbac:v2"}
-			f.GroupVersions = &gv
+			f.GroupVersions = []string{"apps:v1", "rbac:v2"}
 
 			g = &Generator{}
 		})
@@ -147,20 +143,45 @@ var _ = Describe("Test generator funcs", func() {
 			Expect(g.groupVersions).To(Equal(expected))
 		})
 
+		It("should parse multiple Group versions without error", func() {
+			f.GroupVersions = []string{"apps:v1,v2"}
+			expected := []types.GroupVersions{{
+				PackageName: "apps",
+				Group:       types.Group("apps"),
+				Versions: []types.PackageVersion{
+					{
+						Version: types.Version("v1"),
+						Package: "test/pkg/apis/apps/v1",
+					},
+				},
+			}, {
+				PackageName: "apps",
+				Group:       types.Group("apps"),
+				Versions: []types.PackageVersion{
+					{
+						Version: types.Version("v2"),
+						Package: "test/pkg/apis/apps/v2",
+					},
+				},
+			}}
+
+			err := g.getGV(f)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(g.groupVersions).To(Equal(expected))
+		})
+
 		It("should error when wrong input is provided through flag", func() {
-			gv := []string{"apps"}
-			f.GroupVersions = &gv
+			f.GroupVersions = []string{"apps"}
 
 			err := g.getGV(f)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<version> format, ex: rbac:v1"))
+			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<versions> format, ex: rbac:v1"))
 
-			gv = []string{"apps:v1:v2"}
-			f.GroupVersions = &gv
+			f.GroupVersions = []string{"apps:v1:v2"}
 
 			err = g.getGV(f)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<version> format, ex: rbac:v1"))
+			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<versions> format, ex: rbac:v1"))
 
 		})
 

@@ -29,7 +29,7 @@ import (
 func main() {
 
 	// TODO: convert this to a cobra command if required
-	f := flag.Flags{}
+	f := &flag.Flags{}
 	f.AddTo(pflag.CommandLine)
 	pflag.Parse()
 
@@ -42,7 +42,7 @@ func main() {
 
 	ctx := &genall.GenerationContext{Collector: &markers.Collector{Registry: reg}}
 	g := generator.Generator{}
-	if err := g.Run(ctx, f); err != nil {
+	if err := g.Run(ctx, *f); err != nil {
 		log.Fatalf(err.Error())
 		os.Exit(1)
 	}

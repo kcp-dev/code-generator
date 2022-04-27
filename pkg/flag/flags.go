@@ -16,7 +16,9 @@ limitations under the License.
 
 package flag
 
-import "github.com/spf13/pflag"
+import (
+	"github.com/spf13/pflag"
+)
 
 // Flags - Options accepted by generator
 type Flags struct {
@@ -24,7 +26,7 @@ type Flags struct {
 	OutputDir        string
 	InputDir         string
 	ClientsetAPIPath string
-	GroupVersions    *[]string
+	GroupVersions    []string
 	InterfaceName    string
 }
 
@@ -36,6 +38,6 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 
 	// TODO: Probably default this to be the package name
 	flagset.StringVar(&f.InterfaceName, "interface", "", "name of the interface which needs to be wrapped")
-	gv := flagset.StringSlice("group-versions", []string{}, "specify group versions for the clients")
-	f.GroupVersions = gv
+	flagset.StringArrayVar(&f.GroupVersions, "group-versions", []string{}, "specify group versions for the clients")
+
 }
