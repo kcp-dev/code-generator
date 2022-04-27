@@ -4,7 +4,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kcp-dev/client-gen/listerpoc/listerpoc/example/informers/core"
+	"k8s.io/client-go/informers/internalinterfaces"
+
+	"github.com/kcp-dev/client-gen/listerpoc/example"
+	"github.com/kcp-dev/client-gen/listerpoc/example/informers/externalversions/core"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -19,16 +22,16 @@ func NewSharedInformerFactory(client kubernetes.Interface, defaultResync time.Du
 		defaultResync,
 		informers.WithExtraClusterScopedIndexers(
 			cache.Indexers{
-				ClusterIndexName: ClusterIndexFunc,
+				example.ClusterIndexName: example.ClusterIndexFunc,
 			},
 		),
 		informers.WithExtraNamespaceScopedIndexers(
 			cache.Indexers{
-				ClusterIndexName:             ClusterIndexFunc,
-				ClusterAndNamespaceIndexName: ClusterAndNamespaceIndexFunc,
+				example.ClusterIndexName:             example.ClusterIndexFunc,
+				example.ClusterAndNamespaceIndexName: example.ClusterAndNamespaceIndexFunc,
 			},
 		),
-		informers.WithKeyFunction(ClusterAwareKeyFunc),
+		informers.WithKeyFunction(example.ClusterAwareKeyFunc),
 	)
 
 	return &sharedInformerFactory{
@@ -38,7 +41,7 @@ func NewSharedInformerFactory(client kubernetes.Interface, defaultResync time.Du
 
 type SharedInformerFactory interface {
 	Start(stopChn <-chan struct{})
-	InformerFor(obj runtime.Object, newFunc NewInformerFunc) cache.SharedIndexInformer
+	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
 
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
@@ -58,7 +61,7 @@ func (s *sharedInformerFactory) WaitForCacheSync(stopChn <-chan struct{}) map[re
 	return s.delegate.WaitForCacheSync(stopChn)
 }
 
-func (s *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc NewInformerFunc) cache.SharedIndexInformer {
+func (s *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer {
 	return s.delegate.InformerFor(obj, newFunc)
 }
 

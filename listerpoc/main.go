@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
-	listerscorev1 "github.com/kcp-dev/client-gen/listerpoc/example/listers/core/v1"
+	"github.com/kcp-dev/client-gen/listerpoc/example/informers/externalversions"
 )
 
 // List all ConfigMaps (kcp-wide)
@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	f := listerscorev1.NewSharedInformerFactory(clientset)
+	f := externalversions.NewSharedInformerFactory(clientset, 0)
 	clusterInf := f.Core().V1().ConfigMaps()
 	inf := clusterInf.Informer()
 	stopChn := make(chan struct{})

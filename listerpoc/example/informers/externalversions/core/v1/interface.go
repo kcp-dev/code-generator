@@ -1,9 +1,9 @@
 package v1
 
-import v1 "k8s.io/client-go/informers/apps/v1"
+import v1 "k8s.io/client-go/informers/core/v1"
 
 type Interface interface {
-	ConfigMaps() clusterConfigMapInformer
+	ConfigMaps() ConfigMapInformer
 }
 
 type version struct {
@@ -16,6 +16,6 @@ func New(delegate v1.Interface) Interface {
 
 func (v *version) ConfigMaps() ConfigMapInformer {
 	return &configMapInformer{
-		delegate: r.delegate.ConfigMaps(),
+		delegate: v.delegate.ConfigMaps(),
 	}
 }

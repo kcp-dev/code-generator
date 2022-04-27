@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	"github.com/kcp-dev/client-gen/listerpoc/example"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-
-	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 )
 
 // ConfigMapLister helps list ConfigMaps.
@@ -87,7 +87,7 @@ type configMapClusterLister struct {
 
 // List lists all ConfigMaps in the indexer.
 func (c *configMapClusterLister) List(selector labels.Selector) (ret []*corev1.ConfigMap, err error) {
-	list, err := c.indexer.ByIndex(ClusterIndexName, c.cluster.String())
+	list, err := c.indexer.ByIndex(example.ClusterIndexName, c.cluster.String())
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ type configMapNamespaceLister struct {
 
 // List lists all ConfigMaps in the indexer for a given namespace.
 func (c configMapNamespaceLister) List(selector labels.Selector) (ret []*corev1.ConfigMap, err error) {
-	list, err := c.indexer.Index(ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
+	list, err := c.indexer.Index(example.ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
 		ZZZ_DeprecatedClusterName: c.cluster.String(),
 		Namespace:                 c.namespace,
 	})
