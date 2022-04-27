@@ -65,12 +65,16 @@ type Generator struct {
 	interfaceName string
 	// GroupVersions for whom the clients are to be generated
 	groupVersions []types.GroupVersions
+	// headerText is the header text to be added to generated wrappers.
+	// It is obtained from `--go-header-text` flag.
+	headerText string
 }
 
 // Run validates the input from the flags and sets default values, after which
 // it calls the custom client genrator to create wrappers
 func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
-	if err := validateFlags(f); err != nil {
+	err := validateFlags(f)
+	if err != nil {
 		return err
 	}
 
@@ -105,7 +109,7 @@ func validateFlags(f flag.Flags) error {
 
 // setDefaults sets the default values for the generator. It also creates
 // a list of group versions provided as an input.
-func (g *Generator) setDefaults(f flag.Flags) error {
+func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if f.InputDir != "" {
 		g.inputDir = f.InputDir
 	}
@@ -118,7 +122,30 @@ func (g *Generator) setDefaults(f flag.Flags) error {
 	if f.InterfaceName != "" {
 		g.interfaceName = f.InterfaceName
 	}
+	g.headerText, err = getHeaderText(f.GoHeaderFilePath)
+	if err != nil {
+		return err
+	}
 	return g.getGV(f)
+}
+
+// getHeaderText reads the text passed through the file present in the
+// path.
+func getHeaderText(path string) (string, error) {
+	var headertext string
+	if path != "" {
+		headerBytes, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		headertext = string(headerBytes)
+
+		// validate the header text.
+		if !strings.Contains(headertext, "Copyright") {
+			return "", fmt.Errorf("invalid header loaded %q", headertext)
+		}
+	}
+	return headertext, nil
 }
 
 // getGV parses the Group Versions provided in the input through flags
@@ -163,7 +190,7 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 
 func (g *Generator) writeWrappedClientSet() error {
 	var out bytes.Buffer
-	if err := writeHeader(&out); err != nil {
+	if err := g.writeHeader(&out); err != nil {
 		return err
 	}
 
@@ -183,13 +210,12 @@ func (g *Generator) writeWrappedClientSet() error {
 	} else {
 		outBytes = formattedBytes
 	}
-	return g.writeContent(outBytes, clientSetFilename)
+	return g.writeContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, generatedFolderName))
 }
 
 // wrtieContents creates a new file under the path <outputDir>/generated with
 // the specified filename and write contents to it.
-func (g *Generator) writeContent(outBytes []byte, filename string) error {
-	path := filepath.Join(g.outputDir, generatedFolderName)
+func (g *Generator) writeContent(outBytes []byte, filename string, path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
@@ -213,13 +239,13 @@ func (g *Generator) writeContent(outBytes []byte, filename string) error {
 	return nil
 }
 
-func writeHeader(out io.Writer) error {
-	n, err := out.Write([]byte(internal.HeaderText))
+func (g *Generator) writeHeader(out io.Writer) error {
+	n, err := out.Write([]byte(g.headerText))
 	if err != nil {
 		return err
 	}
 
-	if n < len([]byte(internal.HeaderText)) {
+	if n < len([]byte(g.headerText)) {
 		return errors.New("header text was not written properly.")
 	}
 	return nil
@@ -244,10 +270,10 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			// this is to accomodate multiple types defined in single group
 			byType := make(map[string][]byte)
 
-			outCommonContent := new(bytes.Buffer)
-			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, outCommonContent)
+			var outCommonContent bytes.Buffer
+			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, &outCommonContent)
 
-			if err := writeHeader(outCommonContent); err != nil {
+			if err := g.writeHeader(&outCommonContent); err != nil {
 				return err
 			}
 			err = pkgmg.WriteContent()
@@ -289,9 +315,9 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				return nil
 			}
 
-			outContent := new(bytes.Buffer)
+			var outContent bytes.Buffer
 			outContent.Write(outCommonContent.Bytes())
-			err = writeMethods(outContent, byType)
+			err = writeMethods(&outContent, byType)
 			if err != nil {
 				return err
 			}
@@ -305,7 +331,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			}
 
 			filename := gv.Group.PackageName() + string(version.Version) + extensionGo
-			err = g.writeContent(outBytes, filename)
+			err = g.writeContent(outBytes, filename, filepath.Join(g.outputDir, generatedFolderName, gv.Group.PackageName(), string(version.Version)))
 			if err != nil {
 				return err
 			}
@@ -322,13 +348,13 @@ func isEnabledForMethod(info *markers.TypeInfo) bool {
 }
 
 func writeMethods(out io.Writer, byType map[string][]byte) error {
-	soretedNames := make([]string, 0, len(byType))
+	sortedNames := make([]string, 0, len(byType))
 	for name := range byType {
-		soretedNames = append(soretedNames, name)
+		sortedNames = append(sortedNames, name)
 	}
-	sort.Strings(soretedNames)
+	sort.Strings(sortedNames)
 
-	for _, name := range soretedNames {
+	for _, name := range sortedNames {
 		_, err := out.Write(byType[name])
 		if err != nil {
 			return err

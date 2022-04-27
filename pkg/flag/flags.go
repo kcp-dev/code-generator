@@ -22,16 +22,22 @@ import (
 
 // Flags - Options accepted by generator
 type Flags struct {
-	// OutputDir is where the generated code is to be written to. The generator writes it in <Outputdir>/generated path.
-	OutputDir        string
-	InputDir         string
+	// OutputDir is where the generated code is to be written to.
+	OutputDir string
+	// InputDir is path to the input APIs (types.go)
+	InputDir string
+	// ClientsetPath is the path to where client sets are scaffolded by codegen.
 	ClientsetAPIPath string
-	GroupVersions    []string
-	InterfaceName    string
+	// List of group versions for which the wrappers are to be generated.
+	GroupVersions []string
+	// The interface name which is to be wrapped.
+	InterfaceName string
+	// Path to the headerfile.
+	GoHeaderFilePath string
 }
 
 func (f *Flags) AddTo(flagset *pflag.FlagSet) {
-	// TODO: FIgure out if its worth defaulting it to pkg/api/...
+	// TODO: Figure out if its worth defaulting it to pkg/api/...
 	flagset.StringVar(&f.InputDir, "input-dir", "", "Input directory where types are defined. It is assumed that 'types.go' is present inside <InputDir>/pkg/apis.")
 	flagset.StringVar(&f.OutputDir, "output-dir", "output", "Output directory where wrapped clients will be generated. The wrappers will be present in '<output-dir>/generated' path.")
 	flagset.StringVar(&f.ClientsetAPIPath, "clientset-api-path", "/apis", "package path where clients are generated")
@@ -39,5 +45,5 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 	// TODO: Probably default this to be the package name
 	flagset.StringVar(&f.InterfaceName, "interface", "", "name of the interface which needs to be wrapped")
 	flagset.StringArrayVar(&f.GroupVersions, "group-versions", []string{}, "specify group versions for the clients")
-
+	flagset.StringVar(&f.GoHeaderFilePath, "go-header-file", "", "path to headerfile for the generated text")
 }
