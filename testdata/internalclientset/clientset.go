@@ -25,6 +25,7 @@ import (
 	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	rbacv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/rbac/v1"
 

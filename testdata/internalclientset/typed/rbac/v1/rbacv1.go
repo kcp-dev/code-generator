@@ -22,6 +22,7 @@ package generated
 
 import (
 	"ctx"
+	"fmt"
 	rbacapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/rbac/v1"
 	rbacv1 "k8s.io/client-gen/kubernetes/typed/rbac/v1"
 

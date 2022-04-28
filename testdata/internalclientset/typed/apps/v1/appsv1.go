@@ -22,6 +22,7 @@ package generated
 
 import (
 	"ctx"
+	"fmt"
 	appsapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/apps/v1"
 	appsv1 "k8s.io/client-gen/kubernetes/typed/apps/v1"
 

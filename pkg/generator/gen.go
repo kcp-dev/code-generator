@@ -42,8 +42,8 @@ var (
 )
 
 const (
-	// output of the generated wrappers is written under <outputDir>/generated path.
-	generatedFolderName = "generated"
+	// packageName for typed client wrappers.
+	typedPackageName = "typed"
 	// name of the file while wrapped clientset is written.
 	clientSetFilename = "clientset.go"
 	// extension for go file.
@@ -55,15 +55,17 @@ const (
 type placeholder struct{}
 
 type Generator struct {
-	// BaseImportPath refers to the base path of the package
+	// InputDir is the path where types are defined.
 	inputDir string
-	// Output Dir
+	// Output Dir where the wrappers are to be written.
 	outputDir string
-	// ClienSetAPI path
+	// Path to where generated clientsets are found.
 	clientSetAPIPath string
-	// interfaceName
+	// clientsetName is the name of the generated clientset package.
+	clientsetName string
+	// interface names which are to be wrapped.
 	interfaceName string
-	// GroupVersions for whom the clients are to be generated
+	// GroupVersions for whom the clients are to be generated.
 	groupVersions []types.GroupVersions
 	// headerText is the header text to be added to generated wrappers.
 	// It is obtained from `--go-header-text` flag.
@@ -118,6 +120,9 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	}
 	if f.ClientsetAPIPath != "" {
 		g.clientSetAPIPath = f.ClientsetAPIPath
+	}
+	if f.ClientsetName != "" {
+		g.clientsetName = f.ClientsetName
 	}
 	if f.InterfaceName != "" {
 		g.interfaceName = f.InterfaceName
@@ -210,7 +215,7 @@ func (g *Generator) writeWrappedClientSet() error {
 	} else {
 		outBytes = formattedBytes
 	}
-	return g.writeContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, generatedFolderName))
+	return g.writeContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
 }
 
 // wrtieContents creates a new file under the path <outputDir>/generated with
@@ -331,7 +336,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			}
 
 			filename := gv.Group.PackageName() + string(version.Version) + extensionGo
-			err = g.writeContent(outBytes, filename, filepath.Join(g.outputDir, generatedFolderName, gv.Group.PackageName(), string(version.Version)))
+			err = g.writeContent(outBytes, filename, filepath.Join(g.outputDir, g.clientsetName, typedPackageName, gv.Group.PackageName(), string(version.Version)))
 			if err != nil {
 				return err
 			}

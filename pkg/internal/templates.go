@@ -28,6 +28,7 @@ import (
 	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	{{$name := .InputPath}}
 	{{ range .APIs }}
@@ -94,6 +95,7 @@ package generated
 
 import (
 	"ctx"
+	"fmt"
 	{{.Name}}api{{.Version}} "{{.APIPath}}"
 	{{.Name}}{{.Version}} "{{.ClientPath}}typed/{{.Name}}/{{.Version}}"
 
