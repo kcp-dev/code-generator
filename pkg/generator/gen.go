@@ -73,7 +73,8 @@ type Generator struct {
 }
 
 // Run validates the input from the flags and sets default values, after which
-// it calls the custom client genrator to create wrappers
+// it calls the custom client genrator to create wrappers. If there are any
+// errors while generating interface wrappers, it prints it out.
 func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	err := validateFlags(f)
 	if err != nil {
@@ -83,7 +84,17 @@ func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	if err := g.setDefaults(f); err != nil {
 		return err
 	}
-	return g.generate(ctx)
+	err = g.generate(ctx)
+	if err != nil {
+		return err
+	}
+
+	// print all the errors consolidated from packages in the generation context.
+	hadErr := loader.PrintErrors(ctx.Roots)
+	if hadErr {
+		return fmt.Errorf("generator did not run successfully")
+	}
+	return nil
 }
 
 // validateFlags checks if the inputs provided through flags are valid and
@@ -199,7 +210,7 @@ func (g *Generator) writeWrappedClientSet() error {
 		return err
 	}
 
-	wrappedInf, err := internal.NewInterfaceWrapper(g.interfaceName, g.inputDir, g.groupVersions, &out)
+	wrappedInf, err := internal.NewInterfaceWrapper(g.interfaceName, g.inputDir, g.clientsetName, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -269,6 +280,11 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			return err
 		}
 
+		// Assign the pkgs obtained from loading roots to generation context.
+		// TODO: Figure out if controller-tools generation runtime can be used to
+		// wire in instead.
+		ctx.Roots = pkgs
+
 		for _, root := range pkgs {
 			root.NeedTypesInfo()
 
@@ -279,15 +295,14 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, &outCommonContent)
 
 			if err := g.writeHeader(&outCommonContent); err != nil {
-				return err
+				root.AddError(err)
 			}
 			err = pkgmg.WriteContent()
 			if err != nil {
-				return err
+				root.AddError(err)
 			}
 
-			var e error
-			e = markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
+			if eachTypeErr := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
 				var outContent bytes.Buffer
 
 				// if not enabled for this type, skip
@@ -297,13 +312,13 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 
 				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, &outContent)
 				if err != nil {
-					e = err
+					root.AddError(err)
 					return
 				}
 
 				err = a.WriteContent()
 				if err != nil {
-					e = err
+					root.AddError(err)
 					return
 				}
 
@@ -311,9 +326,8 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				if len(outBytes) > 0 {
 					byType[info.Name] = outBytes
 				}
-			})
-			if e != nil {
-				return err
+			}); eachTypeErr != nil {
+				return eachTypeErr
 			}
 
 			if len(byType) == 0 {
@@ -338,6 +352,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			filename := gv.Group.PackageName() + string(version.Version) + extensionGo
 			err = g.writeContent(outBytes, filename, filepath.Join(g.outputDir, g.clientsetName, typedPackageName, gv.Group.PackageName(), string(version.Version)))
 			if err != nil {
+				root.AddError(err)
 				return err
 			}
 		}

@@ -35,6 +35,9 @@ type interfaceWrapper struct {
 	InterfaceName string
 	// input path where types are defined.
 	InputPath string
+	// clientsetname is the name of the package where the clientsets
+	// are to be generated.
+	ClientsetName string
 	// APIs wrap each of the type
 	APIs []api
 	// writer wherein outputs are written
@@ -65,11 +68,12 @@ type packages struct {
 }
 
 // NewInterfaceWrapper returns a interfaceWrapper which can fill the templates to wrtie clientset wrappers.
-func NewInterfaceWrapper(interfaceName, inputPath string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
+func NewInterfaceWrapper(interfaceName, inputPath, clientsetName string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
 	apis := groupVersionsToApis(gvs)
 	return &interfaceWrapper{
 		InputPath:     inputPath,
 		InterfaceName: interfaceName,
+		ClientsetName: clientsetName,
 		APIs:          apis,
 		writer:        &w,
 	}, nil

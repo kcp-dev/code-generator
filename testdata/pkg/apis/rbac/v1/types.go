@@ -1,16 +1,8 @@
 package v1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // +genclient
 // Role is a namespaced, logical grouping of PolicyRules that can be referenced as a unit by a RoleBinding.
 type ClusterRole struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Rules holds all the PolicyRules for this ClusterRole
 	// +optional
@@ -29,6 +21,14 @@ type AggregationRule struct {
 	// If any of the selectors match, then the ClusterRole's permissions will be added
 	// +optional
 	ClusterRoleSelectors []metav1.LabelSelector `json:"clusterRoleSelectors,omitempty" protobuf:"bytes,1,rep,name=clusterRoleSelectors"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterRoleList is a collection of ClusterRoles
+type ClusterRoleList struct {
+	// Items is a list of ClusterRoles
+	Items []ClusterRole `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // PolicyRule holds information that describes a policy rule, but does not contain information

@@ -43,7 +43,7 @@ func main() {
 	ctx := &genall.GenerationContext{Collector: &markers.Collector{Registry: reg}}
 	g := generator.Generator{}
 	if err := g.Run(ctx, *f); err != nil {
-		log.Fatalf(err.Error())
+		// log.Fatalf(err.Error())
 		os.Exit(1)
 	}
 }

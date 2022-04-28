@@ -16,20 +16,9 @@ limitations under the License.
 
 package v1
 
-import (
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // +genclient
 // Deployment enables declarative updates for Pods and ReplicaSets.
 type Deployment struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
 	// Specification of the desired behavior of the Deployment.
 	// +optional
 	Spec DeploymentSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -45,14 +34,6 @@ type DeploymentSpec struct {
 	// zero and not specified. Defaults to 1.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
-
-	// Label selector for pods. Existing ReplicaSets whose pods are
-	// selected by this will be the ones affected by this deployment.
-	// It must match the pod template's labels.
-	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
-
-	// Template describes the pods that will be created.
-	Template v1.PodTemplateSpec `json:"template" protobuf:"bytes,3,opt,name=template"`
 
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional

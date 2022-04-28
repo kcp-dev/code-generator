@@ -27,7 +27,7 @@ Example:
 Running the following command:
 
 ```
-go run main.go --clientset-api-path="k8s.io/client-gen-clean/kubernetes/" --input-dir="github.com/<username>/client-gen/testdata" --group-versions="rbac:v1,apps:v1" --interface=kubernetes --output-dir="testdata --go-header-file=testdata/header.txt"
+go run main.go --clientset-api-path="k8s.io/client-go/kubernetes/" --input-dir="github.com/<username>/client-gen/testdata" --group-versions="rbac:v1" --group-versions="apps:v1" --interface=kubernetes --output-dir="testdata --go-header-file=testdata/header.txt"
 ```
 
-will create an output folder in `testdata/generated`.
+will create an output folder in `testdata/internalclientset`.
