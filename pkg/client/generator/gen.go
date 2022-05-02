@@ -27,13 +27,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kcp-dev/client-gen/pkg/flag"
-	"github.com/kcp-dev/client-gen/pkg/internal"
 	"k8s.io/code-generator/cmd/client-gen/args"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	"github.com/kcp-dev/client-gen/pkg/client/flag"
+	"github.com/kcp-dev/client-gen/pkg/client/internal"
 )
 
 var (
@@ -68,7 +69,7 @@ type Generator struct {
 }
 
 // Run validates the input from the flags and sets default values, after which
-// it calls the custom client genrator to create wrappers
+// it calls the custom client generator to create wrappers.
 func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	if err := validateFlags(f); err != nil {
 		return err

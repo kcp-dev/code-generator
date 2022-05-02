@@ -19,11 +19,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/kcp-dev/client-gen/pkg/flag"
-	"github.com/kcp-dev/client-gen/pkg/generator"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	"github.com/kcp-dev/client-gen/pkg/client/flag"
+	"github.com/kcp-dev/client-gen/pkg/client/generator"
 )
 
 func main() {
