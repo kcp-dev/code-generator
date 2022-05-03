@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package generator
+package clientgen
 
 import (
 	"bytes"
@@ -43,6 +43,8 @@ var (
 )
 
 const (
+	// GeneratorName is the name of the generator.
+	GeneratorName = "client"
 	// packageName for typed client wrappers.
 	typedPackageName = "typed"
 	// name of the file while wrapped clientset is written.
@@ -73,10 +75,22 @@ type Generator struct {
 	headerText string
 }
 
+func (g Generator) RegisterMarker() (*markers.Registry, error) {
+	reg := &markers.Registry{}
+	if err := reg.Register(RuleDefinition); err != nil {
+		return nil, fmt.Errorf("Error registering markers")
+	}
+	return reg, nil
+}
+
+func (g Generator) GetName() string {
+	return GeneratorName
+}
+
 // Run validates the input from the flags and sets default values, after which
 // it calls the custom client genrator to create wrappers. If there are any
 // errors while generating interface wrappers, it prints it out.
-func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
+func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	err := validateFlags(f)
 	if err != nil {
 		return err

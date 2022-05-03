@@ -19,7 +19,7 @@ limitations under the License.
 
 // Code auto-generated. DO NOT EDIT.
 
-package internalclientset
+package clientset
 
 import (
 	"fmt"

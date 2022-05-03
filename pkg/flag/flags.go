@@ -48,5 +48,5 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 	flagset.StringVar(&f.InterfaceName, "interface", "", "name of the interface which needs to be wrapped.")
 	flagset.StringArrayVar(&f.GroupVersions, "group-versions", []string{}, "specify group versions for the clients.")
 	flagset.StringVar(&f.GoHeaderFilePath, "go-header-file", "", "path to headerfile for the generated text.")
-	flagset.StringVar(&f.ClientsetName, "clientset-name", "internalclientset", "the name of the generated clientset package.")
+	flagset.StringVar(&f.ClientsetName, "clientset-name", "clientset", "the name of the generated clientset package.")
 }

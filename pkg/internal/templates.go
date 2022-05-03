@@ -102,7 +102,7 @@ import (
 	"context"
 	"fmt"
 	{{.Name}}api{{.Version}} "{{.APIPath}}"
-	{{.Name}}{{.Version}} "{{.ClientPath}}typed/{{.Name}}/{{.Version}}"
+	{{.Name}}{{.Version}} "{{.ClientPath}}/typed/{{.Name}}/{{.Version}}"
 
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
