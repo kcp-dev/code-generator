@@ -29,6 +29,7 @@ import (
 
 	"github.com/kcp-dev/client-gen/pkg/flag"
 	"github.com/kcp-dev/client-gen/pkg/internal"
+	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/args"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/genall"
@@ -90,7 +91,9 @@ func (g *Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	}
 
 	// print all the errors consolidated from packages in the generation context.
-	hadErr := loader.PrintErrors(ctx.Roots)
+	// skip the type errors since they occur when input path does not contain
+	// go.mod files.
+	hadErr := loader.PrintErrors(ctx.Roots, packages.TypeError)
 	if hadErr {
 		return fmt.Errorf("generator did not run successfully")
 	}
@@ -218,7 +221,6 @@ func (g *Generator) writeWrappedClientSet() error {
 	if err := wrappedInf.WriteContent(); err != nil {
 		return err
 	}
-
 	outBytes := out.Bytes()
 	formattedBytes, err := format.Source(outBytes)
 	if err != nil {

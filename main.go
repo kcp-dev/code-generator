@@ -16,7 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/kcp-dev/client-gen/pkg/flag"
@@ -36,14 +36,14 @@ func main() {
 	// Register genclient marker to rule definition
 	reg := &markers.Registry{}
 	if err := reg.Register(generator.RuleDefinition); err != nil {
-		log.Fatalf(err.Error())
+		fmt.Fprintf(os.Stderr, "Error registering rule definition: %v\n", err)
 		os.Exit(1)
 	}
 
 	ctx := &genall.GenerationContext{Collector: &markers.Collector{Registry: reg}}
 	g := generator.Generator{}
 	if err := g.Run(ctx, *f); err != nil {
-		// log.Fatalf(err.Error())
+		fmt.Fprintf(os.Stderr, "Errors generating clientset: %v\n", err)
 		os.Exit(1)
 	}
 }

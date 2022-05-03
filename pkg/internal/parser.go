@@ -134,7 +134,7 @@ func upperFirst(s string) string {
 // NewPackages returns a new packages instance which is used to write wrapper content.
 func NewPackages(root *loader.Package, apiPath, clientPath, version, group string, w io.Writer) *packages {
 	p := &packages{
-		Name:       group,
+		Name:       sanitize(group),
 		APIPath:    apiPath,
 		Version:    version,
 		ClientPath: clientPath,
@@ -142,6 +142,14 @@ func NewPackages(root *loader.Package, apiPath, clientPath, version, group strin
 	}
 	p.setCased()
 	return p
+}
+
+func sanitize(groupName string) string {
+	if groupName != "" {
+		arr := strings.Split(groupName, ".")
+		groupName = arr[0]
+	}
+	return groupName
 }
 
 func (p *packages) WriteContent() error {
