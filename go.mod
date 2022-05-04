@@ -1,4 +1,4 @@
-module github.com/kcp-dev/client-gen
+module github.com/kcp-dev/code-generator
 
 go 1.18
 

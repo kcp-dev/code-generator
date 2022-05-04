@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/client-gen/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/flag"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

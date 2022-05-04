@@ -17,7 +17,7 @@ limitations under the License.
 package generators
 
 import (
-	"github.com/kcp-dev/client-gen/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/flag"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )

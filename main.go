@@ -20,11 +20,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kcp-dev/client-gen/pkg/flag"
-	"github.com/kcp-dev/client-gen/pkg/generators"
-	"github.com/kcp-dev/client-gen/pkg/generators/clientgen"
+	"github.com/kcp-dev/code-generator/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/generators"
+	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
@@ -76,7 +75,6 @@ func main() {
 	}
 
 	f.AddTo(cmd.Flags())
-	pflag.Parse()
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "error running all markers: %v\n", err)

@@ -27,9 +27,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kcp-dev/client-gen/pkg/flag"
-	"github.com/kcp-dev/client-gen/pkg/internal"
-	"github.com/kcp-dev/client-gen/pkg/util"
+	"github.com/kcp-dev/code-generator/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/internal"
+	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/args"
 	"k8s.io/code-generator/cmd/client-gen/types"

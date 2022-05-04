@@ -24,7 +24,7 @@ package v1
 import (
 	"context"
 	"fmt"
-	rbacapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/rbac/v1"
+	rbacapiv1 "github.com/kcp-dev/code-generator/testdata/pkg/apis/rbac/v1"
 	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
@@ -130,7 +130,7 @@ func (w *wrappedClusterRole) Patch(ctx context.Context, name string, pt types.Pa
 	return w.delegate.Patch(ctx, name, pt, data, opts, subresources...)
 }
 
-func (w *WrappedRbacV1) ClusterRoleBindings(namespace) rbacv1.ClusterRoleBindingInterface {
+func (w *WrappedRbacV1) ClusterRoleBindings(namespace string) rbacv1.ClusterRoleBindingInterface {
 	return &wrappedClusterRoleBinding{
 		cluster:  w.Cluster,
 		delegate: w.Delegate.ClusterRoleBindings(namespace),

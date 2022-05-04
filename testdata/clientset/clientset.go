@@ -30,10 +30,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	rbacv1Client "github.com/kcp-dev/client-gen/testdata/clientset/typed/rbac/v1"
+	rbacv1Client "github.com/kcp-dev/code-generator/testdata/clientset/typed/rbac/v1"
 	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 
-	appsv1Client "github.com/kcp-dev/client-gen/testdata/clientset/typed/apps/v1"
+	appsv1Client "github.com/kcp-dev/code-generator/testdata/clientset/typed/apps/v1"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 

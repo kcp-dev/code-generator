@@ -24,7 +24,7 @@ package v1
 import (
 	"context"
 	"fmt"
-	appsapiv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/apps/v1"
+	appsapiv1 "github.com/kcp-dev/code-generator/testdata/pkg/apis/apps/v1"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
@@ -44,7 +44,7 @@ func (w *WrappedAppsV1) RESTClient() rest.Interface {
 	return w.Delegate.RESTClient()
 }
 
-func (w *WrappedAppsV1) Deployments(namespace) appsv1.DeploymentInterface {
+func (w *WrappedAppsV1) Deployments(namespace string) appsv1.DeploymentInterface {
 	return &wrappedDeployment{
 		cluster:  w.Cluster,
 		delegate: w.Delegate.Deployments(namespace),
