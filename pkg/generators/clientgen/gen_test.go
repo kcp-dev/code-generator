@@ -35,7 +35,6 @@ var _ = Describe("Test generator funcs", func() {
 			f = flag.Flags{}
 			f.InputDir = "test"
 			f.ClientsetAPIPath = "testdata/"
-			f.InterfaceName = "testInterface"
 			f.GroupVersions = []string{"apps:v1"}
 		})
 
@@ -54,12 +53,6 @@ var _ = Describe("Test generator funcs", func() {
 			Expect(err.Error()).To(ContainSubstring("specifying client API path is required currently."))
 		})
 
-		It("verify interface name", func() {
-			f.InterfaceName = ""
-			err := validateFlags(f)
-			Expect(err.Error()).To(ContainSubstring("specifying interface name is required currently."))
-		})
-
 		It("verify group version list", func() {
 			f.GroupVersions = []string{}
 			err := validateFlags(f)
@@ -75,7 +68,6 @@ var _ = Describe("Test generator funcs", func() {
 			f = flag.Flags{}
 			f.InputDir = "test"
 			f.ClientsetAPIPath = "testdata"
-			f.InterfaceName = "testInterface"
 			f.OutputDir = "testdata"
 			f.GroupVersions = []string{"apps:v1"}
 
@@ -88,7 +80,6 @@ var _ = Describe("Test generator funcs", func() {
 			Expect(g.inputDir).To(Equal("test"))
 			Expect(g.clientSetAPIPath).To(Equal("testdata"))
 			Expect(g.outputDir).To(Equal("testdata"))
-			Expect(g.interfaceName).To(Equal("testInterface"))
 
 			expected := []types.GroupVersions{{
 				PackageName: "apps",

@@ -19,22 +19,19 @@ limitations under the License.
 
 // Code auto-generated. DO NOT EDIT.
 
-package clientset
+package clusterclient
 
 import (
 	"fmt"
 
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
 	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	"github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	rbacv1Client "github.com/kcp-dev/code-generator/testdata/clientset/typed/rbac/v1"
-	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
-
-	appsv1Client "github.com/kcp-dev/code-generator/testdata/clientset/typed/apps/v1"
-	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	examplev1Client "github.com/kcp-dev/code-generator/testdata/pkg/clusterclient/typed/example/v1"
+	examplev1 "github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned/typed/example/v1"
 )
 
 func NewForConfig(config *rest.Config) (*ClusterClient, error) {
@@ -46,7 +43,7 @@ func NewForConfig(config *rest.Config) (*ClusterClient, error) {
 	clusterRoundTripper := kcp.NewClusterRoundTripper(client.Transport)
 	client.Transport = clusterRoundTripper
 
-	delegate, err := kubernetes.NewForConfigAndClient(config, client)
+	delegate, err := versioned.NewForConfigAndClient(config, client)
 	if err != nil {
 		return nil, fmt.Errorf("error creating delegate clientset: %w", err)
 	}
@@ -57,10 +54,10 @@ func NewForConfig(config *rest.Config) (*ClusterClient, error) {
 }
 
 type ClusterClient struct {
-	delegate kubernetes.Interface
+	delegate versioned.Interface
 }
 
-func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) kubernetes.Interface {
+func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) versioned.Interface {
 	return &wrappedInterface{
 		cluster:  cluster,
 		delegate: c.delegate,
@@ -69,23 +66,16 @@ func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) kubernete
 
 type wrappedInterface struct {
 	cluster  logicalcluster.LogicalCluster
-	delegate kubernetes.Interface
+	delegate versioned.Interface
 }
 
 func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 	return w.delegate.Discovery()
 }
 
-func (w *wrappedInterface) RbacV1() rbacv1.RbacV1Interface {
-	return &rbacv1Client.WrappedRbacV1{
+func (w *wrappedInterface) ExampleV1() examplev1.ExampleV1Interface {
+	return &examplev1Client.WrappedExampleV1{
 		Cluster:  w.cluster,
-		Delegate: w.delegate.RbacV1(),
-	}
-}
-
-func (w *wrappedInterface) AppsV1() appsv1.AppsV1Interface {
-	return &appsv1Client.WrappedAppsV1{
-		Cluster:  w.cluster,
-		Delegate: w.delegate.AppsV1(),
+		Delegate: w.delegate.ExampleV1(),
 	}
 }

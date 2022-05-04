@@ -149,6 +149,10 @@ func NewPackages(root *loader.Package, apiPath, clientPath, version, group strin
 	return p
 }
 
+// group names can have separators in them, ex: "example.com". This is a fix to
+// sanitize those.
+// TODO: Dig into code-gen on how they handle these cases and use the same logic
+// here.
 func sanitize(groupName string) string {
 	if groupName != "" {
 		arr := strings.Split(groupName, ".")

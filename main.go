@@ -37,15 +37,33 @@ var (
 func main() {
 	f := &flag.Flags{}
 	cmd := &cobra.Command{
-		Use:     "code-gen",
-		Short:   "Generate cluster-aware kcp wrappers around clients, listers and informers.",
-		Long:    "Generate cluster-aware kcp wrappers around clients, listers and informers.",
-		Example: "TODO",
+		Use:   "code-gen",
+		Short: "Generate cluster-aware kcp wrappers around clients, listers and informers.",
+		Long:  "Generate cluster-aware kcp wrappers around clients, listers and informers.",
+		Example: `Generate cluster-aware kcp clients from existing code scaffolded by k8.io/code-gen.
+		For example:
+		# To generate client wrappers:
+		code-gen "client" --clientset-name clusterclient --go-header-file testdata/header.txt 
+						  --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
+						  --input-dir github.com/kcp-dev/code-generator/testdata 
+						  --output-dir testdata/pkg 
+						  --group-versions example:v1
+		
+		# To generate listers and informers (Yet to be implemented):
+		code-gen "client,lister,informer" --clientset-name clusterclient --go-header-file testdata/header.txt 
+						  --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
+						  --input-dir github.com/kcp-dev/code-generator/testdata 
+						  --output-dir testdata/pkg 
+						  --group-versions example:v1
+		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("no arguments provided to the command. Accepted values are clients, informers and listers.")
 			}
 
+			// This argument is expected to be of the form
+			// "client,lister,informer". Based on the arguments,
+			// enable the suitable generator.
 			cmdArgs := strings.Split(args[0], ",")
 			enabledGenerators := []generators.Generator{}
 			for _, gName := range cmdArgs {

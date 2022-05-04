@@ -93,16 +93,14 @@ func (g Generator) GetName() string {
 // it calls the custom client genrator to create wrappers. If there are any
 // errors while generating interface wrappers, it prints it out.
 func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
-	err := validateFlags(f)
-	if err != nil {
+	if err := validateFlags(f); err != nil {
 		return err
 	}
 
 	if err := g.setDefaults(f); err != nil {
 		return err
 	}
-	err = g.generate(ctx)
-	if err != nil {
+	if err := g.generate(ctx); err != nil {
 		return err
 	}
 
@@ -127,11 +125,6 @@ func validateFlags(f flag.Flags) error {
 		return errors.New("specifying client API path is required currently.")
 	}
 
-	// TODO: Do we default this from name of the type?
-	if f.InterfaceName == "" {
-		return errors.New("specifying interface name is required currently.")
-	}
-
 	if len(f.GroupVersions) == 0 {
 		return errors.New("list of group versions for which the clients are to be generated is required.")
 	}
@@ -154,9 +147,6 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if f.ClientsetName != "" {
 		g.clientsetName = f.ClientsetName
 	}
-	if f.InterfaceName != "" {
-		g.interfaceName = f.InterfaceName
-	}
 	g.headerText, err = getHeaderText(f.GoHeaderFilePath)
 	if err != nil {
 		return err
@@ -174,11 +164,6 @@ func getHeaderText(path string) (string, error) {
 			return "", err
 		}
 		headertext = string(headerBytes)
-
-		// validate the header text.
-		if !strings.Contains(headertext, "Copyright") {
-			return "", fmt.Errorf("invalid header loaded %q", headertext)
-		}
 	}
 	return headertext, nil
 }
@@ -216,8 +201,7 @@ func (g *Generator) getGV(f flag.Flags) error {
 // Then for each type defined in the input, it recursively wraps the subsequent
 // interfaces to be kcp-aware.
 func (g *Generator) generate(ctx *genall.GenerationContext) error {
-	err := g.writeWrappedClientSet()
-	if err != nil {
+	if err := g.writeWrappedClientSet(); err != nil {
 		return err
 	}
 	return g.generateSubInterfaces(ctx)

@@ -30,8 +30,6 @@ type Flags struct {
 	ClientsetAPIPath string
 	// List of group versions for which the wrappers are to be generated.
 	GroupVersions []string
-	// The interface name which is to be wrapped.
-	InterfaceName string
 	// Path to the headerfile.
 	GoHeaderFilePath string
 	// ClientsetName is the name of the clientset to be generated.
@@ -44,8 +42,6 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 	flagset.StringVar(&f.OutputDir, "output-dir", "output", "Output directory where wrapped clients will be generated. The wrappers will be present in '<output-dir>/generated' path.")
 	flagset.StringVar(&f.ClientsetAPIPath, "clientset-api-path", "/apis", "package path where clients are generated.")
 
-	// TODO: Probably default this to be the package name
-	flagset.StringVar(&f.InterfaceName, "interface", "", "name of the interface which needs to be wrapped.")
 	flagset.StringArrayVar(&f.GroupVersions, "group-versions", []string{}, "specify group versions for the clients.")
 	flagset.StringVar(&f.GoHeaderFilePath, "go-header-file", "", "path to headerfile for the generated text.")
 	flagset.StringVar(&f.ClientsetName, "clientset-name", "clientset", "the name of the generated clientset package.")
