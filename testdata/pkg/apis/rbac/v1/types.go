@@ -1,6 +1,7 @@
 package v1
 
 // +genclient
+// +genclient:nonNamespaced
 // Role is a namespaced, logical grouping of PolicyRules that can be referenced as a unit by a RoleBinding.
 type ClusterRole struct {
 

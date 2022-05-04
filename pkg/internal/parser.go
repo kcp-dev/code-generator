@@ -49,10 +49,11 @@ type interfaceWrapper struct {
 
 // api contains info about each type
 type api struct {
-	Name    string
-	Version string
-	PkgName string
-	writer  io.Writer
+	Name         string
+	Version      string
+	PkgName      string
+	writer       io.Writer
+	IsNamespaced bool
 
 	PkgNameUpperFirst string
 	VersionUpperFirst string
@@ -164,17 +165,18 @@ func (p *packages) WriteContent() error {
 	return templ.Execute(p.writer, p)
 }
 
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, w io.Writer) (*api, error) {
+func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, isNamespaced bool, w io.Writer) (*api, error) {
 	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
 	if typeInfo == types.Typ[types.Invalid] {
 		return nil, fmt.Errorf("unknown type: %s", info.Name)
 	}
 
 	api := &api{
-		Name:    info.RawSpec.Name.Name,
-		Version: version,
-		PkgName: group,
-		writer:  w,
+		Name:         info.RawSpec.Name.Name,
+		Version:      version,
+		PkgName:      group,
+		writer:       w,
+		IsNamespaced: isNamespaced,
 	}
 
 	api.setCased()

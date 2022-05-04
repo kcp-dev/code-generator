@@ -44,10 +44,10 @@ func (w *WrappedRbacV1) RESTClient() rest.Interface {
 	return w.Delegate.RESTClient()
 }
 
-func (w *WrappedRbacV1) ClusterRoles(namespace string) rbacv1.ClusterRoleInterface {
+func (w *WrappedRbacV1) ClusterRoles() rbacv1.ClusterRoleInterface {
 	return &wrappedClusterRole{
 		cluster:  w.Cluster,
-		delegate: w.Delegate.ClusterRoles(namespace),
+		delegate: w.Delegate.ClusterRoles(),
 	}
 }
 
@@ -130,7 +130,7 @@ func (w *wrappedClusterRole) Patch(ctx context.Context, name string, pt types.Pa
 	return w.delegate.Patch(ctx, name, pt, data, opts, subresources...)
 }
 
-func (w *WrappedRbacV1) ClusterRoleBindings(namespace string) rbacv1.ClusterRoleBindingInterface {
+func (w *WrappedRbacV1) ClusterRoleBindings(namespace) rbacv1.ClusterRoleBindingInterface {
 	return &wrappedClusterRoleBinding{
 		cluster:  w.Cluster,
 		delegate: w.Delegate.ClusterRoleBindings(namespace),

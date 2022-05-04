@@ -40,7 +40,8 @@ import (
 
 var (
 	// RuleDefinition is a marker for defining rules
-	RuleDefinition = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
+	ruleDefinition  = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
+	namespaceMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, placeholder{}))
 )
 
 const (
@@ -78,8 +79,8 @@ type Generator struct {
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
-	if err := reg.Register(RuleDefinition); err != nil {
-		return nil, fmt.Errorf("Error registering markers")
+	if err := markers.RegisterAll(reg, ruleDefinition, namespaceMarker); err != nil {
+		return nil, fmt.Errorf("error registering markers")
 	}
 	return reg, nil
 }
@@ -337,7 +338,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 					return
 				}
 
-				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, &outContent)
+				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, !isNamespaced(info), &outContent)
 				if err != nil {
 					root.AddError(err)
 					return
@@ -388,9 +389,16 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 }
 
 // isEnabledForMethod verifies if the genclient marker is enabled for
-// this type or not
+// this type or not.
 func isEnabledForMethod(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(RuleDefinition.Name)
+	enabled := info.Markers.Get(ruleDefinition.Name)
+	return enabled != nil
+}
+
+// isNamespaced verifies if the genclient marker for this
+// type is namespaced or clusterscoped.
+func isNamespaced(info *markers.TypeInfo) bool {
+	enabled := info.Markers.Get(namespaceMarker.Name)
 	return enabled != nil
 }
 

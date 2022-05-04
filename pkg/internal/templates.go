@@ -127,10 +127,10 @@ func (w *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Int
 `
 
 const wrapperMethodsTempl = `
-func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s(namespace string) {{.PkgName}}{{.Version}}.{{.Name}}Interface {
+func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
 	return &wrapped{{.Name}}{
 		cluster:  w.Cluster,
-		delegate: w.Delegate.{{.Name}}s(namespace),
+		delegate: w.Delegate.{{.Name}}s{{if .IsNamespaced}}(namespace){{else}}(){{end}},
 	}
 }
 

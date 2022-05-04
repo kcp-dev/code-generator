@@ -44,7 +44,7 @@ func (w *WrappedAppsV1) RESTClient() rest.Interface {
 	return w.Delegate.RESTClient()
 }
 
-func (w *WrappedAppsV1) Deployments(namespace string) appsv1.DeploymentInterface {
+func (w *WrappedAppsV1) Deployments(namespace) appsv1.DeploymentInterface {
 	return &wrappedDeployment{
 		cluster:  w.Cluster,
 		delegate: w.Delegate.Deployments(namespace),

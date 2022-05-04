@@ -76,8 +76,6 @@ func main() {
 	}
 
 	f.AddTo(cmd.Flags())
-
-	f.AddTo(pflag.CommandLine)
 	pflag.Parse()
 
 	if err := cmd.Execute(); err != nil {
