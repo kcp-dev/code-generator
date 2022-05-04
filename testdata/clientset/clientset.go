@@ -30,9 +30,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	rbacv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/rbac/v1"
+	rbacv1Client "github.com/kcp-dev/client-gen/testdata/clientset/typed/rbac/v1"
+	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 
-	appsv1 "github.com/kcp-dev/client-gen/testdata/pkg/apis/apps/v1"
+	appsv1Client "github.com/kcp-dev/client-gen/testdata/clientset/typed/apps/v1"
+	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
 func NewForConfig(config *rest.Config) (*ClusterClient, error) {
@@ -75,15 +77,15 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 }
 
 func (w *wrappedInterface) RbacV1() rbacv1.RbacV1Interface {
-	return &wrappedRbacV1{
-		cluster:  w.cluster,
-		delegate: w.delegate.RbacV1(),
+	return &rbacv1Client.WrappedRbacV1{
+		Cluster:  w.cluster,
+		Delegate: w.delegate.RbacV1(),
 	}
 }
 
 func (w *wrappedInterface) AppsV1() appsv1.AppsV1Interface {
-	return &wrappedAppsV1{
-		cluster:  w.cluster,
-		delegate: w.delegate.AppsV1(),
+	return &appsv1Client.WrappedAppsV1{
+		Cluster:  w.cluster,
+		Delegate: w.delegate.AppsV1(),
 	}
 }

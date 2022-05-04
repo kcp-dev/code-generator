@@ -31,12 +31,15 @@ import (
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
 	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"{{.ClientsetAPIPath}}"
 
-	{{$name := .InputPath}}
+	{{$clientPath := .ClientsetAPIPath}}
+	{{$pkg := .TypedPkgPath}}
 	{{ range .APIs }}
-	{{.PkgName}}{{.Version}} "{{$name}}/pkg/apis/{{.PkgName}}/{{.Version}}"
+	{{.PkgName}}{{.Version}} "{{$clientPath}}/typed/{{.PkgName}}/{{.Version}}"
+	{{.PkgName}}{{.Version}}Client "{{$pkg}}/typed/{{.PkgName}}/{{.Version}}"
+
 	{{ end }}
 )
 
@@ -49,7 +52,7 @@ func NewForConfig(config *rest.Config) (*ClusterClient, error) {
 	clusterRoundTripper := kcp.NewClusterRoundTripper(client.Transport)
 	client.Transport = clusterRoundTripper
 
-	delegate, err := kubernetes.NewForConfigAndClient(config, client)
+	delegate, err := {{.InterfaceName}}.NewForConfigAndClient(config, client)
 	if err != nil {
 		return nil, fmt.Errorf("error creating delegate clientset: %w", err)
 	}
@@ -81,9 +84,9 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 
 {{ range .APIs }}
 func (w *wrappedInterface) {{.PkgNameUpperFirst}}{{.VersionUpperFirst}}() {{.PkgName}}{{.Version}}.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}Interface {
-	return &wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}{
-		cluster:  w.cluster,
-		delegate: w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}(),
+	return &{{.PkgName}}{{.Version}}Client.Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}{
+		Cluster:  w.cluster,
+		Delegate: w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}(),
 	}
 }
 {{ end }}
@@ -112,22 +115,22 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-type wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
-	cluster  logicalcluster.LogicalCluster
-	delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
+type Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
+	Cluster  logicalcluster.LogicalCluster
+	Delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
 }
 
-func (w *wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Interface {
-	return w.delegate.RESTClient()
+func (w *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Interface {
+	return w.Delegate.RESTClient()
 }
 
 `
 
 const wrapperMethodsTempl = `
-func (w *wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s() {{.PkgName}}{{.Version}}.{{.Name}}Interface {
+func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s(namespace string) {{.PkgName}}{{.Version}}.{{.Name}}Interface {
 	return &wrapped{{.Name}}{
-		cluster:  w.cluster,
-		delegate: w.delegate.{{.Name}}s(),
+		cluster:  w.Cluster,
+		delegate: w.Delegate.{{.Name}}s(namespace),
 	}
 }
 

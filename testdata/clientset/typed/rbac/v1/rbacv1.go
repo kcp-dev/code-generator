@@ -35,19 +35,19 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type wrappedRbacV1 struct {
-	cluster  logicalcluster.LogicalCluster
-	delegate rbacv1.RbacV1Interface
+type WrappedRbacV1 struct {
+	Cluster  logicalcluster.LogicalCluster
+	Delegate rbacv1.RbacV1Interface
 }
 
-func (w *wrappedRbacV1) RESTClient() rest.Interface {
-	return w.delegate.RESTClient()
+func (w *WrappedRbacV1) RESTClient() rest.Interface {
+	return w.Delegate.RESTClient()
 }
 
-func (w *wrappedRbacV1) ClusterRoles() rbacv1.ClusterRoleInterface {
+func (w *WrappedRbacV1) ClusterRoles(namespace string) rbacv1.ClusterRoleInterface {
 	return &wrappedClusterRole{
-		cluster:  w.cluster,
-		delegate: w.delegate.ClusterRoles(),
+		cluster:  w.Cluster,
+		delegate: w.Delegate.ClusterRoles(namespace),
 	}
 }
 
@@ -130,10 +130,10 @@ func (w *wrappedClusterRole) Patch(ctx context.Context, name string, pt types.Pa
 	return w.delegate.Patch(ctx, name, pt, data, opts, subresources...)
 }
 
-func (w *wrappedRbacV1) ClusterRoleBindings() rbacv1.ClusterRoleBindingInterface {
+func (w *WrappedRbacV1) ClusterRoleBindings(namespace string) rbacv1.ClusterRoleBindingInterface {
 	return &wrappedClusterRoleBinding{
-		cluster:  w.cluster,
-		delegate: w.delegate.ClusterRoleBindings(),
+		cluster:  w.Cluster,
+		delegate: w.Delegate.ClusterRoleBindings(namespace),
 	}
 }
 

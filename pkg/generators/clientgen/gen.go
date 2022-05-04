@@ -29,6 +29,7 @@ import (
 
 	"github.com/kcp-dev/client-gen/pkg/flag"
 	"github.com/kcp-dev/client-gen/pkg/internal"
+	"github.com/kcp-dev/client-gen/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/args"
 	"k8s.io/code-generator/cmd/client-gen/types"
@@ -227,7 +228,16 @@ func (g *Generator) writeWrappedClientSet() error {
 		return err
 	}
 
-	wrappedInf, err := internal.NewInterfaceWrapper(g.interfaceName, g.inputDir, g.clientsetName, g.groupVersions, &out)
+	pwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error finding current directory %q", err)
+	}
+	pkg := util.CurrentPackage(pwd)
+	if len(pkg) == 0 {
+		return fmt.Errorf("error finding the module path for this package %q", pwd)
+	}
+
+	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, pkg, g.outputDir, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -242,6 +252,7 @@ func (g *Generator) writeWrappedClientSet() error {
 	} else {
 		outBytes = formattedBytes
 	}
+
 	return g.writeContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
 }
 

@@ -81,7 +81,7 @@ func main() {
 	pflag.Parse()
 
 	if err := cmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error registering rule definition: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error running all markers: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -35,19 +35,19 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type wrappedAppsV1 struct {
-	cluster  logicalcluster.LogicalCluster
-	delegate appsv1.AppsV1Interface
+type WrappedAppsV1 struct {
+	Cluster  logicalcluster.LogicalCluster
+	Delegate appsv1.AppsV1Interface
 }
 
-func (w *wrappedAppsV1) RESTClient() rest.Interface {
-	return w.delegate.RESTClient()
+func (w *WrappedAppsV1) RESTClient() rest.Interface {
+	return w.Delegate.RESTClient()
 }
 
-func (w *wrappedAppsV1) Deployments() appsv1.DeploymentInterface {
+func (w *WrappedAppsV1) Deployments(namespace string) appsv1.DeploymentInterface {
 	return &wrappedDeployment{
-		cluster:  w.cluster,
-		delegate: w.delegate.Deployments(),
+		cluster:  w.Cluster,
+		delegate: w.Delegate.Deployments(namespace),
 	}
 }
 

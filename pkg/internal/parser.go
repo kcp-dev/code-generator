@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"go/types"
 	"io"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -33,11 +34,13 @@ import (
 type interfaceWrapper struct {
 	// name of the interface provided from the input flag.
 	InterfaceName string
-	// input path where types are defined.
-	InputPath string
 	// clientsetname is the name of the package where the clientsets
 	// are to be generated.
 	ClientsetName string
+	// ClientsetAPI path refers to where apis are generated.
+	ClientsetAPIPath string
+	// Pkgpath refers to the path where the typedClients would be written.
+	TypedPkgPath string
 	// APIs wrap each of the type
 	APIs []api
 	// writer wherein outputs are written
@@ -68,14 +71,15 @@ type packages struct {
 }
 
 // NewInterfaceWrapper returns a interfaceWrapper which can fill the templates to wrtie clientset wrappers.
-func NewInterfaceWrapper(interfaceName, inputPath, clientsetName string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
+func NewInterfaceWrapper(clientSetAPIPath, clientsetName, pkgPath, outputDir string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
 	apis := groupVersionsToApis(gvs)
 	return &interfaceWrapper{
-		InputPath:     inputPath,
-		InterfaceName: interfaceName,
-		ClientsetName: clientsetName,
-		APIs:          apis,
-		writer:        &w,
+		InterfaceName:    filepath.Base(clientSetAPIPath),
+		ClientsetName:    clientsetName,
+		ClientsetAPIPath: clientSetAPIPath,
+		TypedPkgPath:     filepath.Join(pkgPath, filepath.Clean(outputDir), clientsetName),
+		APIs:             apis,
+		writer:           &w,
 	}, nil
 }
 
