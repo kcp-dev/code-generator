@@ -38,7 +38,7 @@ import (
 	{{$pkg := .TypedPkgPath}}
 	{{ range .APIs }}
 	{{.PkgName}}{{.Version}} "{{$clientPath}}/typed/{{.PkgName}}/{{.Version}}"
-	{{.PkgName}}{{.Version}}Client "{{$pkg}}/typed/{{.PkgName}}/{{.Version}}"
+	{{.PkgName}}{{.Version}}client "{{$pkg}}/typed/{{.PkgName}}/{{.Version}}"
 
 	{{ end }}
 )
@@ -84,7 +84,7 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 
 {{ range .APIs }}
 func (w *wrappedInterface) {{.PkgNameUpperFirst}}{{.VersionUpperFirst}}() {{.PkgName}}{{.Version}}.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}Interface {
-	return &{{.PkgName}}{{.Version}}Client.Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}{
+	return &{{.PkgName}}{{.Version}}client.Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}{
 		Cluster:  w.cluster,
 		Delegate: w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}(),
 	}
@@ -164,6 +164,16 @@ func (w *wrapped{{.Name}}) Update(ctx context.Context, {{.NameLowerFirst}} *{{.P
 	}
 	return w.delegate.Update(ctx, {{.NameLowerFirst}}, opts)
 }
+
+{{if .HasStatus}}
+ func (w *wrapped{{.Name}}) UpdateStatus(ctx context.Context, {{.NameLowerFirst}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
+ 	ctx, err := w.checkCluster(ctx)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+ 	return w.delegate.UpdateStatus(ctx, {{.NameLowerFirst}}, opts)
+ }
+ {{end}}
 
 func (w *wrapped{{.Name}}) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	ctx, err := w.checkCluster(ctx)

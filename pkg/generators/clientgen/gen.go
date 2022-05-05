@@ -40,8 +40,11 @@ import (
 
 var (
 	// RuleDefinition is a marker for defining rules
-	ruleDefinition  = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
+	ruleDefinition = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
+	// namespaceMarker checks if resource is namespaced or clusterscoped
 	namespaceMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, placeholder{}))
+	// statusSubresourceMarker checks if status is to scaffolded
+	statusSubresourceMarker = markers.Must(markers.MakeDefinition("+genclient:noStatus", markers.DescribesType, placeholder{}))
 )
 
 const (
@@ -79,7 +82,7 @@ type Generator struct {
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
-	if err := markers.RegisterAll(reg, ruleDefinition, namespaceMarker); err != nil {
+	if err := markers.RegisterAll(reg, ruleDefinition, namespaceMarker, statusSubresourceMarker); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
 	return reg, nil
@@ -322,7 +325,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 					return
 				}
 
-				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, !isNamespaced(info), &outContent)
+				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, !isClusterScoped(info), hasStatusSubresource(info), &outContent)
 				if err != nil {
 					root.AddError(err)
 					return
@@ -379,11 +382,29 @@ func isEnabledForMethod(info *markers.TypeInfo) bool {
 	return enabled != nil
 }
 
-// isNamespaced verifies if the genclient marker for this
+// isClusterScoped verifies if the genclient marker for this
 // type is namespaced or clusterscoped.
-func isNamespaced(info *markers.TypeInfo) bool {
+func isClusterScoped(info *markers.TypeInfo) bool {
 	enabled := info.Markers.Get(namespaceMarker.Name)
 	return enabled != nil
+}
+
+// hasStatusSubresource verifies if updateStatus verb is to be scaffolded.
+// if `noStatus` marker is present is returns false. Else it checks if
+// the type has Status field.
+func hasStatusSubresource(info *markers.TypeInfo) bool {
+	if info.Markers.Get(statusSubresourceMarker.Name) != nil {
+		return false
+	}
+
+	hasStatusField := false
+	for _, f := range info.Fields {
+		if f.Name == "Status" {
+			hasStatusField = true
+			break
+		}
+	}
+	return hasStatusField
 }
 
 func writeMethods(out io.Writer, byType map[string][]byte) error {

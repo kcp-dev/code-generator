@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 
-	examplev1Client "github.com/kcp-dev/code-generator/testdata/pkg/clusterclient/typed/example/v1"
+	examplev1client "github.com/kcp-dev/code-generator/testdata/pkg/clusterclient/typed/example/v1"
 	examplev1 "github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned/typed/example/v1"
 )
 
@@ -74,7 +74,7 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 }
 
 func (w *wrappedInterface) ExampleV1() examplev1.ExampleV1Interface {
-	return &examplev1Client.WrappedExampleV1{
+	return &examplev1client.WrappedExampleV1{
 		Cluster:  w.cluster,
 		Delegate: w.delegate.ExampleV1(),
 	}

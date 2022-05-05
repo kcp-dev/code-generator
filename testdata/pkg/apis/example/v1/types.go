@@ -36,8 +36,14 @@ type ClusterTestType struct {
 	Kind string `json:"kind" protobuf:"bytes,2,opt,name=kind"`
 	// Name is the name of resource being referenced
 	Name string `json:"name" protobuf:"bytes,3,opt,name=name"`
+	// +optional
+	Status ClusterTestTypeStatus `json:"status,omitempty"`
 }
 
 type ClusterTestTypeStatus struct {
 	Blah string
+}
+
+type ClusterTestTypeList struct {
+	Items []ClusterTestType `json:"items"`
 }

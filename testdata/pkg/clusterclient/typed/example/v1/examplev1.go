@@ -82,6 +82,14 @@ func (w *wrappedClusterTestType) Update(ctx context.Context, clusterTestType *ex
 	return w.delegate.Update(ctx, clusterTestType, opts)
 }
 
+func (w *wrappedClusterTestType) UpdateStatus(ctx context.Context, clusterTestType *exampleapiv1.ClusterTestType, opts metav1.UpdateOptions) (*exampleapiv1.ClusterTestType, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.UpdateStatus(ctx, clusterTestType, opts)
+}
+
 func (w *wrappedClusterTestType) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	ctx, err := w.checkCluster(ctx)
 	if err != nil {
