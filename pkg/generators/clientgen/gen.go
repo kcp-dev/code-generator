@@ -63,11 +63,12 @@ const (
 type placeholder struct{}
 
 type Generator struct {
-	// InputDir is the path where types are defined.
-	inputDir string
-	// Output Dir where the wrappers are to be written.
+	// inputDir is the path where types are defined.
+	inputDir    string
+	basePackage string
+	// output Dir where the wrappers are to be written.
 	outputDir string
-	// Path to where generated clientsets are found.
+	// path to where generated clientsets are found.
 	clientSetAPIPath string
 	// clientsetName is the name of the generated clientset package.
 	clientsetName string
@@ -140,6 +141,11 @@ func validateFlags(f flag.Flags) error {
 func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if f.InputDir != "" {
 		g.inputDir = f.InputDir
+		pkg := util.CurrentPackage(f.InputDir)
+		if len(pkg) == 0 {
+			return fmt.Errorf("error finding the module path for this package %q", f.InputDir)
+		}
+		g.basePackage = pkg
 	}
 	if f.OutputDir != "" {
 		g.outputDir = f.OutputDir
@@ -185,10 +191,10 @@ func (g *Generator) getGV(f flag.Flags) error {
 
 		versions := strings.Split(arr[1], ",")
 		for _, v := range versions {
-			// input path is converted to <inputDir>/pkg/apis/<group>/<version>.
-			// example for input directory of "k8s.io/client-go/kubernetes", it would
-			// be converted to "k8s.io/client-go/kubernetes/pkg/apis/rbac/v1".
-			input := filepath.Join(f.InputDir, "pkg", "apis", arr[0], v)
+			// input path is converted to <inputDir>/<group>/<version>.
+			// example for input directory of "k8s.io/client-go/kubernetes/pkg/apis/", it would
+			// be converted to "k8s.io/client-go/kubernetes/rbac/v1".
+			input := filepath.Join(f.InputDir, arr[0], v)
 			groups := []types.GroupVersions{}
 			builder := args.NewGroupVersionsBuilder(&groups)
 			_ = args.NewGVPackagesValue(builder, []string{input})
@@ -216,16 +222,7 @@ func (g *Generator) writeWrappedClientSet() error {
 		return err
 	}
 
-	pwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("error finding current directory %q", err)
-	}
-	pkg := util.CurrentPackage(pwd)
-	if len(pkg) == 0 {
-		return fmt.Errorf("error finding the module path for this package %q", pwd)
-	}
-
-	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, pkg, g.outputDir, g.groupVersions, &out)
+	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, g.basePackage, g.outputDir, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -288,9 +285,18 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 		// Even if there are multiple versions for same group, we will have separate types.GroupVersions
 		// for it. Hence length of gv.Versions will always be one.
 		version := gv.Versions[0]
-		path := filepath.Join(g.inputDir, "pkg", "apis", gv.Group.String(), string(version.Version))
 
-		pkgs, err := loader.LoadRoots(path)
+		// This is to accomodate the usecase wherein the apis are defined under a sub-folder inside
+		// base package.
+		basePkg := g.basePackage
+		cleanPkgPath := util.CleanInputDir(g.inputDir)
+		if cleanPkgPath != "" {
+			basePkg = filepath.Join(g.basePackage, cleanPkgPath)
+		}
+
+		path := filepath.Join(basePkg, gv.Group.String(), string(version.Version))
+
+		pkgs, err := loader.LoadRootsWithConfig(&packages.Config{Dir: g.inputDir}, path)
 		if err != nil {
 			return err
 		}

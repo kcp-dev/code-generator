@@ -17,9 +17,12 @@ limitations under the License.
 package util
 
 import (
-	gobuild "go/build"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
-	"strings"
+
+	"golang.org/x/mod/modfile"
 )
 
 // CurrentPackage returns the go package of the current directory, or "" if it cannot
@@ -27,28 +30,37 @@ import (
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
 // directory whose pacakge is to be found.
 func CurrentPackage(dir string) string {
-	for _, root := range gobuild.Default.SrcDirs() {
-		if pkg, ok := hasSubdir(root, dir); ok {
-			return pkg
-		}
+	goModPath, err := getGoModPath(dir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	return ""
+
+	gomod, err := ioutil.ReadFile(filepath.Join(goModPath, "go.mod"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return modfile.ModulePath(gomod)
 }
 
-func hasSubdir(root, dir string) (rel string, ok bool) {
-	// ensure a tailing separator to properly compare on word-boundaries
-	const sep = string(filepath.Separator)
-	root = filepath.Clean(root)
-	if !strings.HasSuffix(root, sep) {
-		root += sep
+// getGoModPath recursively traverses up the directory path
+// to find the location of go.mod file.
+func getGoModPath(dir string) (string, error) {
+	if dir == "/" {
+		return "", fmt.Errorf("could not find go.mod")
 	}
-
-	// check whether root dir starts with root
-	dir = filepath.Clean(dir)
-	if !strings.HasPrefix(dir, root) {
-		return "", false
+	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+		return dir, nil
 	}
+	return getGoModPath(filepath.Dir(dir))
+}
 
-	// cut off root
-	return filepath.ToSlash(dir[len(root):]), true
+// CleanInputDir returns a clean directory path. If
+// the input is ".", it returns an empty string.
+func CleanInputDir(dir string) (cleanPath string) {
+	if dir == "." {
+		return cleanPath
+	}
+	return filepath.Clean(dir)
 }
