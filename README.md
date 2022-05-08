@@ -4,7 +4,7 @@
 
 #### Input flags:
 
-1. `--input-dir` - The directory path where APIs are defined. Make sure that the types are defined in `<inputDir>/pkg/apis/<group>/<version>`. For example, if your input apis are defined in `types.go` inside `testdata/pkg/apis/apps/v1/types.go`, the input directory should be specified as `testdata`.
+1. `--input-dir` - The directory path where APIs are defined. Make sure that the types are defined in `<inputDir>/pkg/apis/{$GROUP}/{$VERSION}`. For example, if your input apis are defined in `types.go` inside `testdata/pkg/apis/apps/v1/types.go`, the input directory should be specified as `testdata/pkg`. `{$GROUP}/{$VERSION}` is appended in the input path.
 **Note**: This is the relative path to the input directory where APIs live.
 
 2. `--output-dir` - The directory where output clients are to be generated. It defaults to the `clientset` folder under current working directory.
@@ -28,7 +28,7 @@ To run it locally and see how it works, use the following command:
 ```
 go run main.go client --clientset-name clusterclient --go-header-file testdata/header.txt 
                       --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
-                      --input-dir testdata 
+                      --input-dir testdata/pkg/apis 
                       --output-dir testdata/pkg --group-versions example:v1
 ```
 

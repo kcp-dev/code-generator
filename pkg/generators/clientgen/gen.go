@@ -64,8 +64,11 @@ type placeholder struct{}
 
 type Generator struct {
 	// inputDir is the path where types are defined.
-	inputDir    string
-	basePackage string
+	inputDir string
+	// inputpkgPaths stores details on input directory.
+	inputpkgPaths pkgPaths
+	// outputpkgPaths stores details on output directory.
+	outputpkgPaths pkgPaths
 	// output Dir where the wrappers are to be written.
 	outputDir string
 	// path to where generated clientsets are found.
@@ -79,6 +82,18 @@ type Generator struct {
 	// headerText is the header text to be added to generated wrappers.
 	// It is obtained from `--go-header-text` flag.
 	headerText string
+}
+
+// TODO: Store this information in generation context, as other genrators
+// may need this too.
+type pkgPaths struct {
+	// basePacakge path as found in go module.
+	basePackage string
+	// hasGoMod is a way of checking if the go.mod file is present inside
+	// the input directory or not. If present the basepkg path need not be modified
+	// to include the location of input directory. If not, include the location of
+	// all the sub folders provided in the input directory.
+	hasGoMod bool
 }
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
@@ -141,13 +156,24 @@ func validateFlags(f flag.Flags) error {
 func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if f.InputDir != "" {
 		g.inputDir = f.InputDir
-		pkg := util.CurrentPackage(f.InputDir)
+		pkg, hasGoMod := util.CurrentPackage(f.InputDir)
 		if len(pkg) == 0 {
 			return fmt.Errorf("error finding the module path for this package %q", f.InputDir)
 		}
-		g.basePackage = pkg
+		g.inputpkgPaths = pkgPaths{
+			basePackage: pkg,
+			hasGoMod:    hasGoMod,
+		}
 	}
 	if f.OutputDir != "" {
+		pkg, hasGoMod := util.CurrentPackage(f.OutputDir)
+		if len(pkg) == 0 {
+			return fmt.Errorf("error finding the module path for this package %q", f.OutputDir)
+		}
+		g.outputpkgPaths = pkgPaths{
+			basePackage: pkg,
+			hasGoMod:    hasGoMod,
+		}
 		g.outputDir = f.OutputDir
 	}
 	if f.ClientsetAPIPath != "" {
@@ -193,7 +219,7 @@ func (g *Generator) getGV(f flag.Flags) error {
 		for _, v := range versions {
 			// input path is converted to <inputDir>/<group>/<version>.
 			// example for input directory of "k8s.io/client-go/kubernetes/pkg/apis/", it would
-			// be converted to "k8s.io/client-go/kubernetes/rbac/v1".
+			// be converted to "k8s.io/client-go/kubernetes/pkg/apis/rbac/v1".
 			input := filepath.Join(f.InputDir, arr[0], v)
 			groups := []types.GroupVersions{}
 			builder := args.NewGroupVersionsBuilder(&groups)
@@ -222,7 +248,25 @@ func (g *Generator) writeWrappedClientSet() error {
 		return err
 	}
 
-	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, g.basePackage, g.outputDir, g.groupVersions, &out)
+	// Get the location of the typed wrapped clientset for imports.
+	// Cases handled here, for example the scenarios could be:
+	// Case 1:
+	// if basePkg := k8s.io/kcp-dev; outputPkg := k8s.io/kcp-dev/output/testdata
+	// then typedPkgPath is k8s.io/kcp-dev/output/testdata/
+	// Case 2:
+	// if basePkg := k8s.io/kcp-dev; outputPkg := ./output/testdata
+	// then typedPkgPath is k8s.io/kcp-dev/output/testdata/
+	// Case 3:
+	// if basePkg := k8s.io/kcp-dev; outputPkg := .
+	// then typedPkgPath is k8s.io/kcp-dev
+	var typedPkgPath string
+	if !g.outputpkgPaths.hasGoMod {
+		typedPkgPath = filepath.Join(util.GetCleanRealtivePath(g.outputpkgPaths.basePackage, filepath.Clean(g.outputDir)), g.clientsetName)
+	} else {
+		typedPkgPath = filepath.Join(g.outputpkgPaths.basePackage, g.clientsetName)
+	}
+
+	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, typedPkgPath, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -288,10 +332,12 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 
 		// This is to accomodate the usecase wherein the apis are defined under a sub-folder inside
 		// base package.
-		basePkg := g.basePackage
-		cleanPkgPath := util.CleanInputDir(g.inputDir)
-		if cleanPkgPath != "" {
-			basePkg = filepath.Join(g.basePackage, cleanPkgPath)
+		basePkg := g.inputpkgPaths.basePackage
+		if !g.inputpkgPaths.hasGoMod {
+			cleanPkgPath := util.CleanInputDir(g.inputDir)
+			if cleanPkgPath != "" {
+				basePkg = filepath.Join(g.inputpkgPaths.basePackage, cleanPkgPath)
+			}
 		}
 
 		path := filepath.Join(basePkg, gv.Group.String(), string(version.Version))

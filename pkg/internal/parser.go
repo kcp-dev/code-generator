@@ -73,13 +73,13 @@ type packages struct {
 }
 
 // NewInterfaceWrapper returns a interfaceWrapper which can fill the templates to wrtie clientset wrappers.
-func NewInterfaceWrapper(clientSetAPIPath, clientsetName, pkgPath, outputDir string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
+func NewInterfaceWrapper(clientSetAPIPath, clientsetName, pkgPath string, gvs []gentype.GroupVersions, w io.Writer) (*interfaceWrapper, error) {
 	apis := groupVersionsToApis(gvs)
 	return &interfaceWrapper{
 		InterfaceName:    filepath.Base(clientSetAPIPath),
 		ClientsetName:    clientsetName,
 		ClientsetAPIPath: clientSetAPIPath,
-		TypedPkgPath:     filepath.Join(pkgPath, filepath.Clean(outputDir), clientsetName),
+		TypedPkgPath:     pkgPath,
 		APIs:             apis,
 		writer:           &w,
 	}, nil
