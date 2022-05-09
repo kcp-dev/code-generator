@@ -1,5 +1,5 @@
 /*
-Copyright The KCP Authors.
+Copyright 2022 The KCP Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,10 +41,10 @@ import (
 var (
 	// RuleDefinition is a marker for defining rules
 	ruleDefinition = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
-	// namespaceMarker checks if resource is namespaced or clusterscoped
-	namespaceMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, placeholder{}))
-	// statusSubresourceMarker checks if status is to scaffolded
-	statusSubresourceMarker = markers.Must(markers.MakeDefinition("+genclient:noStatus", markers.DescribesType, placeholder{}))
+	// nonNamespacedMarker checks if resource is namespaced or clusterscoped
+	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, placeholder{}))
+	// noStatusMarker checks if status is to scaffolded
+	noStatusMarker = markers.Must(markers.MakeDefinition("+genclient:noStatus", markers.DescribesType, placeholder{}))
 )
 
 const (
@@ -98,7 +98,7 @@ type pkgPaths struct {
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
-	if err := markers.RegisterAll(reg, ruleDefinition, namespaceMarker, statusSubresourceMarker); err != nil {
+	if err := markers.RegisterAll(reg, ruleDefinition, nonNamespacedMarker, noStatusMarker); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
 	return reg, nil
@@ -289,7 +289,7 @@ func (g *Generator) writeWrappedClientSet() error {
 // the specified filename and write contents to it.
 func (g *Generator) writeContent(outBytes []byte, filename string, path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err = os.MkdirAll(path, os.ModePerm)
+		err = os.MkdirAll(path, 0755)
 		if err != nil {
 			return err
 		}
@@ -437,7 +437,7 @@ func isEnabledForMethod(info *markers.TypeInfo) bool {
 // isClusterScoped verifies if the genclient marker for this
 // type is namespaced or clusterscoped.
 func isClusterScoped(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(namespaceMarker.Name)
+	enabled := info.Markers.Get(nonNamespacedMarker.Name)
 	return enabled != nil
 }
 
@@ -445,7 +445,7 @@ func isClusterScoped(info *markers.TypeInfo) bool {
 // if `noStatus` marker is present is returns false. Else it checks if
 // the type has Status field.
 func hasStatusSubresource(info *markers.TypeInfo) bool {
-	if info.Markers.Get(statusSubresourceMarker.Name) != nil {
+	if info.Markers.Get(noStatusMarker.Name) != nil {
 		return false
 	}
 

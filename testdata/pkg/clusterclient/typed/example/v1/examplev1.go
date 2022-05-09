@@ -36,18 +36,22 @@ import (
 )
 
 type WrappedExampleV1 struct {
-	Cluster  logicalcluster.LogicalCluster
-	Delegate examplev1.ExampleV1Interface
+	cluster  logicalcluster.LogicalCluster
+	delegate examplev1.ExampleV1Interface
+}
+
+func New(cluster logicalcluster.LogicalCluster, delegate examplev1.ExampleV1Interface) *WrappedExampleV1 {
+	return &WrappedExampleV1{cluster: cluster, delegate: delegate}
 }
 
 func (w *WrappedExampleV1) RESTClient() rest.Interface {
-	return w.Delegate.RESTClient()
+	return w.delegate.RESTClient()
 }
 
 func (w *WrappedExampleV1) ClusterTestTypes() examplev1.ClusterTestTypeInterface {
 	return &wrappedClusterTestType{
-		cluster:  w.Cluster,
-		delegate: w.Delegate.ClusterTestTypes(),
+		cluster:  w.cluster,
+		delegate: w.delegate.ClusterTestTypes(),
 	}
 }
 
@@ -140,8 +144,8 @@ func (w *wrappedClusterTestType) Patch(ctx context.Context, name string, pt type
 
 func (w *WrappedExampleV1) TestTypes(namespace string) examplev1.TestTypeInterface {
 	return &wrappedTestType{
-		cluster:  w.Cluster,
-		delegate: w.Delegate.TestTypes(namespace),
+		cluster:  w.cluster,
+		delegate: w.delegate.TestTypes(namespace),
 	}
 }
 

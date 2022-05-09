@@ -1,5 +1,5 @@
 /*
-Copyright The KCP Authors.
+Copyright 2022 The KCP Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -84,10 +84,7 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 
 {{ range .APIs }}
 func (w *wrappedInterface) {{.PkgNameUpperFirst}}{{.VersionUpperFirst}}() {{.PkgName}}{{.Version}}.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}Interface {
-	return &{{.PkgName}}{{.Version}}client.Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}{
-		Cluster:  w.cluster,
-		Delegate: w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}(),
-	}
+	return {{.PkgName}}{{.Version}}client.New(w.cluster, w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}())
 }
 {{ end }}
 
@@ -116,12 +113,16 @@ import (
 )
 
 type Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
-	Cluster  logicalcluster.LogicalCluster
-	Delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
+	cluster  logicalcluster.LogicalCluster
+	delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
+}
+
+func New(cluster logicalcluster.LogicalCluster, delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface) *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{
+	return &Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{cluster: cluster, delegate: delegate}
 }
 
 func (w *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Interface {
-	return w.Delegate.RESTClient()
+	return w.delegate.RESTClient()
 }
 
 `
@@ -129,8 +130,8 @@ func (w *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Int
 const wrapperMethodsTempl = `
 func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
 	return &wrapped{{.Name}}{
-		cluster:  w.Cluster,
-		delegate: w.Delegate.{{.Name}}s{{if .IsNamespaced}}(namespace){{else}}(){{end}},
+		cluster:  w.cluster,
+		delegate: w.delegate.{{.Name}}s{{if .IsNamespaced}}(namespace){{else}}(){{end}},
 	}
 }
 
