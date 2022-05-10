@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package internal
+package clientgen
 
 import (
 	"fmt"
@@ -24,6 +24,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/kcp-dev/code-generator/pkg/util"
 	gentype "k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -117,24 +118,14 @@ func groupVersionsToApis(gvs []gentype.GroupVersions) []api {
 }
 
 func (a *api) setCased() {
-	a.PkgNameUpperFirst = upperFirst(a.PkgName)
-	a.VersionUpperFirst = upperFirst(a.Version)
-	a.NameLowerFirst = lowerFirst(a.Name)
+	a.PkgNameUpperFirst = util.UpperFirst(a.PkgName)
+	a.VersionUpperFirst = util.UpperFirst(a.Version)
+	a.NameLowerFirst = util.LowerFirst(a.Name)
 }
 
 func (p *packages) setCased() {
-	p.NameUpperFirst = upperFirst(p.Name)
-	p.VersionUpperFirst = upperFirst(p.Version)
-}
-
-// lowerFirst sets the first alphabet to lowerCase.
-func lowerFirst(s string) string {
-	return strings.ToLower(string(s[0])) + s[1:]
-}
-
-// upperFirst sets the first alphabet to upperCase/
-func upperFirst(s string) string {
-	return strings.ToUpper(string(s[0])) + s[1:]
+	p.NameUpperFirst = util.UpperFirst(p.Name)
+	p.VersionUpperFirst = util.UpperFirst(p.Version)
 }
 
 // NewPackages returns a new packages instance which is used to write wrapper content.

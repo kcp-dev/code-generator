@@ -62,9 +62,9 @@ codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) build
 		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset \
 		--trim-path-prefix github.com/kcp-dev/code-generator
 
-	# Generate cluster clientset
+	# Generate cluster clientset and listers
 	bin/code-generator \
-		client \
+		client,lister \
 		--clientset-name clusterclient \
 		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
 		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
