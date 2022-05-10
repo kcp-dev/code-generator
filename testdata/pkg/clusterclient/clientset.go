@@ -34,6 +34,10 @@ import (
 	examplev1 "github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned/typed/example/v1"
 )
 
+// NewForConfig creates a new ClusterClient for the given config.
+// It uses a custom round tripper that wraps the given client's
+// endpoint. The clientset returned from NewForConfig is kcp
+// cluster-aware.
 func NewForConfig(config *rest.Config) (*ClusterClient, error) {
 	client, err := rest.HTTPClientFor(config)
 	if err != nil {
@@ -53,10 +57,12 @@ func NewForConfig(config *rest.Config) (*ClusterClient, error) {
 	}, nil
 }
 
+// ClusterClient wraps the underlying interface.
 type ClusterClient struct {
 	delegate versioned.Interface
 }
 
+// Cluster returns a wrapped interface scoped to a particular cluster.
 func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) versioned.Interface {
 	return &wrappedInterface{
 		cluster:  cluster,
@@ -69,10 +75,12 @@ type wrappedInterface struct {
 	delegate versioned.Interface
 }
 
+// Discovery retrieves the DiscoveryClient.
 func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 	return w.delegate.Discovery()
 }
 
+// ExampleV1 retrieves the ExampleV1Client.
 func (w *wrappedInterface) ExampleV1() examplev1.ExampleV1Interface {
 	return examplev1client.New(w.cluster, w.delegate.ExampleV1())
 }
