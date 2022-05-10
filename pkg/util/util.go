@@ -18,9 +18,11 @@ package util
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"golang.org/x/mod/modfile"
@@ -63,15 +65,23 @@ var DefaultValue = func(a, b string) string {
 	return a
 }
 
+const (
+	// Extension for go file.
+	ExtensionGo = ".go"
+)
+
 // CurrentPackage returns the go package of the current directory, or "" if it cannot
 // be derived from the GOPATH.
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
 // directory whose pacakge is to be found.
 func CurrentPackage(dir string) (string, bool) {
-	goModPath, err := getGoModPath(dir)
+	absPath, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return "", false
+	}
+	goModPath, err := getGoModPath(absPath)
+	if err != nil {
+		return "", false
 	}
 
 	// hasGoMod returns true if go.mod was found in the parent dir which was
@@ -85,8 +95,7 @@ func CurrentPackage(dir string) (string, bool) {
 
 	gomod, err := ioutil.ReadFile(filepath.Join(goModPath, "go.mod"))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return "", false
 	}
 	return modfile.ModulePath(gomod), hasGoMod
 }
@@ -143,7 +152,70 @@ func ImportFormat(tag, path string) string {
 	return fmt.Sprintf("%s %q", tag, path)
 }
 
-// upperFirst sets the first alphabet to upperCase
+// GetHeaderText reads the text passed through the file present in the
+// path.
+func GetHeaderText(path string) (string, error) {
+	var headertext string
+	if path != "" {
+		headerBytes, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		headertext = string(headerBytes)
+	}
+	return headertext, nil
+}
+
+// LowerFirst sets the first alphabet to lowerCase.
+func LowerFirst(s string) string {
+	return strings.ToLower(string(s[0])) + s[1:]
+}
+
+// UpperFirst sets the first alphabet to upperCase/
 func UpperFirst(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+// WriteMethods takes in the io.Writer, sort the content
+// based on keys and writes to it.
+func WriteMethods(out io.Writer, byType map[string][]byte) error {
+	sortedNames := make([]string, 0, len(byType))
+	for name := range byType {
+		sortedNames = append(sortedNames, name)
+	}
+	sort.Strings(sortedNames)
+
+	for _, name := range sortedNames {
+		_, err := out.Write(byType[name])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteContent creates a new file under the path output directory with
+// the specified filename and write contents to it.
+func WriteContent(outBytes []byte, filename string, path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err = os.MkdirAll(path, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	outputFile, err := os.Create(filepath.Join(path, filename))
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	n, err := outputFile.Write(outBytes)
+	if err != nil {
+		return err
+	}
+	if n < len(outBytes) {
+		return err
+	}
+	return nil
 }

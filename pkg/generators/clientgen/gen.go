@@ -22,9 +22,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
-	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -35,25 +33,9 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/internal"
+	"github.com/kcp-dev/code-generator/pkg/internal/clientgen"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
-)
-
-var (
-	genclientMarker = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, genclient{}))
-
-	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
-	// markers are not a part of genclient, since they do not accept any values.
-	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
-	noStatusMarker      = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
-	noVerbsMarker       = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
-	readOnlyMarker      = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
-
-	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
-	// controller-tools, comma indicates another argument, as multiple arguments need to provided with a semi-colon separator.
-	skipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
-	onlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
 )
 
 const (
@@ -63,8 +45,6 @@ const (
 	typedPackageName = "typed"
 	// name of the file while wrapped clientset is written.
 	clientSetFilename = "clientset.go"
-	// extension for go file.
-	extensionGo = ".go"
 )
 
 type genclient struct {
@@ -113,13 +93,13 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
 	if err := markers.RegisterAll(
 		reg,
-		genclientMarker,
-		nonNamespacedMarker,
-		noStatusMarker,
-		noVerbsMarker,
-		readOnlyMarker,
-		skipVerbsMarker,
-		onlyVerbsMarker,
+		GenclientMarker,
+		NonNamespacedMarker,
+		NoStatusMarker,
+		NoVerbsMarker,
+		ReadOnlyMarker,
+		SkipVerbsMarker,
+		OnlyVerbsMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -134,10 +114,9 @@ func (g Generator) GetName() string {
 // it calls the custom client genrator to create wrappers. If there are any
 // errors while generating interface wrappers, it prints it out.
 func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
-	if err := validateFlags(f); err != nil {
+	if err := flag.ValidateFlags(f); err != nil {
 		return err
 	}
-
 	if err := g.setDefaults(f); err != nil {
 		return err
 	}
@@ -152,24 +131,6 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	if hadErr {
 		return fmt.Errorf("generator did not run successfully")
 	}
-	return nil
-}
-
-// validateFlags checks if the inputs provided through flags are valid and
-// if so, sets defaults.
-func validateFlags(f flag.Flags) error {
-	if f.InputDir == "" {
-		return errors.New("input path to API definition is required.")
-	}
-
-	if f.ClientsetAPIPath == "" {
-		return errors.New("specifying client API path is required currently.")
-	}
-
-	if len(f.GroupVersions) == 0 {
-		return errors.New("list of group versions for which the clients are to be generated is required.")
-	}
-
 	return nil
 }
 
@@ -207,37 +168,29 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if f.ApplyConfigurationPackage != "" {
 		g.applyConfigGenPkg = f.ApplyConfigurationPackage
 	}
-	g.headerText, err = getHeaderText(f.GoHeaderFilePath)
+	g.headerText, err = util.GetHeaderText(f.GoHeaderFilePath)
 	if err != nil {
 		return err
 	}
-	return g.getGV(f)
-}
-
-// getHeaderText reads the text passed through the file present in the
-// path.
-func getHeaderText(path string) (string, error) {
-	var headertext string
-	if path != "" {
-		headerBytes, err := os.ReadFile(path)
-		if err != nil {
-			return "", err
-		}
-		headertext = string(headerBytes)
+	gvs, err := GetGV(f)
+	if err != nil {
+		return err
 	}
-	return headertext, nil
+	g.groupVersions = append(g.groupVersions, gvs...)
+	return nil
 }
 
-// getGV parses the Group Versions provided in the input through flags
+// GetGV parses the Group Versions provided in the input through flags
 // and creates a list of []types.GroupVersions.
-func (g *Generator) getGV(f flag.Flags) error {
+func GetGV(f flag.Flags) ([]types.GroupVersions, error) {
+	groupVersions := make([]types.GroupVersions, 0)
 	// Its already validated that list of group versions cannot be empty.
 	gvs := f.GroupVersions
 	for _, gv := range gvs {
 		// arr[0] -> group, arr[1] -> versions
 		arr := strings.Split(gv, ":")
 		if len(arr) != 2 {
-			return fmt.Errorf("input to --group-version must be in <group>:<versions> format, ex: rbac:v1. Got %q", gv)
+			return nil, fmt.Errorf("input to --group-version must be in <group>:<versions> format, ex: rbac:v1. Got %q", gv)
 		}
 
 		versions := strings.Split(arr[1], ",")
@@ -250,11 +203,11 @@ func (g *Generator) getGV(f flag.Flags) error {
 			builder := args.NewGroupVersionsBuilder(&groups)
 			_ = args.NewGVPackagesValue(builder, []string{input})
 
-			g.groupVersions = append(g.groupVersions, groups...)
+			groupVersions = append(groupVersions, groups...)
 
 		}
 	}
-	return nil
+	return groupVersions, nil
 }
 
 // generate first generates the wrapper for all the interfaces provided in the input.
@@ -291,7 +244,7 @@ func (g *Generator) writeWrappedClientSet() error {
 		typedPkgPath = filepath.Join(g.outputpkgPaths.basePackage, g.clientsetName)
 	}
 
-	wrappedInf, err := internal.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, typedPkgPath, g.groupVersions, &out)
+	wrappedInf, err := clientgen.NewInterfaceWrapper(g.clientSetAPIPath, g.clientsetName, typedPkgPath, g.groupVersions, &out)
 	if err != nil {
 		return err
 	}
@@ -307,33 +260,7 @@ func (g *Generator) writeWrappedClientSet() error {
 		outBytes = formattedBytes
 	}
 
-	return g.writeContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
-}
-
-// wrtieContents creates a new file under the path <outputDir>/generated with
-// the specified filename and write contents to it.
-func (g *Generator) writeContent(outBytes []byte, filename string, path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err = os.MkdirAll(path, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
-	outputFile, err := os.Create(filepath.Join(path, filename))
-	if err != nil {
-		return err
-	}
-	defer outputFile.Close()
-
-	n, err := outputFile.Write(outBytes)
-	if err != nil {
-		return err
-	}
-	if n < len(outBytes) {
-		return err
-	}
-	return nil
+	return util.WriteContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
 }
 
 func (g *Generator) writeHeader(out io.Writer) error {
@@ -386,7 +313,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			importList := make([]string, 0)
 
 			var outCommonContent bytes.Buffer
-			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, &outCommonContent)
+			pkgmg := clientgen.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, &outCommonContent)
 
 			if err := g.writeHeader(&outCommonContent); err != nil {
 				root.AddError(err)
@@ -396,7 +323,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				var outContent bytes.Buffer
 
 				// if not enabled for this type, skip
-				if !isEnabledForMethod(info) {
+				if !IsEnabledForMethod(info) {
 					return
 				}
 
@@ -424,33 +351,33 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 					// +genclient:skipVerbs=get,update
 				*/
 
-				var additionalMethods []internal.AdditionalMethod
+				var additionalMethods []clientgen.AdditionalMethod
 				var skipVerbs []string
 				var onlyVerbs []string
 
-				genclientMarkers := info.Markers[genclientMarker.Name]
+				genclientMarkers := info.Markers[GenclientMarker.Name]
 
-				namespaceScoped := info.Markers.Get(nonNamespacedMarker.Name) == nil
-				noVerbs := info.Markers.Get(noVerbsMarker.Name) != nil
-				hasStatus := hasStatusSubresource(info)
-				readOnly := info.Markers.Get(readOnlyMarker.Name) != nil
+				namespaceScoped := info.Markers.Get(NonNamespacedMarker.Name) == nil
+				noVerbs := info.Markers.Get(NoVerbsMarker.Name) != nil
+				hasStatus := HasStatusSubresource(info)
+				readOnly := info.Markers.Get(ReadOnlyMarker.Name) != nil
 
 				// Extract values from skip verbs marker.
-				sVerbs := info.Markers.Get(skipVerbsMarker.Name)
+				sVerbs := info.Markers.Get(SkipVerbsMarker.Name)
 				if sVerbs != nil {
 					val, ok := sVerbs.(markers.RawArguments)
 					if !ok {
-						root.AddError(fmt.Errorf("marker defined in wrong format %q", skipVerbsMarker.Name))
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", SkipVerbsMarker.Name))
 					}
 					skipVerbs = strings.Split(string(val), ",")
 				}
 
 				// Extract values from only verbs marker.
-				oVerbs := info.Markers.Get(onlyVerbsMarker.Name)
+				oVerbs := info.Markers.Get(OnlyVerbsMarker.Name)
 				if oVerbs != nil {
 					val, ok := oVerbs.(markers.RawArguments)
 					if !ok {
-						root.AddError(fmt.Errorf("marker defined in wrong format %q", onlyVerbsMarker.Name))
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name))
 					}
 					onlyVerbs = append(onlyVerbs, strings.Split(string(val), ",")...)
 				}
@@ -462,11 +389,11 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				for _, m := range genclientMarkers {
 					gm, ok := m.(genclient)
 					if !ok {
-						root.AddError(fmt.Errorf("marker defined in wrong format %q", genclientMarker.Name))
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", GenclientMarker.Name))
 					}
 
 					if gm.Method != nil {
-						additionalMethod := internal.AdditionalMethod{
+						additionalMethod := clientgen.AdditionalMethod{
 							Method:      gm.Method,
 							Verb:        gm.Verb,
 							Subresource: gm.Subresource,
@@ -510,7 +437,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 					}
 				}
 
-				a, err := internal.NewAPI(
+				a, err := clientgen.NewAPI(
 					root,
 					info,
 					gv.PackageName,
@@ -555,7 +482,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 
 			var outContent bytes.Buffer
 			outContent.Write(outCommonContent.Bytes())
-			err = writeMethods(&outContent, byType)
+			err = util.WriteMethods(&outContent, byType)
 			if err != nil {
 				return err
 			}
@@ -568,8 +495,8 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				outBytes = formattedBytes
 			}
 
-			filename := gv.Group.PackageName() + string(version.Version) + extensionGo
-			err = g.writeContent(outBytes, filename, filepath.Join(g.outputDir, g.clientsetName, typedPackageName, gv.Group.PackageName(), string(version.Version)))
+			filename := gv.Group.PackageName() + string(version.Version) + util.ExtensionGo
+			err = util.WriteContent(outBytes, filename, filepath.Join(g.outputDir, g.clientsetName, typedPackageName, gv.Group.PackageName(), string(version.Version)))
 			if err != nil {
 				root.AddError(err)
 				return err
@@ -579,7 +506,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 	return nil
 }
 
-func verifyAdditionalMethod(m internal.AdditionalMethod) error {
+func verifyAdditionalMethod(m clientgen.AdditionalMethod) error {
 	if m.Verb == nil {
 		return fmt.Errorf("verb type must be specified (use '// +genclient:method=%s,verb=create')", *m.Method)
 	}
@@ -614,45 +541,4 @@ func verifyAdditionalMethod(m internal.AdditionalMethod) error {
 		}
 	}
 	return nil
-}
-
-// isEnabledForMethod verifies if the genclient marker is enabled for
-// this type or not.
-func isEnabledForMethod(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(genclientMarker.Name)
-	return enabled != nil
-}
-
-func writeMethods(out io.Writer, byType map[string][]byte) error {
-	sortedNames := make([]string, 0, len(byType))
-	for name := range byType {
-		sortedNames = append(sortedNames, name)
-	}
-	sort.Strings(sortedNames)
-
-	for _, name := range sortedNames {
-		_, err := out.Write(byType[name])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// hasStatusSubresource verifies if updateStatus verb is to be scaffolded.
-// if `noStatus` marker is present is returns false. Else it checks if
-// the type has Status field.
-func hasStatusSubresource(info *markers.TypeInfo) bool {
-	if info.Markers.Get(noStatusMarker.Name) != nil {
-		return false
-	}
-
-	hasStatusField := false
-	for _, f := range info.Fields {
-		if f.Name == "Status" {
-			hasStatusField = true
-			break
-		}
-	}
-	return hasStatusField
 }

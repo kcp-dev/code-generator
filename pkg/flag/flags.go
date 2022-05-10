@@ -17,6 +17,8 @@ limitations under the License.
 package flag
 
 import (
+	"errors"
+
 	"github.com/spf13/pflag"
 )
 
@@ -48,4 +50,24 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 	flagset.StringArrayVar(&f.GroupVersions, "group-versions", []string{}, "specify group versions for the clients.")
 	flagset.StringVar(&f.GoHeaderFilePath, "go-header-file", "", "path to headerfile for the generated text.")
 	flagset.StringVar(&f.ClientsetName, "clientset-name", "clientset", "the name of the generated clientset package.")
+}
+
+// ValidateFlags checks if the inputs provided through flags are valid and
+// if so, sets defaults.
+// TODO: Remove this and bind options to all the generators, see
+// https://github.com/kcp-dev/code-generator/issues/4
+func ValidateFlags(f Flags) error {
+	if f.InputDir == "" {
+		return errors.New("input path to API definition is required.")
+	}
+
+	if f.ClientsetAPIPath == "" {
+		return errors.New("specifying client API path is required currently.")
+	}
+
+	if len(f.GroupVersions) == 0 {
+		return errors.New("list of group versions for which the clients are to be generated is required.")
+	}
+
+	return nil
 }
