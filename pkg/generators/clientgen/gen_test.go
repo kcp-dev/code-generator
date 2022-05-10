@@ -27,40 +27,7 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/flag"
 )
 
-// TODO: tests are currently broken as they expect a "test" input directory that does not exist.
-var _ = XDescribe("Test generator funcs", func() {
-	Describe("Test validate flags", func() {
-		var (
-			f flag.Flags
-		)
-		BeforeEach(func() {
-			f = flag.Flags{}
-			f.InputDir = "test"
-			f.ClientsetAPIPath = "examples/"
-			f.GroupVersions = []string{"apps:v1"}
-		})
-
-		It("Should not error when input in set right", func() {
-			Expect(validateFlags(f)).NotTo(HaveOccurred())
-		})
-		It("verify input path error", func() {
-			f.InputDir = ""
-			err := validateFlags(f)
-			Expect(err.Error()).To(ContainSubstring("input path to API definition is required."))
-		})
-
-		It("verify clientsetAPI path", func() {
-			f.ClientsetAPIPath = ""
-			err := validateFlags(f)
-			Expect(err.Error()).To(ContainSubstring("specifying client API path is required currently."))
-		})
-
-		It("verify group version list", func() {
-			f.GroupVersions = []string{}
-			err := validateFlags(f)
-			Expect(err.Error()).To(ContainSubstring("list of group versions for which the clients are to be generated is required."))
-		})
-	})
+var _ = Describe("Test generator funcs", func() {
 	Describe("Test setting defaults", func() {
 		var (
 			f flag.Flags
@@ -100,14 +67,11 @@ var _ = XDescribe("Test generator funcs", func() {
 	Describe("Test gv", func() {
 		var (
 			f flag.Flags
-			g *Generator
 		)
 		BeforeEach(func() {
 			f = flag.Flags{}
 			f.InputDir = "test"
 			f.GroupVersions = []string{"apps:v1", "rbac:v2"}
-
-			g = &Generator{}
 		})
 
 		It("should parse Group versions without error", func() {
@@ -131,9 +95,9 @@ var _ = XDescribe("Test generator funcs", func() {
 				},
 			}}
 
-			err := g.getGV(f)
+			gvs, err := GetGV(f)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(g.groupVersions).To(Equal(expected))
+			Expect(gvs).To(Equal(expected))
 		})
 
 		It("should parse multiple Group versions without error", func() {
@@ -158,21 +122,21 @@ var _ = XDescribe("Test generator funcs", func() {
 				},
 			}}
 
-			err := g.getGV(f)
+			gvs, err := GetGV(f)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(g.groupVersions).To(Equal(expected))
+			Expect(gvs).To(Equal(expected))
 		})
 
 		It("should error when wrong input is provided through flag", func() {
 			f.GroupVersions = []string{"apps"}
 
-			err := g.getGV(f)
+			_, err := GetGV(f)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<versions> format, ex: rbac:v1"))
 
 			f.GroupVersions = []string{"apps:v1:v2"}
 
-			err = g.getGV(f)
+			_, err = GetGV(f)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("input to --group-version must be in <group>:<versions> format, ex: rbac:v1"))
 
