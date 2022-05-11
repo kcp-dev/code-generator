@@ -23,7 +23,10 @@ TMPDIR := $(shell mktemp -d)
 CONTROLLER_GEN_VER := v0.8.0
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(TOOLS_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
-export CONTROLLER_GEN # so hack scripts can use it
+
+GOLANGCI_LINT_VER := v1.44.2
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(GOBIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
 
 $(CONTROLLER_GEN):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_VER)
@@ -31,6 +34,13 @@ $(CONTROLLER_GEN):
 .PHONY: codegen
 codegen: $(CONTROLLER_GEN)
 	${CONTROLLER_GEN} object paths=./testdata/pkg/apis/...
+
+$(GOLANGCI_LINT):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)
+
+.PHONY: lint
+lint: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --timeout=10m ./...
 
 # Note, running this locally if you have any modified files, even those that are not generated,
 # will result in an error. This target is mostly for CI jobs.
