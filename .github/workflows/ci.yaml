@@ -39,6 +39,17 @@ jobs:
       - name: Run golangci-lint
         run: make lint
 
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: v1.17
+      - name: Run go test
+        run: make test
+
   verify-codegen:
     name: verify-codegen
     runs-on: ubuntu-latest
