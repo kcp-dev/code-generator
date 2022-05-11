@@ -20,12 +20,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/generators"
-	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	"github.com/kcp-dev/code-generator/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/generators"
+	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
 )
 
 var (
@@ -43,17 +44,17 @@ func main() {
 		Example: `Generate cluster-aware kcp clients from existing code scaffolded by k8.io/code-gen.
 		For example:
 		# To generate client wrappers:
-		code-gen "client" --clientset-name clusterclient --go-header-file testdata/header.txt 
-						  --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
-						  --input-dir github.com/kcp-dev/code-generator/testdata 
-						  --output-dir testdata/pkg 
+		code-gen "client" --clientset-name clusterclient --go-header-file examples/header.txt 
+						  --clientset-api-path=github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned 
+						  --input-dir github.com/kcp-dev/code-generator/examples 
+						  --output-dir examples/pkg 
 						  --group-versions example:v1
 		
 		# To generate listers and informers (Yet to be implemented):
-		code-gen "client,lister,informer" --clientset-name clusterclient --go-header-file testdata/header.txt 
-						  --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
-						  --input-dir github.com/kcp-dev/code-generator/testdata 
-						  --output-dir testdata/pkg 
+		code-gen "client,lister,informer" --clientset-name clusterclient --go-header-file examples/header.txt 
+						  --clientset-api-path=github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned 
+						  --input-dir github.com/kcp-dev/code-generator/examples 
+						  --output-dir examples/pkg 
 						  --group-versions example:v1
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {

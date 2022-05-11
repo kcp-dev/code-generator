@@ -50,27 +50,27 @@ install:
 .PHONY: codegen
 codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) build
 	# Generate deepcopy functions
-	${CONTROLLER_GEN} object paths=./testdata/pkg/apis/...
+	${CONTROLLER_GEN} object paths=./examples/pkg/apis/...
 
 	# Generate standard clientset
 	$(KUBE_CLIENT_GEN) \
 		--clientset-name versioned \
 		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--input-base github.com/kcp-dev/code-generator/testdata/pkg/apis \
+		--input-base github.com/kcp-dev/code-generator/examples/pkg/apis \
 		--input example/v1 \
 		--output-base . \
-		--output-package github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset \
+		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset \
 		--trim-path-prefix github.com/kcp-dev/code-generator
 
 	# Generate cluster clientset
-		bin/code-generator \
-			client \
-			--clientset-name clusterclient \
-			--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-			--clientset-api-path github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned \
-			--input-dir ./testdata/pkg/apis \
-			--output-dir ./testdata/pkg \
-			--group-versions example:v1
+	bin/code-generator \
+		client \
+		--clientset-name clusterclient \
+		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
+		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
+		--input-dir ./examples/pkg/apis \
+		--output-dir ./examples/pkg \
+		--group-versions example:v1
 
 $(GOLANGCI_LINT):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)

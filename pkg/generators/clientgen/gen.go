@@ -250,11 +250,11 @@ func (g *Generator) writeWrappedClientSet() error {
 	// Get the location of the typed wrapped clientset for imports.
 	// Cases handled here, for example the scenarios could be:
 	// Case 1:
-	// if basePkg := k8s.io/kcp-dev; outputPkg := k8s.io/kcp-dev/output/testdata
-	// then typedPkgPath is k8s.io/kcp-dev/output/testdata/
+	// if basePkg := k8s.io/kcp-dev; outputPkg := k8s.io/kcp-dev/output/examples
+	// then typedPkgPath is k8s.io/kcp-dev/output/examples/
 	// Case 2:
-	// if basePkg := k8s.io/kcp-dev; outputPkg := ./output/testdata
-	// then typedPkgPath is k8s.io/kcp-dev/output/testdata/
+	// if basePkg := k8s.io/kcp-dev; outputPkg := ./output/examples
+	// then typedPkgPath is k8s.io/kcp-dev/output/examples/
 	// Case 3:
 	// if basePkg := k8s.io/kcp-dev; outputPkg := .
 	// then typedPkgPath is k8s.io/kcp-dev
