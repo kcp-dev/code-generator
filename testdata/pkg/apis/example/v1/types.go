@@ -16,11 +16,13 @@ limitations under the License.
 
 package v1
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // +genclient
 // TestType is a top-level type. A client is created for it.
 type TestType struct {
 	// +optional
-	APIGroups []string `json:"apiGroups,omitempty" protobuf:"bytes,2,rep,name=apiGroups"`
+	APIGroups []string `json:"apiGroups,omitempty"`
 }
 
 // TestTypeList is a top-level list type. The client methods for lists are automatically created.
@@ -31,19 +33,27 @@ type TestTypeList struct {
 
 // +genclient
 // +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClusterTestType struct {
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Kind is the type of resource being referenced
-	Kind string `json:"kind" protobuf:"bytes,2,opt,name=kind"`
+	Kind string `json:"kind"`
 	// Name is the name of resource being referenced
-	Name string `json:"name" protobuf:"bytes,3,opt,name=name"`
+	Name string `json:"name"`
 	// +optional
 	Status ClusterTestTypeStatus `json:"status,omitempty"`
 }
 
 type ClusterTestTypeStatus struct {
-	Blah string
+	Blah string `json:"blah,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClusterTestTypeList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
 	Items []ClusterTestType `json:"items"`
 }
