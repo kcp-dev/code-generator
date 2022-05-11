@@ -31,3 +31,20 @@ $(CONTROLLER_GEN):
 .PHONY: codegen
 codegen: $(CONTROLLER_GEN)
 	${CONTROLLER_GEN} object paths=./testdata/pkg/apis/...
+
+# Note, running this locally if you have any modified files, even those that are not generated,
+# will result in an error. This target is mostly for CI jobs.
+.PHONY: verify-codegen
+verify-codegen:
+	if [[ -n "${GITHUB_WORKSPACE}" ]]; then \
+		mkdir -p $$(go env GOPATH)/src/github.com/kcp-dev; \
+		ln -s ${GITHUB_WORKSPACE} $$(go env GOPATH)/src/github.com/kcp-dev/code-generator; \
+	fi
+
+	$(MAKE) codegen
+
+	if ! git diff --quiet HEAD; then \
+		git diff; \
+		echo "You need to run 'make codegen' to update generated files and commit them"; \
+		exit 1; \
+	fi
