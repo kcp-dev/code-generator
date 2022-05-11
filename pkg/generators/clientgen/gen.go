@@ -27,15 +27,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/internal"
-	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/args"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	"github.com/kcp-dev/code-generator/pkg/flag"
+	"github.com/kcp-dev/code-generator/pkg/internal"
+	"github.com/kcp-dev/code-generator/pkg/util"
 )
 
 var (
@@ -75,8 +76,6 @@ type Generator struct {
 	clientSetAPIPath string
 	// clientsetName is the name of the generated clientset package.
 	clientsetName string
-	// interface names which are to be wrapped.
-	interfaceName string
 	// GroupVersions for whom the clients are to be generated.
 	groupVersions []types.GroupVersions
 	// headerText is the header text to be added to generated wrappers.
