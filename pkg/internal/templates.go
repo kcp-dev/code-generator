@@ -29,7 +29,7 @@ import (
 	"fmt"
 	
 	kcp "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"{{.ClientsetAPIPath}}"
@@ -72,7 +72,7 @@ type ClusterClient struct {
 }
 
 // Cluster returns a wrapped interface scoped to a particular cluster.
-func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) {{.InterfaceName}}.Interface {
+func (c *ClusterClient) Cluster(cluster logicalcluster.Name) {{.InterfaceName}}.Interface {
 	return &wrappedInterface{
 		cluster:  cluster,
 		delegate: c.delegate,
@@ -80,7 +80,7 @@ func (c *ClusterClient) Cluster(cluster logicalcluster.LogicalCluster) {{.Interf
 }
 
 type wrappedInterface struct {
-	cluster  logicalcluster.LogicalCluster
+	cluster  logicalcluster.Name
 	delegate {{.InterfaceName}}.Interface
 }
 
@@ -116,19 +116,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
 // Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} wraps the client interface with a
 // logical cluster.
 type Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
-	cluster  logicalcluster.LogicalCluster
+	cluster  logicalcluster.Name
 	delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
 }
 
 // New creates a Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} with the given logical cluster and client interface.
-func New(cluster logicalcluster.LogicalCluster, delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface) *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{
+func New(cluster logicalcluster.Name, delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface) *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{
 	return &Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{cluster: cluster, delegate: delegate}
 }
 
@@ -149,7 +149,7 @@ func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s{{if .Is
 }
 
 type wrapped{{.Name}} struct {
-	cluster  logicalcluster.LogicalCluster
+	cluster  logicalcluster.Name
 	delegate {{.PkgName}}{{.Version}}.{{.Name}}Interface
 }
 
