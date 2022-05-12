@@ -41,30 +41,30 @@ import (
 
 // {{.Name}}Lister helps list {{.NameLowerFirst}}.
 // All objects returned here must be treated as read-only.
-type {{.Name}}Lister interface {
+type {{.Name}}ClusterLister interface {
 	// List lists all {{.NameLowerFirst}} in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{$fqkind}}, err error)
 
 	// Cluster returns an object that can list and get {{.NameLowerFirst}} from the given logical cluster.
-	Cluster(cluster logicalcluster.Name) {{.Name}}ClusterLister
+	Cluster(cluster logicalcluster.Name) {{.Name}}Lister
 
 	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
 	// {{.Name}}ListerExpansion
 }
 
-// {{.NameLowerFirst}}Lister implements the {{.Name}}Lister interface.
-type {{.NameLowerFirst}}Lister struct {
+// {{.NameLowerFirst}}ClusterLister implements the {{.Name}}ClusterLister interface.
+type {{.NameLowerFirst}}ClusterLister struct {
 	indexer cache.Indexer
 }
 
-// New{{.Name}}Lister returns a new {{.Name}}Lister.
-func New{{.Name}}Lister(indexer cache.Indexer) {{.Name}}Lister {
-	return &{{.NameLowerFirst}}Lister{indexer: indexer}
+// New{{.Name}}ClusterLister returns a new {{.Name}}ClusterLister.
+func New{{.Name}}ClusterLister(indexer cache.Indexer) {{.Name}}ClusterLister {
+	return &{{.NameLowerFirst}}ClusterLister{indexer: indexer}
 }
 
 // List lists all {{.NameLowerFirst}} in the indexer.
-func (s *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
+func (s *{{.NameLowerFirst}}ClusterLister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*{{$fqkind}}))
 	})
@@ -72,67 +72,91 @@ func (s *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fq
 }
 
 // Cluster returns an object that can list and get {{.NameLowerFirst}}.
-func (s *{{.NameLowerFirst}}Lister) Cluster(cluster logicalcluster.Name) {{.Name}}ClusterLister {
-	return &{{.NameLowerFirst}}ClusterLister{indexer: s.indexer, cluster: cluster}
+func (s *{{.NameLowerFirst}}ClusterLister) Cluster(cluster logicalcluster.Name) {{.Name}}Lister {
+	return &{{.NameLowerFirst}}Lister{indexer: s.indexer, cluster: cluster}
 }
 
 // {{.Name}}Lister helps list {{.NameLowerFirst}}.
 // All objects returned here must be treated as read-only.
-type {{.Name}}ClusterLister interface {
+type {{.Name}}Lister interface {
 	// List lists all {{.NameLowerFirst}} in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{$fqkind}}, err error)
-	// {{.NameLowerFirst}} returns an object that can list and get {{.NameLowerFirst}}.
-	{{.NameLowerFirst}}(namespace string) {{.Name}}NamespaceLister
+	{{ if .IsNamespaced -}}
+	// {{.Name}}s returns an object that can list and get {{.NameLowerFirst}}.
+	{{.Name}}s(namespace string) {{.Name}}NamespaceLister
+	{{ else -}}
+	// Get retrieves the {{.Name}} from the indexer for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*{{$fqkind}}, error)
+	{{ end -}}
 	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
 	// {{.Name}}ListerExpansion
 }
 
-// {{.NameLowerFirst}}ClusterLister implements the {{.Name}}Lister interface.
-type {{.NameLowerFirst}}ClusterLister struct {
+// {{.NameLowerFirst}}Lister implements the {{.Name}}Lister interface.
+type {{.NameLowerFirst}}Lister struct {
 	indexer cache.Indexer
 	cluster logicalcluster.Name
 }
 
 // List lists all {{.NameLowerFirst}} in the indexer.
-func (c *{{.NameLowerFirst}}ClusterLister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
-	list, err := c.indexer.ByIndex(ClusterIndexName, c.cluster.String())
+func (c *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
+	selectAll := selector == nil || selector.Empty()
+
+	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", "")
+	list, err := s.indexer.ByIndex(apimachinerycache.ClusterIndexName, key)
 	if err != nil {
 		return nil, err
 	}
 
-	if selector == nil {
-		selector = labels.Everything()
-	}
 	for i := range list {
 		obj := list[i].(*{{$fqkind}})
-		if selector.Matches(labels.Set(obj.GetLabels())) {
+		if selectAll {
 			ret = append(ret, obj)
+		} else {
+			if selector.Matches(labels.Set(obj.GetLabels())) {
+				ret = append(ret, obj)
+			}
 		}
 	}
 
 	return ret, err
 }
 
+{{ if  not .IsNamespaced -}}
+// Get retrieves the {{.Name}} from the indexer for a given name.
+func (c {{.NameLowerFirst}}Lister) Get(name string) (*{{$fqkind}}, error) {
+	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", name)
+	obj, exists, err := c.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound({{$typepkg}}.Resource("{{.NameLowerFirst}}"), name)
+	}
+	return obj.(*{{$fqkind}}), nil
+}
+{{ else -}}
 // {{.NameLowerFirst}} returns an object that can list and get {{.NameLowerFirst}}.
-func (c *{{.NameLowerFirst}}ClusterLister) {{.NameLowerFirst}}(namespace string) {{.Name}}NamespaceLister {
+func (c *{{.NameLowerFirst}}Lister) {{.Name}}s(namespace string) {{.Name}}NamespaceLister {
 	return {{.NameLowerFirst}}NamespaceLister{indexer: c.indexer, cluster: c.cluster, namespace: namespace}
 }
 
-// ConfigMapNamespaceLister helps list and get {{.NameLowerFirst}}.
+// {{.Name}}NamespaceLister helps list and get {{.NameLowerFirst}}.
 // All objects returned here must be treated as read-only.
-type ConfigMapNamespaceLister interface {
+type {{.Name}}NamespaceLister interface {
 	// List lists all {{.NameLowerFirst}} in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{$fqkind}}, err error)
-	// Get retrieves the ConfigMap from the indexer for a given namespace and name.
+	// Get retrieves the {{.Name}} from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*{{$fqkind}}, error)
 	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
-	// ConfigMapNamespaceListerExpansion
+	// {{.Name}}NamespaceListerExpansion
 }
 
-// {{.NameLowerFirst}}NamespaceLister implements the ConfigMapNamespaceLister
+// {{.NameLowerFirst}}NamespaceLister implements the {{.Name}}NamespaceLister
 // interface.
 type {{.NameLowerFirst}}NamespaceLister struct {
 	indexer   cache.Indexer
@@ -142,35 +166,31 @@ type {{.NameLowerFirst}}NamespaceLister struct {
 
 // List lists all {{.NameLowerFirst}} in the indexer for a given namespace.
 func (c {{.NameLowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
-	list, err := c.indexer.Index(ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
-		ZZZ_DeprecatedClusterName: c.cluster.String(),
-		Namespace:                 c.namespace,
-	})
+	selectAll := selector == nil || selector.Empty()
+
+	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, "")
+	list, err := c.indexer.ByIndex(apimachinerycache.ClusterAndNamespaceIndexName, key)
 	if err != nil {
 		return nil, err
 	}
 
-	if selector == nil {
-		selector = labels.Everything()
-	}
 	for i := range list {
-		cm := list[i].(*{{$fqkind}})
-		if selector.Matches(labels.Set(cm.GetLabels())) {
-			ret = append(ret, cm)
+		obj := list[i].(*{{$fqkind}})
+		if selectAll {
+			ret = append(ret, obj)
+		} else {
+			if selector.Matches(labels.Set(obj.GetLabels())) {
+				ret = append(ret, obj)
+			}
 		}
 	}
-
 	return ret, err
 }
 
-// Get retrieves the ConfigMap from the indexer for a given namespace and name.
+// Get retrieves the {{.Name}} from the indexer for a given namespace and name.
 func (c {{.NameLowerFirst}}NamespaceLister) Get(name string) (*{{$fqkind}}, error) {
-	meta := &metav1.ObjectMeta{
-		ZZZ_DeprecatedClusterName: c.cluster.String(),
-		Namespace:                 c.namespace,
-		Name:                      name,
-	}
-	obj, exists, err := c.indexer.Get(meta)
+	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, name)
+	obj, exists, err := c.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +199,7 @@ func (c {{.NameLowerFirst}}NamespaceLister) Get(name string) (*{{$fqkind}}, erro
 	}
 	return obj.(*{{$fqkind}}), nil
 }
+{{ end -}}
 `
 
 // Do we make this configurable?
