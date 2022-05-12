@@ -23,6 +23,7 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/flag"
 	"github.com/kcp-dev/code-generator/pkg/generators"
 	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
+	"github.com/kcp-dev/code-generator/pkg/generators/listergen"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -31,6 +32,7 @@ import (
 var (
 	allGenerators = map[string]generators.Generator{
 		"client": clientgen.Generator{},
+		"lister": listergen.Generator{},
 	}
 )
 

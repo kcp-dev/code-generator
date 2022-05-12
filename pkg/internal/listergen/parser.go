@@ -33,13 +33,14 @@ type api struct {
 	Name         string
 	Version      string
 	PkgName      string
-	writer       io.Writer
+	writer       *io.Writer
 	IsNamespaced bool
+	APIPath      string
 
 	NameLowerFirst string
 }
 
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, isNamespaced bool, w io.Writer) (*api, error) {
+func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group, apiPath string, isNamespaced bool, w io.Writer) (*api, error) {
 	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
 	if typeInfo == types.Typ[types.Invalid] {
 		return nil, fmt.Errorf("unknown type: %s", info.Name)
@@ -49,8 +50,9 @@ func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string,
 		Name:         info.RawSpec.Name.Name,
 		Version:      version,
 		PkgName:      group,
-		writer:       w,
+		writer:       &w,
 		IsNamespaced: isNamespaced,
+		APIPath:      apiPath,
 	}
 
 	api.setCased()
@@ -62,9 +64,9 @@ func (a *api) setCased() {
 }
 
 func (a *api) WriteContent() error {
-	templ, err := template.New("wrapper").Parse(apiWrapper)
+	templ, err := template.New("api").Parse(apiWrapper)
 	if err != nil {
 		return err
 	}
-	return templ.Execute(a.writer, a)
+	return templ.Execute(*a.writer, a)
 }
