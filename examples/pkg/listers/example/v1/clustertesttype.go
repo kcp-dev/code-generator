@@ -7,8 +7,8 @@
 package v1
 
 import (
-	ClusterTestTypeapiv1 "github.com/kcp-dev/code-generator/testdata/pkg/apis/example/v1"
-	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	ClusterTestTypeapiv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
+	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,14 +17,14 @@ import (
 )
 
 // Cluster returns an object that can list and get ClusterTestType.
-func (s *clusterTestTypeLister) Cluster(cluster logicalcluster.LogicalCluster) ClusterTestTypeClusterLister {
+func (s *clusterTestTypeLister) Cluster(cluster logicalcluster.Name) ClusterTestTypeClusterLister {
 	return &clusterTestTypeClusterLister{indexer: s.indexer, cluster: cluster}
 }
 
 // clusterTestTypeLister implements the ClusterTestTypeLister interface.
 type clusterTestTypeClusterLister struct {
 	indexer cache.Indexer
-	cluster logicalcluster.LogicalCluster
+	cluster logicalcluster.Name
 }
 
 // List lists all ClusterTestType in the indexer.

@@ -26,7 +26,7 @@ package {{.Version}}
 
 import (
 	{{.Name}}api{{.Version}} "{{.APIPath}}"
-	"github.com/kcp-dev/apimachinery/pkg/logicalcluster"
+	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,14 +35,14 @@ import (
 )
 
 // Cluster returns an object that can list and get {{.Name}}.
-func (s *{{.NameLowerFirst}}Lister) Cluster(cluster logicalcluster.LogicalCluster) {{.Name}}ClusterLister {
+func (s *{{.NameLowerFirst}}Lister) Cluster(cluster logicalcluster.Name) {{.Name}}ClusterLister {
 	return &{{.NameLowerFirst}}ClusterLister{indexer: s.indexer, cluster: cluster}
 }
 
 // {{.NameLowerFirst}}Lister implements the {{.Name}}Lister interface.
 type {{.NameLowerFirst}}ClusterLister struct {
 	indexer cache.Indexer
-	cluster logicalcluster.LogicalCluster
+	cluster logicalcluster.Name
 }
 
 // List lists all {{.Name}} in the indexer.
@@ -87,7 +87,7 @@ type {{.Name}}NamespaceLister interface {
 // interface.
 type {{.NameLowerFirst}}NamespaceLister struct {
 	indexer   cache.Indexer
-	cluster   logicalcluster.LogicalCluster
+	cluster   logicalcluster.Name
 	namespace string
 }
 
