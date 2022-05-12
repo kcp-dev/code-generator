@@ -57,15 +57,18 @@ func CurrentPackage(dir string) (string, bool) {
 // getGoModPath recursively traverses up the directory path
 // to find the location of go.mod file.
 func getGoModPath(dir string) (string, error) {
-	// fix the case where this function could recursively run
-	// for "." in case go.mod is not found. It can cause the
-	// stack to overflow and run infinitely.
-	if dir == "/" {
-		return "", fmt.Errorf("could not find go.mod")
+	if _, err := os.Stat(dir); err != nil {
+		return "", fmt.Errorf("error trying to find go.mod from directory %s: %w", dir, err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 		return dir, nil
 	}
+
+	if filepath.Dir(dir) == dir {
+		// Hit the root
+		return "", fmt.Errorf("could not find go.mod")
+	}
+
 	return getGoModPath(filepath.Dir(dir))
 }
 
