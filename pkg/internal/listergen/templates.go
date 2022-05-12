@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 )
 
 // Cluster returns an object that can list and get {{.Name}}.
@@ -46,7 +47,7 @@ type {{.NameLowerFirst}}ClusterLister struct {
 
 // List lists all {{.Name}} in the indexer.
 func (c *{{.NameLowerFirst}}ClusterLister) List(selector labels.Selector) (ret []*{{.PkgName}}{{.Version}}.{{.Name}}, err error) {
-	list, err := c.indexer.ByIndex(example.ClusterIndexName, c.cluster.String())
+	list, err := c.indexer.ByIndex(apimachinerycache.ClusterIndexName, c.cluster.String())
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ type {{.NameLowerFirst}}NamespaceLister struct {
 
 // List lists all {{.Name}}s in the indexer for a given namespace.
 func (c {{.NameLowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{.PkgName}}{{.Version}}.{{.Name}}, err error) {
-	list, err := c.indexer.Index({$$$$$$$}.ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
+	list, err := c.indexer.Index(apimachinerycache.ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
 		ZZZ_DeprecatedClusterName: c.cluster.String(),
 		Namespace:                 c.namespace,
 	})

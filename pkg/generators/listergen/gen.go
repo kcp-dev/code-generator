@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"go/format"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
 	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
@@ -88,6 +88,13 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 		return err
 	}
 
+	// print all the errors consolidated from packages in the generation context.
+	// skip the type errors since they occur when input path does not contain
+	// go.mod files.
+	hadErr := loader.PrintErrors(ctx.Roots, packages.TypeError)
+	if hadErr {
+		return fmt.Errorf("generator did not run successfully")
+	}
 	return nil
 }
 
@@ -160,7 +167,7 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 					return
 				}
 
-				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, !clientgen.IsClusterScoped(info), &outContent)
+				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, path, !clientgen.IsClusterScoped(info), &outContent)
 				if err != nil {
 					root.AddError(err)
 					return
@@ -184,31 +191,14 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 				return nil
 			}
 
-			var outContent bytes.Buffer
-			outContent.Write(outCommonContent.Bytes())
-			err = util.WriteMethods(&outContent, byType)
-			if err != nil {
-				return err
+			for typeName, content := range byType {
+				filename := strings.ToLower(typeName) + util.ExtensionGo
+				err = util.WriteContent(content, filename, filepath.Join(g.outputDir, "listers", gv.Group.PackageName(), string(version.Version)))
+				if err != nil {
+					fmt.Println(err)
+					root.AddError(err)
+				}
 			}
-
-			outBytes := outContent.Bytes()
-			formattedBytes, err := format.Source(outBytes)
-			if err != nil {
-				root.AddError(err)
-			} else {
-				outBytes = formattedBytes
-			}
-
-			filename := gv.Group.PackageName() + string(version.Version) + util.ExtensionGo
-
-			// TODO: figure out which output file to write to and its path. Should it be appended
-			// or a new file is to be created?
-			err = util.WriteContent(outBytes, filename, filepath.Join(g.outputDir, "listers", gv.Group.PackageName(), string(version.Version)))
-			if err != nil {
-				root.AddError(err)
-				return err
-			}
-
 		}
 	}
 
