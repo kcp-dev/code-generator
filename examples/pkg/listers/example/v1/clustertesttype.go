@@ -6,8 +6,10 @@
 
 package v1
 
+
+
 import (
-	ClusterTestTypeapiv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
+	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
 	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
@@ -16,20 +18,66 @@ import (
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 )
 
-// Cluster returns an object that can list and get ClusterTestType.
+
+
+// ClusterTestTypeLister helps list clusterTestType.
+// All objects returned here must be treated as read-only.
+type ClusterTestTypeLister interface {
+	// List lists all clusterTestType in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error)
+
+	// Cluster returns an object that can list and get clusterTestType from the given logical cluster.
+	Cluster(cluster logicalcluster.Name) ClusterTestTypeClusterLister
+
+	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
+	// ClusterTestTypeListerExpansion
+}
+
+// clusterTestTypeLister implements the ClusterTestTypeLister interface.
+type clusterTestTypeLister struct {
+	indexer cache.Indexer
+}
+
+// NewClusterTestTypeLister returns a new ClusterTestTypeLister.
+func NewClusterTestTypeLister(indexer cache.Indexer) ClusterTestTypeLister {
+	return &clusterTestTypeLister{indexer: indexer}
+}
+
+// List lists all clusterTestType in the indexer.
+func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*examplev1.ClusterTestType))
+	})
+	return ret, err
+}
+
+// Cluster returns an object that can list and get clusterTestType.
 func (s *clusterTestTypeLister) Cluster(cluster logicalcluster.Name) ClusterTestTypeClusterLister {
 	return &clusterTestTypeClusterLister{indexer: s.indexer, cluster: cluster}
 }
 
-// clusterTestTypeLister implements the ClusterTestTypeLister interface.
+// ClusterTestTypeLister helps list clusterTestType.
+// All objects returned here must be treated as read-only.
+type ClusterTestTypeClusterLister interface {
+	// List lists all clusterTestType in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error)
+	// clusterTestType returns an object that can list and get clusterTestType.
+	clusterTestType(namespace string) ClusterTestTypeNamespaceLister
+	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
+	// ClusterTestTypeListerExpansion
+}
+
+// clusterTestTypeClusterLister implements the ClusterTestTypeLister interface.
 type clusterTestTypeClusterLister struct {
 	indexer cache.Indexer
 	cluster logicalcluster.Name
 }
 
-// List lists all ClusterTestType in the indexer.
+// List lists all clusterTestType in the indexer.
 func (c *clusterTestTypeClusterLister) List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error) {
-	list, err := c.indexer.ByIndex(apimachinerycache.ClusterIndexName, c.cluster.String())
+	list, err := c.indexer.ByIndex(ClusterIndexName, c.cluster.String())
 	if err != nil {
 		return nil, err
 	}
@@ -47,4 +95,68 @@ func (c *clusterTestTypeClusterLister) List(selector labels.Selector) (ret []*ex
 	return ret, err
 }
 
+// clusterTestType returns an object that can list and get clusterTestType.
+func (c *clusterTestTypeClusterLister) clusterTestType(namespace string) ClusterTestTypeNamespaceLister {
+	return clusterTestTypeNamespaceLister{indexer: c.indexer, cluster: c.cluster, namespace: namespace}
+}
 
+// ConfigMapNamespaceLister helps list and get clusterTestType.
+// All objects returned here must be treated as read-only.
+type ConfigMapNamespaceLister interface {
+	// List lists all clusterTestType in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error)
+	// Get retrieves the ConfigMap from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*examplev1.ClusterTestType, error)
+	// Note(kcp): Workspace-capable Lister implementation doesn't support support expansions.
+	// ConfigMapNamespaceListerExpansion
+}
+
+// clusterTestTypeNamespaceLister implements the ConfigMapNamespaceLister
+// interface.
+type clusterTestTypeNamespaceLister struct {
+	indexer   cache.Indexer
+	cluster   logicalcluster.Name
+	namespace string
+}
+
+// List lists all clusterTestType in the indexer for a given namespace.
+func (c clusterTestTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error) {
+	list, err := c.indexer.Index(ClusterAndNamespaceIndexName, &metav1.ObjectMeta{
+		ZZZ_DeprecatedClusterName: c.cluster.String(),
+		Namespace:                 c.namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if selector == nil {
+		selector = labels.Everything()
+	}
+	for i := range list {
+		cm := list[i].(*examplev1.ClusterTestType)
+		if selector.Matches(labels.Set(cm.GetLabels())) {
+			ret = append(ret, cm)
+		}
+	}
+
+	return ret, err
+}
+
+// Get retrieves the ConfigMap from the indexer for a given namespace and name.
+func (c clusterTestTypeNamespaceLister) Get(name string) (*examplev1.ClusterTestType, error) {
+	meta := &metav1.ObjectMeta{
+		ZZZ_DeprecatedClusterName: c.cluster.String(),
+		Namespace:                 c.namespace,
+		Name:                      name,
+	}
+	obj, exists, err := c.indexer.Get(meta)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(examplev1.Resource("clusterTestType"), name)
+	}
+	return obj.(*examplev1.ClusterTestType), nil
+}

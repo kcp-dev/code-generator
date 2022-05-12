@@ -19,8 +19,8 @@ package listergen
 import (
 	"fmt"
 	"go/types"
-	"html/template"
 	"io"
+	"text/template"
 
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"sigs.k8s.io/controller-tools/pkg/loader"
