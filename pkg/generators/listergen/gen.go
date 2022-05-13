@@ -166,6 +166,9 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 				if !clientgen.IsEnabledForMethod(info) {
 					return
 				}
+				if err := g.writeHeader(&outContent); err != nil {
+					root.AddError(err)
+				}
 
 				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, path, !clientgen.IsClusterScoped(info), &outContent)
 				if err != nil {
