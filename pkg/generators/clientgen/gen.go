@@ -40,12 +40,15 @@ import (
 )
 
 var (
-	// RuleDefinition is a marker for defining rules
-	ruleDefinition = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, placeholder{}))
-	// nonNamespacedMarker checks if resource is namespaced or clusterscoped
-	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, placeholder{}))
-	// noStatusMarker checks if status is to scaffolded
-	noStatusMarker = markers.Must(markers.MakeDefinition("+genclient:noStatus", markers.DescribesType, placeholder{}))
+	genclientMarker = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, genclient{}))
+
+	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
+
+	noStatusMarker = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
+
+	noVerbsMarker = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
+
+	readOnlyMarker = markers.Must(markers.MakeDefinition("genclient:readOnly", markers.DescribesType, struct{}{}))
 )
 
 const (
@@ -59,9 +62,19 @@ const (
 	extensionGo = ".go"
 )
 
-// Assigning marker's output to a placeholder struct, to verify to
-// typecast the result and make sure if it exists for the type.
-type placeholder struct{}
+type genclient struct {
+	Method      *string
+	Verb        *[]string
+	Subresource *string
+	Input       *string
+	Result      *string
+
+	// ReadOnly bool
+
+	OnlyVerbs *[]string
+
+	SkipVerbs *[]string
+}
 
 type Generator struct {
 	// inputDir is the path where types are defined.
@@ -97,7 +110,14 @@ type pkgPaths struct {
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
-	if err := markers.RegisterAll(reg, ruleDefinition, nonNamespacedMarker, noStatusMarker); err != nil {
+	if err := markers.RegisterAll(
+		reg,
+		genclientMarker,
+		nonNamespacedMarker,
+		noStatusMarker,
+		noVerbsMarker,
+		readOnlyMarker,
+	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
 	return reg, nil
@@ -376,7 +396,74 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 					return
 				}
 
-				a, err := internal.NewAPI(root, info, string(version.Version), gv.PackageName, !isClusterScoped(info), hasStatusSubresource(info), &outContent)
+				/*
+					This is the current list of unique genclient markers as of 1.23
+
+					// +genclient
+					// +genclient:method=ApplyScale,verb=apply,subresource=scale,input=Scale,result=Scale
+					// +genclient:method=ApplyScale,verb=apply,subresource=scale,input=k8s.io/api/autoscaling/v1.Scale,result=k8s.io/api/autoscaling/v1.Scale
+					// +genclient:method=CreateScale,verb=create,subresource=scale,input=k8s.io/api/autoscaling/v1.Scale,result=k8s.io/api/autoscaling/v1.Scale
+					// +genclient:method=CreateToken,verb=create,subresource=token,input=k8s.io/api/authentication/v1.TokenRequest,result=k8s.io/api/authentication/v1.TokenRequest
+					// +genclient:method=GetScale,verb=get,subresource=scale,result=Scale
+					// +genclient:method=GetScale,verb=get,subresource=scale,result=k8s.io/api/autoscaling/v1.Scale
+					// +genclient:method=UpdateApproval,verb=update,subresource=approval,input=k8s.io/api/certificates/v1.CertificateSigningRequest,result=k8s.io/api/certificates/v1.CertificateSigningRequest
+					// +genclient:method=UpdateEphemeralContainers,verb=update,subresource=ephemeralcontainers
+					// +genclient:method=UpdateScale,verb=update,subresource=scale,input=Scale,result=Scale
+					// +genclient:method=UpdateScale,verb=update,subresource=scale,input=k8s.io/api/autoscaling/v1.Scale,result=k8s.io/api/autoscaling/v1.Scale
+					// +genclient:noStatus
+					// +genclient:nonNamespaced
+					// +genclient:noVerbs
+					// +genclient:onlyVerbs=create
+					// +genclient:onlyVerbs=create,delete
+					// +genclient:readonly
+					// +genclient:skipVerbs=deleteCollection
+					// +genclient:skipVerbs=get,update
+				*/
+
+				var additionalMethods []internal.AdditionalMethod
+				var skipVerbs []string
+				var onlyVerbs []string
+
+				genclientMarkers := info.Markers[genclientMarker.Name]
+				for _, m := range genclientMarkers {
+					gm := m.(genclient)
+
+					if gm.Method != nil {
+						additionalMethods = append(additionalMethods, internal.AdditionalMethod{
+							Method:      gm.Method,
+							Verb:        gm.Verb,
+							Subresource: gm.Subresource,
+							Input:       gm.Input,
+							Result:      gm.Result,
+						})
+					}
+
+					if gm.SkipVerbs != nil {
+						skipVerbs = *gm.SkipVerbs
+					}
+
+					if gm.OnlyVerbs != nil {
+						onlyVerbs = *gm.OnlyVerbs
+					}
+				}
+
+				namespaceScoped := info.Markers.Get(nonNamespacedMarker.Name) == nil
+				noVerbs := info.Markers.Get(noVerbsMarker.Name) != nil
+				hasStatus := info.Markers.Get(noStatusMarker.Name) == nil
+
+				a, err := internal.NewAPI(
+					root,
+					info,
+					gv.PackageName,
+					string(version.Version),
+					namespaceScoped,
+					additionalMethods,
+					skipVerbs,
+					onlyVerbs,
+					noVerbs,
+					hasStatus,
+					&outContent,
+				)
 				if err != nil {
 					root.AddError(err)
 					return
@@ -429,7 +516,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 // isEnabledForMethod verifies if the genclient marker is enabled for
 // this type or not.
 func isEnabledForMethod(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(ruleDefinition.Name)
+	enabled := info.Markers.Get(genclientMarker.Name)
 	return enabled != nil
 }
 
