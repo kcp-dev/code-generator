@@ -27,7 +27,6 @@ import (
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
 	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
-	genclientmarker "github.com/kcp-dev/code-generator/pkg/generators/clientgen"
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
@@ -68,7 +67,12 @@ type pkgPaths struct {
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
-	if err := markers.RegisterAll(reg, genclientmarker.GenclientMarker, genclientmarker.NonNamespacedMarker); err != nil {
+	if err := markers.RegisterAll(reg,
+		clientgen.GenclientMarker,
+		clientgen.NonNamespacedMarker,
+		clientgen.SkipVerbsMarker,
+		clientgen.OnlyVerbsMarker,
+	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
 	return reg, nil
