@@ -58,16 +58,6 @@ type interfaceWrapper struct {
 	writer *io.Writer
 }
 
-// api contains info about each type
-type api struct {
-	Name         string
-	Version      string
-	PkgName      string
-	writer       io.Writer
-	IsNamespaced bool
-	HasStatus    bool
-}
-
 // packages stores the info used to scaffold wrapped interfaces content
 type packages struct {
 	Name       string
@@ -152,19 +142,54 @@ func (p *packages) WriteContent() error {
 	return templ.Execute(p.writer, p)
 }
 
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, isNamespaced bool, hasStatus bool, w io.Writer) (*api, error) {
+// api contains info about each type
+type api struct {
+	Name              string
+	PkgName           string
+	Version           string
+	IsNamespaced      bool
+	AdditionalMethods []AdditionalMethod
+	SkipVerbs         []string
+	OnlyVerbs         []string
+	NoVerbs           bool
+	HasStatus         bool
+	writer            io.Writer
+}
+
+type AdditionalMethod struct {
+	Method      *string
+	Verb        *[]string
+	Subresource *string
+	Input       *string
+	Result      *string
+}
+
+func NewAPI(
+	root *loader.Package,
+	info *markers.TypeInfo,
+	group, version string,
+	namespaceScoped bool,
+	additionalMethods []AdditionalMethod,
+	skipVerbs, onlyVerbs []string,
+	noVerbs, hasStatus bool,
+	w io.Writer,
+) (*api, error) {
 	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
 	if typeInfo == types.Typ[types.Invalid] {
 		return nil, fmt.Errorf("unknown type: %s", info.Name)
 	}
 
 	api := &api{
-		Name:         info.RawSpec.Name.Name,
-		Version:      version,
-		PkgName:      group,
-		writer:       w,
-		IsNamespaced: isNamespaced,
-		HasStatus:    hasStatus,
+		Name:              info.RawSpec.Name.Name,
+		PkgName:           group,
+		Version:           version,
+		IsNamespaced:      namespaceScoped,
+		AdditionalMethods: additionalMethods,
+		SkipVerbs:         skipVerbs,
+		OnlyVerbs:         onlyVerbs,
+		NoVerbs:           noVerbs,
+		HasStatus:         hasStatus,
+		writer:            w,
 	}
 	return api, nil
 }
