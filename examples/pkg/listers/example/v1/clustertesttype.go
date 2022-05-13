@@ -13,7 +13,6 @@ import (
 	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 )
@@ -77,10 +76,10 @@ type clusterTestTypeLister struct {
 }
 
 // List lists all clusterTestType in the indexer.
-func (c *clusterTestTypeLister) List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error) {
+func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*examplev1.ClusterTestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", "")
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", "")
 	list, err := s.indexer.ByIndex(apimachinerycache.ClusterIndexName, key)
 	if err != nil {
 		return nil, err
@@ -101,9 +100,9 @@ func (c *clusterTestTypeLister) List(selector labels.Selector) (ret []*examplev1
 }
 
 // Get retrieves the ClusterTestType from the indexer for a given name.
-func (c clusterTestTypeLister) Get(name string) (*examplev1.ClusterTestType, error) {
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", name)
-	obj, exists, err := c.indexer.GetByKey(key)
+func (s clusterTestTypeLister) Get(name string) (*examplev1.ClusterTestType, error) {
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

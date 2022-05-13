@@ -32,7 +32,6 @@ import (
 	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 )
@@ -101,10 +100,10 @@ type {{.NameLowerFirst}}Lister struct {
 }
 
 // List lists all {{.NameLowerFirst}} in the indexer.
-func (c *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
+func (s *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", "")
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", "")
 	list, err := s.indexer.ByIndex(apimachinerycache.ClusterIndexName, key)
 	if err != nil {
 		return nil, err
@@ -126,9 +125,9 @@ func (c *{{.NameLowerFirst}}Lister) List(selector labels.Selector) (ret []*{{$fq
 
 {{ if  not .IsNamespaced -}}
 // Get retrieves the {{.Name}} from the indexer for a given name.
-func (c {{.NameLowerFirst}}Lister) Get(name string) (*{{$fqkind}}, error) {
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", name)
-	obj, exists, err := c.indexer.GetByKey(key)
+func (s {{.NameLowerFirst}}Lister) Get(name string) (*{{$fqkind}}, error) {
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +138,8 @@ func (c {{.NameLowerFirst}}Lister) Get(name string) (*{{$fqkind}}, error) {
 }
 {{ else -}}
 // {{.NameLowerFirst}} returns an object that can list and get {{.NameLowerFirst}}.
-func (c *{{.NameLowerFirst}}Lister) {{.Name}}s(namespace string) {{.Name}}NamespaceLister {
-	return {{.NameLowerFirst}}NamespaceLister{indexer: c.indexer, cluster: c.cluster, namespace: namespace}
+func (s *{{.NameLowerFirst}}Lister) {{.Name}}s(namespace string) {{.Name}}NamespaceLister {
+	return {{.NameLowerFirst}}NamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
 }
 
 // {{.Name}}NamespaceLister helps list and get {{.NameLowerFirst}}.
@@ -165,11 +164,11 @@ type {{.NameLowerFirst}}NamespaceLister struct {
 }
 
 // List lists all {{.NameLowerFirst}} in the indexer for a given namespace.
-func (c {{.NameLowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
+func (s {{.NameLowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{$fqkind}}, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, "")
-	list, err := c.indexer.ByIndex(apimachinerycache.ClusterAndNamespaceIndexName, key)
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, "")
+	list, err := s.indexer.ByIndex(apimachinerycache.ClusterAndNamespaceIndexName, key)
 	if err != nil {
 		return nil, err
 	}
@@ -188,9 +187,9 @@ func (c {{.NameLowerFirst}}NamespaceLister) List(selector labels.Selector) (ret 
 }
 
 // Get retrieves the {{.Name}} from the indexer for a given namespace and name.
-func (c {{.NameLowerFirst}}NamespaceLister) Get(name string) (*{{$fqkind}}, error) {
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, name)
-	obj, exists, err := c.indexer.GetByKey(key)
+func (s {{.NameLowerFirst}}NamespaceLister) Get(name string) (*{{$fqkind}}, error) {
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

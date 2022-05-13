@@ -13,7 +13,6 @@ import (
 	"github.com/kcp-dev/logicalcluster"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 )
@@ -76,10 +75,10 @@ type testTypeLister struct {
 }
 
 // List lists all testType in the indexer.
-func (c *testTypeLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
+func (s *testTypeLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), "", "")
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", "")
 	list, err := s.indexer.ByIndex(apimachinerycache.ClusterIndexName, key)
 	if err != nil {
 		return nil, err
@@ -100,8 +99,8 @@ func (c *testTypeLister) List(selector labels.Selector) (ret []*examplev1.TestTy
 }
 
 // testType returns an object that can list and get testType.
-func (c *testTypeLister) TestTypes(namespace string) TestTypeNamespaceLister {
-	return testTypeNamespaceLister{indexer: c.indexer, cluster: c.cluster, namespace: namespace}
+func (s *testTypeLister) TestTypes(namespace string) TestTypeNamespaceLister {
+	return testTypeNamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
 }
 
 // TestTypeNamespaceLister helps list and get testType.
@@ -126,11 +125,11 @@ type testTypeNamespaceLister struct {
 }
 
 // List lists all testType in the indexer for a given namespace.
-func (c testTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
+func (s testTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, "")
-	list, err := c.indexer.ByIndex(apimachinerycache.ClusterAndNamespaceIndexName, key)
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, "")
+	list, err := s.indexer.ByIndex(apimachinerycache.ClusterAndNamespaceIndexName, key)
 	if err != nil {
 		return nil, err
 	}
@@ -149,9 +148,9 @@ func (c testTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev
 }
 
 // Get retrieves the TestType from the indexer for a given namespace and name.
-func (c testTypeNamespaceLister) Get(name string) (*examplev1.TestType, error) {
-	key := apimachinerycache.ToClusterAwareKey(c.cluster.String(), c.namespace, name)
-	obj, exists, err := c.indexer.GetByKey(key)
+func (s testTypeNamespaceLister) Get(name string) (*examplev1.TestType, error) {
+	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
