@@ -37,18 +37,23 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/flag"
 	"github.com/kcp-dev/code-generator/pkg/internal"
 	"github.com/kcp-dev/code-generator/pkg/util"
+	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 )
 
 var (
 	genclientMarker = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, genclient{}))
 
+	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
+	// markers are not a part of genclient, since they do not accept any values.
 	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
+	noStatusMarker      = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
+	noVerbsMarker       = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
+	readOnlyMarker      = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
 
-	noStatusMarker = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
-
-	noVerbsMarker = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
-
-	readOnlyMarker = markers.Must(markers.MakeDefinition("genclient:readOnly", markers.DescribesType, struct{}{}))
+	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
+	// controller-tools, comma indicates another argument, as multiple arguments need to provided with a semi-colon separator.
+	skipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
+	onlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
 )
 
 const (
@@ -64,16 +69,10 @@ const (
 
 type genclient struct {
 	Method      *string
-	Verb        *[]string
+	Verb        *string
 	Subresource *string
 	Input       *string
 	Result      *string
-
-	// ReadOnly bool
-
-	OnlyVerbs *[]string
-
-	SkipVerbs *[]string
 }
 
 type Generator struct {
@@ -87,6 +86,8 @@ type Generator struct {
 	outputDir string
 	// path to where generated clientsets are found.
 	clientSetAPIPath string
+	// path to optional apply-config-gen packages.
+	applyConfigGenPkg string
 	// clientsetName is the name of the generated clientset package.
 	clientsetName string
 	// GroupVersions for whom the clients are to be generated.
@@ -117,6 +118,8 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 		noStatusMarker,
 		noVerbsMarker,
 		readOnlyMarker,
+		skipVerbsMarker,
+		onlyVerbsMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -200,6 +203,9 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	}
 	if f.ClientsetName != "" {
 		g.clientsetName = f.ClientsetName
+	}
+	if f.ApplyConfigurationPackage != "" {
+		g.applyConfigGenPkg = f.ApplyConfigurationPackage
 	}
 	g.headerText, err = getHeaderText(f.GoHeaderFilePath)
 	if err != nil {
@@ -377,14 +383,12 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			// this is to accomodate multiple types defined in single group
 			byType := make(map[string][]byte)
 
+			importList := make([]string, 0)
+
 			var outCommonContent bytes.Buffer
 			pkgmg := internal.NewPackages(root, path, g.clientSetAPIPath, string(version.Version), gv.PackageName, &outCommonContent)
 
 			if err := g.writeHeader(&outCommonContent); err != nil {
-				root.AddError(err)
-			}
-			err = pkgmg.WriteContent()
-			if err != nil {
 				root.AddError(err)
 			}
 
@@ -425,39 +429,96 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				var onlyVerbs []string
 
 				genclientMarkers := info.Markers[genclientMarker.Name]
+
+				namespaceScoped := info.Markers.Get(nonNamespacedMarker.Name) == nil
+				noVerbs := info.Markers.Get(noVerbsMarker.Name) != nil
+				hasStatus := hasStatusSubresource(info)
+				readOnly := info.Markers.Get(readOnlyMarker.Name) != nil
+
+				// Extract values from skip verbs marker.
+				sVerbs := info.Markers.Get(skipVerbsMarker.Name)
+				if sVerbs != nil {
+					val, ok := sVerbs.(markers.RawArguments)
+					if !ok {
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", skipVerbsMarker.Name))
+					}
+					skipVerbs = strings.Split(string(val), ",")
+				}
+
+				// Extract values from only verbs marker.
+				oVerbs := info.Markers.Get(onlyVerbsMarker.Name)
+				if oVerbs != nil {
+					val, ok := oVerbs.(markers.RawArguments)
+					if !ok {
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", onlyVerbsMarker.Name))
+					}
+					onlyVerbs = append(onlyVerbs, strings.Split(string(val), ",")...)
+				}
+
+				if readOnly {
+					onlyVerbs = append(onlyVerbs, genutil.ReadonlyVerbs...)
+				}
+
 				for _, m := range genclientMarkers {
-					gm := m.(genclient)
+					gm, ok := m.(genclient)
+					if !ok {
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", genclientMarker.Name))
+					}
 
 					if gm.Method != nil {
-						additionalMethods = append(additionalMethods, internal.AdditionalMethod{
+						additionalMethod := internal.AdditionalMethod{
 							Method:      gm.Method,
 							Verb:        gm.Verb,
 							Subresource: gm.Subresource,
 							Input:       gm.Input,
 							Result:      gm.Result,
-						})
+						}
+
+						if err := verifyAdditionalMethod(additionalMethod); err != nil {
+							root.AddError(err)
+						}
+						additionalMethods = append(additionalMethods, additionalMethod)
 					}
 
-					if gm.SkipVerbs != nil {
-						skipVerbs = *gm.SkipVerbs
-					}
+					// parse onlyVerbs marker
+					if len(onlyVerbs) > 0 {
+						onlyVerbsSet := make(map[string]bool)
+						for _, o := range onlyVerbs {
+							onlyVerbsSet[o] = true
+						}
 
-					if gm.OnlyVerbs != nil {
-						onlyVerbs = *gm.OnlyVerbs
+						// Combine the verbs in only Verbs and skip Verbs list.
+						skippedverbsList := []string{}
+						for _, m := range genutil.SupportedVerbs {
+							skip := true
+							if _, ok := onlyVerbsSet[m]; ok {
+								skip = false
+							}
+
+							// Check for conflits if a verb is present in onlyVerb and also in a SkipVerb marker.
+							for _, v := range skippedverbsList {
+								if v == m {
+									root.AddError(fmt.Errorf("verb %q used both in genclient:skipVerbs and genclient:onlyVerbs", v))
+								}
+							}
+
+							if skip {
+								skippedverbsList = append(skippedverbsList, m)
+							}
+						}
+						skipVerbs = skippedverbsList
 					}
 				}
-
-				namespaceScoped := info.Markers.Get(nonNamespacedMarker.Name) == nil
-				noVerbs := info.Markers.Get(noVerbsMarker.Name) != nil
-				hasStatus := info.Markers.Get(noStatusMarker.Name) == nil
 
 				a, err := internal.NewAPI(
 					root,
 					info,
 					gv.PackageName,
 					string(version.Version),
+					g.applyConfigGenPkg,
 					namespaceScoped,
 					additionalMethods,
+					&importList,
 					skipVerbs,
 					onlyVerbs,
 					noVerbs,
@@ -487,6 +548,11 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 				return nil
 			}
 
+			err = pkgmg.WriteContent(&importList)
+			if err != nil {
+				root.AddError(err)
+			}
+
 			var outContent bytes.Buffer
 			outContent.Write(outCommonContent.Bytes())
 			err = writeMethods(&outContent, byType)
@@ -513,6 +579,43 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 	return nil
 }
 
+func verifyAdditionalMethod(m internal.AdditionalMethod) error {
+	if m.Verb == nil {
+		return fmt.Errorf("verb type must be specified (use '// +genclient:method=%s,verb=create')", *m.Method)
+	}
+	if m.Result != nil {
+		supported := false
+		for _, v := range util.ResultTypeSupportedVerbs {
+			if *m.Verb == v {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			return fmt.Errorf("%s: result type is not supported for %q verbs (supported verbs: %#v)", *m.Method, *m.Verb, util.ResultTypeSupportedVerbs)
+		}
+	}
+
+	if m.Input != nil {
+		supported := false
+		for _, v := range util.InputTypeSupportedVerbs {
+			if *m.Verb == v {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			return fmt.Errorf("%s: input type is not supported for %q verbs (supported verbs: %#v)", *m.Method, *m.Verb, util.InputTypeSupportedVerbs)
+		}
+	}
+	for _, t := range util.UnsupportedExtensionVerbs {
+		if *m.Verb == t {
+			return fmt.Errorf("verb %q is not supported by extension generator", *m.Verb)
+		}
+	}
+	return nil
+}
+
 // isEnabledForMethod verifies if the genclient marker is enabled for
 // this type or not.
 func isEnabledForMethod(info *markers.TypeInfo) bool {
@@ -520,11 +623,20 @@ func isEnabledForMethod(info *markers.TypeInfo) bool {
 	return enabled != nil
 }
 
-// isClusterScoped verifies if the genclient marker for this
-// type is namespaced or clusterscoped.
-func isClusterScoped(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(nonNamespacedMarker.Name)
-	return enabled != nil
+func writeMethods(out io.Writer, byType map[string][]byte) error {
+	sortedNames := make([]string, 0, len(byType))
+	for name := range byType {
+		sortedNames = append(sortedNames, name)
+	}
+	sort.Strings(sortedNames)
+
+	for _, name := range sortedNames {
+		_, err := out.Write(byType[name])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // hasStatusSubresource verifies if updateStatus verb is to be scaffolded.
@@ -543,20 +655,4 @@ func hasStatusSubresource(info *markers.TypeInfo) bool {
 		}
 	}
 	return hasStatusField
-}
-
-func writeMethods(out io.Writer, byType map[string][]byte) error {
-	sortedNames := make([]string, 0, len(byType))
-	for name := range byType {
-		sortedNames = append(sortedNames, name)
-	}
-	sort.Strings(sortedNames)
-
-	for _, name := range sortedNames {
-		_, err := out.Write(byType[name])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

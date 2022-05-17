@@ -43,8 +43,8 @@ func main() {
 	cmd := &cobra.Command{
 		Use:          "code-gen",
 		SilenceUsage: true,
-		Short:        "Generate cluster-aware kcp wrappers around clients, listers and informers.",
-		Long:         "Generate cluster-aware kcp wrappers around clients, listers and informers.",
+		Short:        "Generate cluster-aware kcp wrappers around clients, listers, and informers.",
+		Long:         "Generate cluster-aware kcp wrappers around clients, listers, and informers.",
 		Example: `Generate cluster-aware kcp clients from existing code scaffolded by k8.io/code-gen.
 		For example:
 		# To generate client wrappers:

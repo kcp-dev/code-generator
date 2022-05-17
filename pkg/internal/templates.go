@@ -108,17 +108,8 @@ const commonTempl = `
 package {{.Version}}
 
 import (
-	"context"
-	"fmt"
-	{{.Name}}api{{.Version}} "{{.APIPath}}"
-	{{.Name}}{{.Version}} "{{.ClientPath}}/typed/{{.Name}}/{{.Version}}"
-
-	kcp "github.com/kcp-dev/apimachinery/pkg/client"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
-	"github.com/kcp-dev/logicalcluster"
-	"k8s.io/apimachinery/pkg/watch"
+	{{range $element := .Imports}}
+	{{$element}} {{end}}
 )
 
 // Wrapped{{upperFirst .Name}}{{upperFirst .Version}} wraps the client interface with a
@@ -166,72 +157,43 @@ func (w *wrapped{{.Name}}) checkCluster(ctx context.Context) (context.Context, e
 	}
 	return ctx, nil
 }
-
-// Create implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Create(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.CreateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
-	ctx, err := w.checkCluster(ctx)
+`
+const patchTemplate = `
+// Patch implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *{{.PkgName}}api{{.Version}}.{{.Name}}, err error) {
+	ctx, err = w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Create(ctx, {{lowerFirst .Name}}, opts)
+	return w.delegate.Patch(ctx, name, pt, data, opts, subresources...)
 }
-
-// Update implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Update(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
-	ctx, err := w.checkCluster(ctx)
+`
+const applyTemplate = `
+{{$result := typepkg . }}
+{{$privateName := lowerFirst .Name}}
+{{$applyConfig := (printf "*%sapply%s.%sApplyConfiguration" .PkgName .Version .Name)}}
+// {{default .Method "Apply"}} implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) {{default .Method "Apply"}}(ctx context.Context, {{default .InputName $privateName}} {{default .InputType $applyConfig}}, opts metav1.ApplyOptions) (result {{default .ResultType $result}}, err error) {
+	ctx, err = w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Update(ctx, {{lowerFirst .Name}}, opts)
+	return w.delegate.{{default .Method "Apply"}}(ctx, {{default .InputName $privateName}}, opts)
 }
+`
 
-{{if .HasStatus}}
- // UpdateStatus implements {{.Name}}Interface. It was generated because the type contains a Status member.
- func (w *wrapped{{.Name}}) UpdateStatus(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
- 	ctx, err := w.checkCluster(ctx)
- 	if err != nil {
- 		return nil, err
- 	}
- 	return w.delegate.UpdateStatus(ctx, {{lowerFirst .Name}}, opts)
- }
- {{end}}
-
-// Update implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return err
-	}
-	return w.delegate.Delete(ctx, name, opts)
-}
-
-// DeleteCollection implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listopts metav1.ListOptions) error {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return err
-	}
-	return w.delegate.DeleteCollection(ctx, opts, listopts)
-}
-
-// Get implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Get(ctx context.Context, name string, opts metav1.GetOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
-	ctx, err := w.checkCluster(ctx)
+const applyStatusTemplate = `
+// ApplyStatus implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) ApplyStatus(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}apply{{.Version}}.{{.Name}}ApplyConfiguration, opts metav1.ApplyOptions) (result *{{.PkgName}}api{{.Version}}.{{.Name}}, err error) {
+	ctx, err = w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Get(ctx, name, opts)
+	return w.delegate.ApplyStatus(ctx, {{lowerFirst .Name}}, opts)
 }
+`
 
-// List implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) List(ctx context.Context, opts metav1.ListOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}List, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.List(ctx, opts)
-}
-
+const watchTemplate = `
 // Watch implements {{.Name}}Interface.
 func (w *wrapped{{.Name}}) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	ctx, err := w.checkCluster(ctx)
@@ -240,13 +202,85 @@ func (w *wrapped{{.Name}}) Watch(ctx context.Context, opts metav1.ListOptions) (
 	}
 	return w.delegate.Watch(ctx, opts)
 }
+`
 
-// Patch implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *{{.PkgName}}api{{.Version}}.{{.Name}}, err error) {
-	ctx, err = w.checkCluster(ctx)
+const listTemplate = `
+// List implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) List(ctx context.Context, opts metav1.ListOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}List, error) {
+	ctx, err := w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Patch(ctx, name, pt, data, opts, subresources...)
+	return w.delegate.List(ctx, opts)
+}
+`
+
+const getTemplate = `
+{{$result := typepkg . }}
+// {{default .Method "Get"}} implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) {{default .Method "Get"}}(ctx context.Context, name string, opts metav1.GetOptions) ({{default .ResultType $result}}, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.{{default .Method "Get"}}(ctx, name, opts)
+}
+`
+const deleteTemplate = `
+// Delete implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return err
+	}
+	return w.delegate.Delete(ctx, name, opts)
+}
+`
+
+const deleteCollectionTemplate = `
+// DeleteCollection implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listopts metav1.ListOptions) error {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return err
+	}
+	return w.delegate.DeleteCollection(ctx, opts, listopts)
+}
+`
+
+const createTemplate = `
+{{$result := typepkg . }}
+{{$privateName := lowerFirst .Name}}
+// {{default .Method "Create"}} implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) {{default .Method "Create"}}(ctx context.Context, {{default .InputName $privateName}} {{default .InputType $result}}, opts metav1.CreateOptions) ({{default .ResultType $result}}, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.{{default .Method "Create"}}(ctx, {{default .InputName $privateName}}, opts)
+}
+`
+
+const updateTemplate = `
+{{$result := typepkg . }}
+{{$privateName := lowerFirst .Name}}
+// {{default .Method "Update"}} implements {{.Name}}Interface.
+func (w *wrapped{{.Name}}) {{default .Method "Update"}}(ctx context.Context, {{default .InputName $privateName}} {{default .InputType $result}}, opts metav1.UpdateOptions) ({{default .ResultType $result}}, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.{{default .Method "Update"}}(ctx, {{default .InputName $privateName}}, opts)
+}
+`
+
+const updateStatusTemplate = `
+// UpdateStatus implements {{.Name}}Interface. It was generated because the type contains a Status member.
+func (w *wrapped{{.Name}}) UpdateStatus(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.UpdateStatus(ctx, {{lowerFirst .Name}}, opts)
 }
 `
