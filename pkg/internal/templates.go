@@ -121,20 +121,20 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-// Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} wraps the client interface with a
+// Wrapped{{upperFirst .Name}}{{upperFirst .Version}} wraps the client interface with a
 // logical cluster.
-type Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} struct {
+type Wrapped{{upperFirst .Name}}{{upperFirst .Version}} struct {
 	cluster  logicalcluster.Name
-	delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface
+	delegate {{.Name}}{{.Version}}.{{upperFirst .Name}}{{upperFirst .Version}}Interface
 }
 
-// New creates a Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}} with the given logical cluster and client interface.
-func New(cluster logicalcluster.Name, delegate {{.Name}}{{.Version}}.{{.NameUpperFirst}}{{.VersionUpperFirst}}Interface) *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{
-	return &Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}{cluster: cluster, delegate: delegate}
+// New creates a Wrapped{{upperFirst .Name}}{{upperFirst .Version}} with the given logical cluster and client interface.
+func New(cluster logicalcluster.Name, delegate {{.Name}}{{.Version}}.{{upperFirst .Name}}{{upperFirst .Version}}Interface) *Wrapped{{upperFirst .Name}}{{upperFirst .Version}}{
+	return &Wrapped{{upperFirst .Name}}{{upperFirst .Version}}{cluster: cluster, delegate: delegate}
 }
 
 // RESTClient returns the underlying RESTClient.
-func (w *Wrapped{{.NameUpperFirst}}{{.VersionUpperFirst}}) RESTClient() rest.Interface {
+func (w *Wrapped{{upperFirst .Name}}{{upperFirst .Version}}) RESTClient() rest.Interface {
 	return w.delegate.RESTClient()
 }
 

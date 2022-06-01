@@ -63,13 +63,11 @@ type api struct {
 
 // packages stores the info used to scaffold wrapped interfaces content
 type packages struct {
-	Name              string
-	APIPath           string
-	ClientPath        string
-	NameUpperFirst    string
-	VersionUpperFirst string
-	Version           string
-	writer            io.Writer
+	Name       string
+	APIPath    string
+	ClientPath string
+	Version    string
+	writer     io.Writer
 }
 
 // NewInterfaceWrapper returns a interfaceWrapper which can fill the templates to wrtie clientset wrappers.
@@ -122,11 +120,6 @@ func (a *api) setCased() {
 	a.NameLowerFirst = lowerFirst(a.Name)
 }
 
-func (p *packages) setCased() {
-	p.NameUpperFirst = upperFirst(p.Name)
-	p.VersionUpperFirst = upperFirst(p.Version)
-}
-
 // lowerFirst sets the first alphabet to lowerCase.
 func lowerFirst(s string) string {
 	return strings.ToLower(string(s[0])) + s[1:]
@@ -146,7 +139,6 @@ func NewPackages(root *loader.Package, apiPath, clientPath, version, group strin
 		ClientPath: clientPath,
 		writer:     w,
 	}
-	p.setCased()
 	return p
 }
 
@@ -163,7 +155,15 @@ func sanitize(groupName string) string {
 }
 
 func (p *packages) WriteContent() error {
-	templ, err := template.New("client").Parse(commonTempl)
+	funcMap := template.FuncMap{
+		"upperFirst": func(s string) string {
+			return strings.ToUpper(string(s[0])) + s[1:]
+		},
+		"lowerFirst": func(s string) string {
+			return strings.ToLower(string(s[0])) + s[1:]
+		},
+	}
+	templ, err := template.New("client").Funcs(funcMap).Parse(commonTempl)
 	if err != nil {
 		return err
 	}
