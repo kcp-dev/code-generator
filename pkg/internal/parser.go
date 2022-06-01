@@ -29,6 +29,17 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
+// funcMap contains the list of functions which are to be registered with
+// the templates.
+var funcMap = template.FuncMap{
+	"upperFirst": func(s string) string {
+		return strings.ToUpper(string(s[0])) + s[1:]
+	},
+	"lowerFirst": func(s string) string {
+		return strings.ToLower(string(s[0])) + s[1:]
+	},
+}
+
 // interfaceWrapper is used to wrap each of the
 // interfaces which are mentioned in the clientset.
 type interfaceWrapper struct {
@@ -55,10 +66,6 @@ type api struct {
 	writer       io.Writer
 	IsNamespaced bool
 	HasStatus    bool
-
-	PkgNameUpperFirst string
-	VersionUpperFirst string
-	NameLowerFirst    string
 }
 
 // packages stores the info used to scaffold wrapped interfaces content
@@ -85,7 +92,7 @@ func NewInterfaceWrapper(clientSetAPIPath, clientsetName, pkgPath string, gvs []
 
 // TODO: this could be converted to an interface, wherein each sub-generator has a writeContent method.
 func (w *interfaceWrapper) WriteContent() error {
-	templ, err := template.New("wrapper").Parse(wrappedInterfacesTempl)
+	templ, err := template.New("wrapper").Funcs(funcMap).Parse(wrappedInterfacesTempl)
 	if err != nil {
 		return err
 	}
@@ -108,26 +115,9 @@ func groupVersionsToApis(gvs []gentype.GroupVersions) []api {
 			Version: string(gv.Versions[0].Version),
 			PkgName: gv.PackageName,
 		}
-		a.setCased()
 		result = append(result, *a)
 	}
 	return result
-}
-
-func (a *api) setCased() {
-	a.PkgNameUpperFirst = upperFirst(a.PkgName)
-	a.VersionUpperFirst = upperFirst(a.Version)
-	a.NameLowerFirst = lowerFirst(a.Name)
-}
-
-// lowerFirst sets the first alphabet to lowerCase.
-func lowerFirst(s string) string {
-	return strings.ToLower(string(s[0])) + s[1:]
-}
-
-// upperFirst sets the first alphabet to upperCase/
-func upperFirst(s string) string {
-	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
 // NewPackages returns a new packages instance which is used to write wrapper content.
@@ -155,14 +145,6 @@ func sanitize(groupName string) string {
 }
 
 func (p *packages) WriteContent() error {
-	funcMap := template.FuncMap{
-		"upperFirst": func(s string) string {
-			return strings.ToUpper(string(s[0])) + s[1:]
-		},
-		"lowerFirst": func(s string) string {
-			return strings.ToLower(string(s[0])) + s[1:]
-		},
-	}
 	templ, err := template.New("client").Funcs(funcMap).Parse(commonTempl)
 	if err != nil {
 		return err
@@ -184,13 +166,11 @@ func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string,
 		IsNamespaced: isNamespaced,
 		HasStatus:    hasStatus,
 	}
-
-	api.setCased()
 	return api, nil
 }
 
 func (a *api) WriteContent() error {
-	templ, err := template.New("wrapper").Parse(wrapperMethodsTempl)
+	templ, err := template.New("wrapper").Funcs(funcMap).Parse(wrapperMethodsTempl)
 	if err != nil {
 		return err
 	}

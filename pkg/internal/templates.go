@@ -90,9 +90,9 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 }
 
 {{ range .APIs }}
-// {{.PkgNameUpperFirst}}{{.VersionUpperFirst}} retrieves the {{.PkgNameUpperFirst}}{{.VersionUpperFirst}}Client.
-func (w *wrappedInterface) {{.PkgNameUpperFirst}}{{.VersionUpperFirst}}() {{.PkgName}}{{.Version}}.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}Interface {
-	return {{.PkgName}}{{.Version}}client.New(w.cluster, w.delegate.{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}())
+// {{upperFirst .PkgName}}{{upperFirst .Version}} retrieves the {{upperFirst .PkgName}}{{upperFirst .Version}}Client.
+func (w *wrappedInterface) {{upperFirst .PkgName}}{{upperFirst .Version}}() {{.PkgName}}{{.Version}}.{{upperFirst .PkgName}}{{upperFirst .Version}}Interface {
+	return {{.PkgName}}{{.Version}}client.New(w.cluster, w.delegate.{{upperFirst .PkgName}}{{upperFirst .Version}}())
 }
 {{ end }}
 
@@ -141,8 +141,8 @@ func (w *Wrapped{{upperFirst .Name}}{{upperFirst .Version}}) RESTClient() rest.I
 `
 
 const wrapperMethodsTempl = `
-// Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}} contains the wrapped logical cluster and interface.
-func (w *Wrapped{{.PkgNameUpperFirst}}{{.VersionUpperFirst}}) {{.Name}}s{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
+// Wrapped{{upperFirst .PkgName}}{{upperFirst .Version}} contains the wrapped logical cluster and interface.
+func (w *Wrapped{{upperFirst .PkgName}}{{upperFirst .Version}}) {{.Name}}s{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
 	return &wrapped{{.Name}}{
 		cluster:  w.cluster,
 		delegate: w.delegate.{{.Name}}s{{if .IsNamespaced}}(namespace){{else}}(){{end}},
@@ -168,31 +168,31 @@ func (w *wrapped{{.Name}}) checkCluster(ctx context.Context) (context.Context, e
 }
 
 // Create implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Create(ctx context.Context, {{.NameLowerFirst}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.CreateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
+func (w *wrapped{{.Name}}) Create(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.CreateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
 	ctx, err := w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Create(ctx, {{.NameLowerFirst}}, opts)
+	return w.delegate.Create(ctx, {{lowerFirst .Name}}, opts)
 }
 
 // Update implements {{.Name}}Interface.
-func (w *wrapped{{.Name}}) Update(ctx context.Context, {{.NameLowerFirst}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
+func (w *wrapped{{.Name}}) Update(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
 	ctx, err := w.checkCluster(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return w.delegate.Update(ctx, {{.NameLowerFirst}}, opts)
+	return w.delegate.Update(ctx, {{lowerFirst .Name}}, opts)
 }
 
 {{if .HasStatus}}
  // UpdateStatus implements {{.Name}}Interface. It was generated because the type contains a Status member.
- func (w *wrapped{{.Name}}) UpdateStatus(ctx context.Context, {{.NameLowerFirst}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
+ func (w *wrapped{{.Name}}) UpdateStatus(ctx context.Context, {{lowerFirst .Name}} *{{.PkgName}}api{{.Version}}.{{.Name}}, opts metav1.UpdateOptions) (*{{.PkgName}}api{{.Version}}.{{.Name}}, error) {
  	ctx, err := w.checkCluster(ctx)
  	if err != nil {
  		return nil, err
  	}
- 	return w.delegate.UpdateStatus(ctx, {{.NameLowerFirst}}, opts)
+ 	return w.delegate.UpdateStatus(ctx, {{lowerFirst .Name}}, opts)
  }
  {{end}}
 
