@@ -133,10 +133,10 @@ func (w *Wrapped{{upperFirst .Name}}{{upperFirst .Version}}) RESTClient() rest.I
 
 const wrapperMethodsTempl = `
 // Wrapped{{upperFirst .PkgName}}{{upperFirst .Version}} contains the wrapped logical cluster and interface.
-func (w *Wrapped{{upperFirst .PkgName}}{{upperFirst .Version}}) {{.Name}}s{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
+func (w *Wrapped{{upperFirst .PkgName}}{{upperFirst .Version}}) {{.Name|plural}}{{if .IsNamespaced}}(namespace string){{else}}(){{end}} {{.PkgName}}{{.Version}}.{{.Name}}Interface {
 	return &wrapped{{.Name}}{
 		cluster:  w.cluster,
-		delegate: w.delegate.{{.Name}}s{{if .IsNamespaced}}(namespace){{else}}(){{end}},
+		delegate: w.delegate.{{.Name|plural}}{{if .IsNamespaced}}(namespace){{else}}(){{end}},
 	}
 }
 

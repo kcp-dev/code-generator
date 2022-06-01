@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The KCP Authors.
+Copyright 2015 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This code has been taken from https://github.com/kubernetes/gengo/blob/master/namer/plural_namer.go
+// with minor modifications. The changes are:
+// 1. There is no concept of plublic/private namer here. There is generic namer struct which
+// parses the input and gives us the required plural form.
+// 2. The input argument to function `Name` is customized to accept a string instead of `types.Type`,
+// since we directly modeify the API name in our code-gen.
+
 package namer
 
 var consonants = "bcdfghjklmnpqrstvwxyz"
 
 type Namer struct {
-	// to add any exceptions to look up
+	// use this to add any exceptions to look up
 	Exceptions map[string]string
 	// Use this to either convert everything to lowercase/upper case
 	// or anything else based on whether the parameter will be public
-	// or private
+	// or private.
 	Finalize func(string) string
 }
 
+// Name gives out the final plural names which are
+// to be scaffolded
 func (n *Namer) Name(input string) string {
 	singular := input
 	var plural string
