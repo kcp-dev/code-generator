@@ -24,6 +24,9 @@ import (
 	"strings"
 	"text/template"
 
+	codegenutil "k8s.io/code-generator/cmd/client-gen/generators/util"
+
+	"github.com/kcp-dev/code-generator/pkg/util"
 	gentype "k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -37,6 +40,10 @@ var funcMap = template.FuncMap{
 	},
 	"lowerFirst": func(s string) string {
 		return strings.ToLower(string(s[0])) + s[1:]
+	},
+	"default": util.DefaultValue,
+	"typepkg": func(a api) string {
+		return fmt.Sprintf("*%sapi%s.%s", a.PkgName, a.Version, a.Name)
 	},
 }
 
@@ -58,22 +65,13 @@ type interfaceWrapper struct {
 	writer *io.Writer
 }
 
-// api contains info about each type
-type api struct {
-	Name         string
-	Version      string
-	PkgName      string
-	writer       io.Writer
-	IsNamespaced bool
-	HasStatus    bool
-}
-
 // packages stores the info used to scaffold wrapped interfaces content
 type packages struct {
 	Name       string
 	APIPath    string
 	ClientPath string
 	Version    string
+	Imports    []string
 	writer     io.Writer
 }
 
@@ -144,7 +142,13 @@ func sanitize(groupName string) string {
 	return groupName
 }
 
-func (p *packages) WriteContent() error {
+// TODO: Clean this up. Its not required to convert the input to a struct
+// and then to a map before passing it to template. Using of map is better,
+// as it allows to add more variables dynamically.
+func (p *packages) WriteContent(importList *[]string) error {
+	if importList != nil {
+		p.Imports = append(p.Imports, p.appendGenericImports(*importList)...)
+	}
 	templ, err := template.New("client").Funcs(funcMap).Parse(commonTempl)
 	if err != nil {
 		return err
@@ -152,27 +156,255 @@ func (p *packages) WriteContent() error {
 	return templ.Execute(p.writer, p)
 }
 
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group string, isNamespaced bool, hasStatus bool, w io.Writer) (*api, error) {
+// api contains info about each type
+type api struct {
+	Name                      string
+	PkgName                   string
+	Version                   string
+	IsNamespaced              bool
+	AdditionalMethods         []AdditionalMethod
+	SkipVerbs                 []string
+	NoVerbs                   bool
+	HasStatus                 bool
+	ApplyConfigurationPackage string
+	writer                    io.Writer
+	importList                *[]string
+
+	InputType  string
+	InputName  string
+	ResultType string
+	Method     string
+}
+
+type AdditionalMethod struct {
+	Method      *string
+	Verb        *string
+	Subresource *string
+	Input       *string
+	Result      *string
+}
+
+func NewAPI(
+	root *loader.Package,
+	info *markers.TypeInfo,
+	group, version, applyconfigurationpkg string,
+	namespaceScoped bool,
+	additionalMethods []AdditionalMethod,
+	importList *[]string,
+	skipVerbs, onlyVerbs []string,
+	noVerbs, hasStatus bool,
+	w io.Writer,
+) (*api, error) {
 	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
 	if typeInfo == types.Typ[types.Invalid] {
 		return nil, fmt.Errorf("unknown type: %s", info.Name)
 	}
 
 	api := &api{
-		Name:         info.RawSpec.Name.Name,
-		Version:      version,
-		PkgName:      group,
-		writer:       w,
-		IsNamespaced: isNamespaced,
-		HasStatus:    hasStatus,
+		Name:                      info.RawSpec.Name.Name,
+		PkgName:                   group,
+		Version:                   version,
+		ApplyConfigurationPackage: applyconfigurationpkg,
+		IsNamespaced:              namespaceScoped,
+		AdditionalMethods:         additionalMethods,
+		importList:                importList,
+		SkipVerbs:                 skipVerbs,
+		NoVerbs:                   noVerbs,
+		HasStatus:                 hasStatus,
+		writer:                    w,
 	}
 	return api, nil
 }
 
+// TODO: add templating logic for additional methods
 func (a *api) WriteContent() error {
-	templ, err := template.New("wrapper").Funcs(funcMap).Parse(wrapperMethodsTempl)
+	generateApply := len(a.ApplyConfigurationPackage) > 0
+	// Add common template followed by specific methods which are required.
+	if err := templateExecute(wrapperMethodsTempl, *a); err != nil {
+		return err
+	}
+
+	if a.NoVerbs {
+		return nil
+	}
+
+	if a.hasVerb("get") {
+		if err := templateExecute(getTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("list") {
+		if err := templateExecute(listTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("watch") {
+		if err := templateExecute(watchTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("create") {
+		if err := templateExecute(createTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("update") {
+		if err := templateExecute(updateTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("updateStatus") && a.HasStatus {
+		if err := templateExecute(updateStatusTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("delete") {
+		if err := templateExecute(deleteTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("deleteCollection") {
+		if err := templateExecute(deleteCollectionTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("patch") {
+		if err := templateExecute(patchTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("apply") && generateApply {
+		*a.importList = append(*a.importList, util.ImportFormat(fmt.Sprintf("%sapply%s", a.PkgName, a.Version), fmt.Sprintf("%s/%s/%s", a.ApplyConfigurationPackage, a.PkgName, a.Version)))
+		if err := templateExecute(applyTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	if a.hasVerb("applyStatus") && generateApply && a.HasStatus {
+		if err := templateExecute(applyStatusTemplate, *a); err != nil {
+			return err
+		}
+	}
+
+	for _, extension := range a.AdditionalMethods {
+		if extension.Result != nil {
+			name, pkg := getPkgType(*extension.Result)
+			if len(pkg) > 0 {
+				*a.importList = append(*a.importList, util.ImportFormat(fmt.Sprintf("%sapi", strings.ToLower(name)), pkg))
+				a.ResultType = fmt.Sprintf("*%sapi.%s", strings.ToLower(name), name)
+			} else {
+				a.ResultType = fmt.Sprintf("*%sapi%s.%s", a.PkgName, a.Version, name)
+			}
+
+		}
+
+		if extension.Input != nil {
+			name, pkg := getPkgType(*extension.Result)
+			if len(pkg) > 0 {
+				*a.importList = append(*a.importList, util.ImportFormat(fmt.Sprintf("%sapi", strings.ToLower(name)), pkg))
+				a.InputType = fmt.Sprintf("*%sapi.%s", strings.ToLower(name), name)
+				if *extension.Verb == "apply" {
+					_, gvString := codegenutil.ParsePathGroupVersion(pkg)
+					*a.importList = append(*a.importList, util.ImportFormat(fmt.Sprintf("%sapplyconfig", strings.ToLower(name)), fmt.Sprintf("%s/%s", a.ApplyConfigurationPackage, gvString)))
+					a.InputType = fmt.Sprintf("*%sapplyconfig.%sApplyConfiguration", strings.ToLower(name), name)
+				}
+			} else {
+				a.InputType = fmt.Sprintf("*%sapi%s.%s", a.PkgName, a.Version, name)
+				if *extension.Verb == "apply" {
+					a.InputType = fmt.Sprintf("*%sapply%s.%sApplyConfiguration", a.PkgName, a.Version, name)
+				}
+			}
+			a.InputName = strings.ToLower(name)
+		}
+
+		if *extension.Verb == "get" {
+			a.Method = *extension.Method
+			if err := templateExecute(getTemplate, *a); err != nil {
+				return err
+			}
+		}
+
+		if *extension.Verb == "create" {
+			a.Method = *extension.Method
+			adjTemplate := adjustTemplate(createTemplate, "create")
+			if err := templateExecute(adjTemplate, *a); err != nil {
+				return err
+			}
+		}
+
+		if *extension.Verb == "update" {
+			a.Method = *extension.Method
+			adjTemplate := adjustTemplate(updateTemplate, "update")
+			if err := templateExecute(adjTemplate, *a); err != nil {
+				return err
+			}
+		}
+
+		if *extension.Verb == "apply" {
+			a.Method = *extension.Method
+			adjTemplate := adjustTemplate(applyTemplate, "apply")
+			if err := templateExecute(adjTemplate, *a); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Execute template and append the contents to the writer.
+func templateExecute(templateName string, data api) error {
+	templ, err := template.New("wrapper").Funcs(funcMap).Parse(templateName)
 	if err != nil {
 		return err
 	}
-	return templ.Execute(a.writer, a)
+	return templ.Execute(data.writer, data)
+}
+
+// hasVerb returns true if the verb is to be scaffolded,
+// if it is a part of "skipVerbs" then it returns false.
+func (a *api) hasVerb(verb string) bool {
+	if len(a.SkipVerbs) == 0 {
+		return true
+	}
+	for _, s := range a.SkipVerbs {
+		if verb == s {
+			return false
+		}
+	}
+	return true
+}
+
+// getPkgType returns the result override package path and the type.
+func getPkgType(input string) (string, string) {
+	parts := strings.Split(input, ".")
+	return parts[len(parts)-1], strings.Join(parts[0:len(parts)-1], ".")
+}
+
+// appendImports adds the regular imports needed for scaffolding.
+func (p *packages) appendGenericImports(importList []string) []string {
+	return append(importList, `"context"`, `"fmt"`, `"k8s.io/apimachinery/pkg/types"`, `"k8s.io/client-go/rest"`,
+		`"github.com/kcp-dev/logicalcluster"`, util.ImportFormat("metav1", "k8s.io/apimachinery/pkg/apis/meta/v1"), `"k8s.io/apimachinery/pkg/watch"`, util.ImportFormat("kcp", "github.com/kcp-dev/apimachinery/pkg/client"),
+		util.ImportFormat(fmt.Sprintf("%sapi%s", p.Name, p.Version), p.APIPath),
+		util.ImportFormat(fmt.Sprintf("%s%s", p.Name, p.Version), fmt.Sprintf("%s/typed/%s/%s", p.ClientPath, p.Name, p.Version)))
+}
+
+func adjustTemplate(template, verb string) string {
+	index := strings.Index(template, "ctx context.Context,") + len("ctx context.Context,")
+	newTemplate := string(template[:index]) + " name string," + string(template[index:])
+	return adjReturnValueInTemplate(newTemplate, verb)
+}
+
+func adjReturnValueInTemplate(template, verb string) string {
+	s := fmt.Sprintf("w.delegate.{{value .Method \"%s\"}}(ctx,", util.UpperFirst(verb))
+	index := strings.Index(template, s) + len(s)
+	return string(template[:index]) + " name, " + string(template[index:])
 }

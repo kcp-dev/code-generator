@@ -24,10 +24,9 @@ package v1
 import (
 	"context"
 	"fmt"
+	kcp "github.com/kcp-dev/apimachinery/pkg/client"
 	exampleapiv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
 	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1"
-
-	kcp "github.com/kcp-dev/apimachinery/pkg/client"
 	"github.com/kcp-dev/logicalcluster"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -78,6 +77,33 @@ func (w *wrappedClusterTestType) checkCluster(ctx context.Context) (context.Cont
 	return ctx, nil
 }
 
+// Get implements ClusterTestTypeInterface.
+func (w *wrappedClusterTestType) Get(ctx context.Context, name string, opts metav1.GetOptions) (*exampleapiv1.ClusterTestType, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.Get(ctx, name, opts)
+}
+
+// List implements ClusterTestTypeInterface.
+func (w *wrappedClusterTestType) List(ctx context.Context, opts metav1.ListOptions) (*exampleapiv1.ClusterTestTypeList, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.List(ctx, opts)
+}
+
+// Watch implements ClusterTestTypeInterface.
+func (w *wrappedClusterTestType) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.Watch(ctx, opts)
+}
+
 // Create implements ClusterTestTypeInterface.
 func (w *wrappedClusterTestType) Create(ctx context.Context, clusterTestType *exampleapiv1.ClusterTestType, opts metav1.CreateOptions) (*exampleapiv1.ClusterTestType, error) {
 	ctx, err := w.checkCluster(ctx)
@@ -105,7 +131,7 @@ func (w *wrappedClusterTestType) UpdateStatus(ctx context.Context, clusterTestTy
 	return w.delegate.UpdateStatus(ctx, clusterTestType, opts)
 }
 
-// Update implements ClusterTestTypeInterface.
+// Delete implements ClusterTestTypeInterface.
 func (w *wrappedClusterTestType) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	ctx, err := w.checkCluster(ctx)
 	if err != nil {
@@ -121,33 +147,6 @@ func (w *wrappedClusterTestType) DeleteCollection(ctx context.Context, opts meta
 		return err
 	}
 	return w.delegate.DeleteCollection(ctx, opts, listopts)
-}
-
-// Get implements ClusterTestTypeInterface.
-func (w *wrappedClusterTestType) Get(ctx context.Context, name string, opts metav1.GetOptions) (*exampleapiv1.ClusterTestType, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.Get(ctx, name, opts)
-}
-
-// List implements ClusterTestTypeInterface.
-func (w *wrappedClusterTestType) List(ctx context.Context, opts metav1.ListOptions) (*exampleapiv1.ClusterTestTypeList, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.List(ctx, opts)
-}
-
-// Watch implements ClusterTestTypeInterface.
-func (w *wrappedClusterTestType) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.Watch(ctx, opts)
 }
 
 // Patch implements ClusterTestTypeInterface.
@@ -185,42 +184,6 @@ func (w *wrappedTestType) checkCluster(ctx context.Context) (context.Context, er
 	return ctx, nil
 }
 
-// Create implements TestTypeInterface.
-func (w *wrappedTestType) Create(ctx context.Context, testType *exampleapiv1.TestType, opts metav1.CreateOptions) (*exampleapiv1.TestType, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.Create(ctx, testType, opts)
-}
-
-// Update implements TestTypeInterface.
-func (w *wrappedTestType) Update(ctx context.Context, testType *exampleapiv1.TestType, opts metav1.UpdateOptions) (*exampleapiv1.TestType, error) {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return w.delegate.Update(ctx, testType, opts)
-}
-
-// Update implements TestTypeInterface.
-func (w *wrappedTestType) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return err
-	}
-	return w.delegate.Delete(ctx, name, opts)
-}
-
-// DeleteCollection implements TestTypeInterface.
-func (w *wrappedTestType) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listopts metav1.ListOptions) error {
-	ctx, err := w.checkCluster(ctx)
-	if err != nil {
-		return err
-	}
-	return w.delegate.DeleteCollection(ctx, opts, listopts)
-}
-
 // Get implements TestTypeInterface.
 func (w *wrappedTestType) Get(ctx context.Context, name string, opts metav1.GetOptions) (*exampleapiv1.TestType, error) {
 	ctx, err := w.checkCluster(ctx)
@@ -246,6 +209,42 @@ func (w *wrappedTestType) Watch(ctx context.Context, opts metav1.ListOptions) (w
 		return nil, err
 	}
 	return w.delegate.Watch(ctx, opts)
+}
+
+// Create implements TestTypeInterface.
+func (w *wrappedTestType) Create(ctx context.Context, testType *exampleapiv1.TestType, opts metav1.CreateOptions) (*exampleapiv1.TestType, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.Create(ctx, testType, opts)
+}
+
+// Update implements TestTypeInterface.
+func (w *wrappedTestType) Update(ctx context.Context, testType *exampleapiv1.TestType, opts metav1.UpdateOptions) (*exampleapiv1.TestType, error) {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return w.delegate.Update(ctx, testType, opts)
+}
+
+// Delete implements TestTypeInterface.
+func (w *wrappedTestType) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return err
+	}
+	return w.delegate.Delete(ctx, name, opts)
+}
+
+// DeleteCollection implements TestTypeInterface.
+func (w *wrappedTestType) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listopts metav1.ListOptions) error {
+	ctx, err := w.checkCluster(ctx)
+	if err != nil {
+		return err
+	}
+	return w.delegate.DeleteCollection(ctx, opts, listopts)
 }
 
 // Patch implements TestTypeInterface.

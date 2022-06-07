@@ -26,6 +26,43 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
+// ResultTypeSupportedVerbs is a list of verb types that supports overriding the
+// resulting type.
+var ResultTypeSupportedVerbs = []string{
+	"create",
+	"update",
+	"get",
+	"list",
+	"patch",
+	"apply",
+}
+
+// UnsupportedExtensionVerbs is a list of verbs we don't support generating
+// extension client functions for.
+var UnsupportedExtensionVerbs = []string{
+	"updateStatus",
+	"deleteCollection",
+	"watch",
+	"delete",
+}
+
+// InputTypeSupportedVerbs is a list of verb types that supports overriding the
+// input argument type.
+var InputTypeSupportedVerbs = []string{
+	"create",
+	"update",
+	"apply",
+}
+
+// DefaultValue just returns the first non-empty string among
+// two inputs.
+var DefaultValue = func(a, b string) string {
+	if len(a) == 0 {
+		return b
+	}
+	return a
+}
+
 // CurrentPackage returns the go package of the current directory, or "" if it cannot
 // be derived from the GOPATH.
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
@@ -98,4 +135,15 @@ func GetCleanRealtivePath(basePath, outputPath string) string {
 	}
 
 	return filepath.Join(basePath, filepath.Clean(outputPath))
+}
+
+// ImportFormat returns the pkgName and path formatted to be scaffolded
+// for inputs.
+func ImportFormat(tag, path string) string {
+	return fmt.Sprintf("%s %q", tag, path)
+}
+
+// upperFirst sets the first alphabet to upperCase
+func UpperFirst(s string) string {
+	return strings.ToUpper(string(s[0])) + s[1:]
 }

@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	goflags "flag"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
@@ -39,9 +41,10 @@ var (
 func main() {
 	f := &flag.Flags{}
 	cmd := &cobra.Command{
-		Use:   "code-gen",
-		Short: "Generate cluster-aware kcp wrappers around clients, listers and informers.",
-		Long:  "Generate cluster-aware kcp wrappers around clients, listers and informers.",
+		Use:          "code-gen",
+		SilenceUsage: true,
+		Short:        "Generate cluster-aware kcp wrappers around clients, listers, and informers.",
+		Long:         "Generate cluster-aware kcp wrappers around clients, listers, and informers.",
 		Example: `Generate cluster-aware kcp clients from existing code scaffolded by k8.io/code-gen.
 		For example:
 		# To generate client wrappers:
@@ -93,6 +96,10 @@ func main() {
 			return nil
 		},
 	}
+
+	fs := goflags.NewFlagSet("klog", goflags.PanicOnError)
+	klog.InitFlags(fs)
+	cmd.Flags().AddGoFlagSet(fs)
 
 	f.AddTo(cmd.Flags())
 
