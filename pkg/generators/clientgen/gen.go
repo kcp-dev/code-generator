@@ -47,6 +47,20 @@ const (
 	clientSetFilename = "clientset.go"
 )
 
+var (
+	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
+	// markers are not a part of genclient, since they do not accept any values.
+	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
+	noStatusMarker      = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
+	noVerbsMarker       = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
+	readOnlyMarker      = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
+
+	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
+	// controller-tools, comma indicates another argument, as multiple arguments need to provided with a semi-colon separator.
+	skipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
+	onlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
+)
+
 type genclient struct {
 	Method      *string
 	Verb        *string
@@ -94,12 +108,12 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	if err := markers.RegisterAll(
 		reg,
 		GenclientMarker,
-		NonNamespacedMarker,
-		NoStatusMarker,
-		NoVerbsMarker,
-		ReadOnlyMarker,
-		SkipVerbsMarker,
-		OnlyVerbsMarker,
+		nonNamespacedMarker,
+		noStatusMarker,
+		noVerbsMarker,
+		readOnlyMarker,
+		skipVerbsMarker,
+		onlyVerbsMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -357,27 +371,27 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 
 				genclientMarkers := info.Markers[GenclientMarker.Name]
 
-				namespaceScoped := info.Markers.Get(NonNamespacedMarker.Name) == nil
-				noVerbs := info.Markers.Get(NoVerbsMarker.Name) != nil
+				namespaceScoped := info.Markers.Get(nonNamespacedMarker.Name) == nil
+				noVerbs := info.Markers.Get(noVerbsMarker.Name) != nil
 				hasStatus := HasStatusSubresource(info)
-				readOnly := info.Markers.Get(ReadOnlyMarker.Name) != nil
+				readOnly := info.Markers.Get(readOnlyMarker.Name) != nil
 
 				// Extract values from skip verbs marker.
-				sVerbs := info.Markers.Get(SkipVerbsMarker.Name)
+				sVerbs := info.Markers.Get(skipVerbsMarker.Name)
 				if sVerbs != nil {
 					val, ok := sVerbs.(markers.RawArguments)
 					if !ok {
-						root.AddError(fmt.Errorf("marker defined in wrong format %q", SkipVerbsMarker.Name))
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", skipVerbsMarker.Name))
 					}
 					skipVerbs = strings.Split(string(val), ",")
 				}
 
 				// Extract values from only verbs marker.
-				oVerbs := info.Markers.Get(OnlyVerbsMarker.Name)
+				oVerbs := info.Markers.Get(onlyVerbsMarker.Name)
 				if oVerbs != nil {
 					val, ok := oVerbs.(markers.RawArguments)
 					if !ok {
-						root.AddError(fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name))
+						root.AddError(fmt.Errorf("marker defined in wrong format %q", onlyVerbsMarker.Name))
 					}
 					onlyVerbs = append(onlyVerbs, strings.Split(string(val), ",")...)
 				}
