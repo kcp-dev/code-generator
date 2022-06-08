@@ -26,6 +26,7 @@ import (
 
 	codegenutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 
+	"github.com/kcp-dev/code-generator/namer"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	gentype "k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/loader"
@@ -362,6 +363,14 @@ func (a *api) WriteContent() error {
 
 // Execute template and append the contents to the writer.
 func templateExecute(templateName string, data api) error {
+	namer := namer.Namer{
+		Finalize: util.UpperFirst,
+	}
+
+	// Add plural naming to the function map based on a custom namer.
+	funcMap["plural"] = func(input string) string {
+		return namer.Name(input)
+	}
 	templ, err := template.New("wrapper").Funcs(funcMap).Parse(templateName)
 	if err != nil {
 		return err
