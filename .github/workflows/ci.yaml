@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 1
       - run: |
           cd code-generator
-          ../repo-infra/hack/verify_boilerplate.py --boilerplate-dir=hack/boilerplate
+          ../repo-infra/hack/verify_boilerplate.py --boilerplate-dir=hack/boilerplate --skip=namer/namer.go
 
   lint:
     name: lint
