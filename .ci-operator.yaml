@@ -1,4 +1,4 @@
 build_root_image:
   namespace: ci
-  name: codegen-build-root
-  tag: "1.18"
+  name: kcp-dev-build-root
+  tag: "1.17"
