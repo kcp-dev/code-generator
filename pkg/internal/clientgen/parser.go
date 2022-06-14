@@ -413,7 +413,7 @@ func adjustTemplate(template, verb string) string {
 }
 
 func adjReturnValueInTemplate(template, verb string) string {
-	s := fmt.Sprintf("w.delegate.{{value .Method \"%s\"}}(ctx,", util.UpperFirst(verb))
+	s := fmt.Sprintf("w.delegate.{{default .Method \"%s\"}}(ctx,", util.UpperFirst(verb))
 	index := strings.Index(template, s) + len(s)
 	return string(template[:index]) + " name, " + string(template[index:])
 }
