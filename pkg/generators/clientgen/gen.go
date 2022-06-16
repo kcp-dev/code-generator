@@ -89,6 +89,9 @@ type Generator struct {
 	// headerText is the header text to be added to generated wrappers.
 	// It is obtained from `--go-header-text` flag.
 	headerText string
+	// clusterclientWrappers contains the content which has the
+	// initial config and wrappers.
+	clusterclientWrappers []byte
 }
 
 // TODO: Store this information in generation context, as other genrators
@@ -274,7 +277,8 @@ func (g *Generator) writeWrappedClientSet() error {
 		outBytes = formattedBytes
 	}
 
-	return util.WriteContent(outBytes, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
+	g.clusterclientWrappers = outBytes
+	return nil
 }
 
 func (g *Generator) writeHeader(out io.Writer) error {
@@ -517,7 +521,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			}
 		}
 	}
-	return nil
+	return util.WriteContent(g.clusterclientWrappers, clientSetFilename, filepath.Join(g.outputDir, g.clientsetName))
 }
 
 func verifyAdditionalMethod(m clientgen.AdditionalMethod) error {

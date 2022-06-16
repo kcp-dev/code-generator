@@ -28,42 +28,6 @@ import (
 )
 
 var _ = Describe("Test generator funcs", func() {
-	Describe("Test setting defaults", func() {
-		var (
-			f flag.Flags
-			g *Generator
-		)
-		BeforeEach(func() {
-			f = flag.Flags{}
-			f.InputDir = "."
-			f.ClientsetAPIPath = "examples"
-			f.OutputDir = "."
-			f.GroupVersions = []string{"apps:v1"}
-
-			g = &Generator{}
-		})
-
-		It("should set defaults correctly", func() {
-			err := g.setDefaults(f)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(g.inputDir).To(Equal("."))
-			Expect(g.clientSetAPIPath).To(Equal("examples"))
-			Expect(g.outputDir).To(Equal("."))
-
-			expected := []types.GroupVersions{{
-				PackageName: "apps",
-				Group:       types.Group("apps"),
-				Versions: []types.PackageVersion{
-					{
-						Version: types.Version("v1"),
-						Package: "apps/v1",
-					},
-				},
-			}}
-			Expect(g.groupVersions).To(Equal(expected))
-		})
-	})
-
 	Describe("Test gv", func() {
 		var (
 			f flag.Flags
