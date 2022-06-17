@@ -75,11 +75,7 @@ const (
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
 // directory whose pacakge is to be found.
 func CurrentPackage(dir string) (string, bool) {
-	absPath, err := filepath.Abs(dir)
-	if err != nil {
-		return "", false
-	}
-	goModPath, err := getGoModPath(absPath)
+	goModPath, err := getGoModPath(dir)
 	if err != nil {
 		return "", false
 	}
