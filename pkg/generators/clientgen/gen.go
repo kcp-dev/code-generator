@@ -490,7 +490,7 @@ func (g *Generator) generateSubInterfaces(ctx *genall.GenerationContext) error {
 			}
 
 			if len(byType) == 0 {
-				return nil
+				continue
 			}
 
 			err = pkgmg.WriteContent(&importList)
