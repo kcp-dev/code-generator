@@ -365,6 +365,9 @@ func (a *api) WriteContent() error {
 func templateExecute(templateName string, data api) error {
 	namer := namer.Namer{
 		Finalize: util.UpperFirst,
+		Exceptions: map[string]string{
+			"Endpoints": "Endpoints",
+		},
 	}
 
 	// Add plural naming to the function map based on a custom namer.
