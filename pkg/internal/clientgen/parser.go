@@ -26,8 +26,8 @@ import (
 
 	codegenutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 
-	"github.com/kcp-dev/code-generator/namer"
 	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/third_party/namer"
 	gentype "k8s.io/code-generator/cmd/client-gen/types"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
