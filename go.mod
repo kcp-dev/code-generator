@@ -3,7 +3,7 @@ module github.com/kcp-dev/code-generator
 go 1.18
 
 require (
-	github.com/kcp-dev/apimachinery v0.0.0-20220511165638-c591795618c7
+	github.com/kcp-dev/apimachinery v0.0.0-20220629202653-f10a8f632ab1
 	github.com/kcp-dev/logicalcluster v1.0.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0

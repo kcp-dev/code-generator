@@ -73,7 +73,7 @@ const (
 // CurrentPackage returns the go package of the current directory, or "" if it cannot
 // be derived from the GOPATH.
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
-// directory whose pacakge is to be found.
+// directory whose package is to be found.
 func CurrentPackage(dir string) (string, bool) {
 	goModPath, err := getGoModPath(dir)
 	if err != nil {
@@ -85,8 +85,6 @@ func CurrentPackage(dir string) (string, bool) {
 	var hasGoMod bool
 	if goModPath == dir {
 		hasGoMod = true
-	} else {
-		hasGoMod = false
 	}
 
 	gomod, err := ioutil.ReadFile(filepath.Join(goModPath, "go.mod"))

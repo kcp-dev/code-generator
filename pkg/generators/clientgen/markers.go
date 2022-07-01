@@ -23,6 +23,11 @@ var (
 	// markers are not a part of genclient, since they do not accept any values.
 	GenclientMarker     = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, genclient{}))
 	NonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
+
+	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
+	// controller-tools, comma indicates another argument, as multiple arguments need to provided with a semi-colon separator.
+	SkipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
+	OnlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
 )
 
 // IsEnabledForMethod verifies if the genclient marker is enabled for
