@@ -99,3 +99,12 @@ verify-codegen:
 		echo "You need to run 'make codegen' to update generated files and commit them"; \
 		exit 1; \
 	fi
+
+$(TOOLS_DIR)/verify_boilerplate.py:
+	mkdir -p $(TOOLS_DIR)
+	curl --fail --retry 3 -L -o $(TOOLS_DIR)/verify_boilerplate.py https://raw.githubusercontent.com/kubernetes/repo-infra/master/hack/verify_boilerplate.py
+	chmod +x $(TOOLS_DIR)/verify_boilerplate.py
+
+.PHONY: verify-boilerplate
+verify-boilerplate: $(TOOLS_DIR)/verify_boilerplate.py
+	$(TOOLS_DIR)/verify_boilerplate.py --boilerplate-dir=hack/boilerplate
