@@ -23,6 +23,7 @@ import (
 	"go/format"
 	"io"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -198,6 +199,9 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 					return nil, typeErr
 				}
 			}
+			sort.Slice(gvks[gv.Group][packageVersion], func(i, j int) bool {
+				return gvks[gv.Group][packageVersion][i].String() < gvks[gv.Group][packageVersion][j].String()
+			})
 		}
 	}
 
