@@ -17,20 +17,34 @@ limitations under the License.
 package informergen
 
 import (
+	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"github.com/kcp-dev/code-generator/third_party/namer"
+	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
 var (
 	templateFuncs = template.FuncMap{
-		"upperFirst": util.UpperFirst,
-		"lowerFirst": util.LowerFirst,
-		"toLower":    strings.ToLower,
+		"upperFirst":   util.UpperFirst,
+		"lowerFirst":   util.LowerFirst,
+		"toLower":      strings.ToLower,
+		"sortVersions": sortVersions,
 	}
 )
+
+func sortVersions(versionKinds map[types.PackageVersion][]Kind) []types.PackageVersion {
+	versions := []types.PackageVersion{}
+	for version := range versionKinds {
+		versions = append(versions, version)
+	}
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].Version.String() < versions[j].Version.String()
+	})
+	return versions
+}
 
 type Kind struct {
 	kind       string
