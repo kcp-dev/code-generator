@@ -35,7 +35,9 @@ import (
 	versioned "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
 
 	example "github.com/kcp-dev/code-generator/examples/pkg/informers/externalversions/example"
+	example3 "github.com/kcp-dev/code-generator/examples/pkg/informers/externalversions/example3"
 	"github.com/kcp-dev/code-generator/examples/pkg/informers/externalversions/internalinterfaces"
+	secondexample "github.com/kcp-dev/code-generator/examples/pkg/informers/externalversions/secondexample"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -179,8 +181,18 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Example() example.Interface
+	Example3() example3.Interface
+	Secondexample() secondexample.Interface
 }
 
 func (f *sharedInformerFactory) Example() example.Interface {
 	return example.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example3() example3.Interface {
+	return example3.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Secondexample() secondexample.Interface {
+	return secondexample.New(f, f.namespace, f.tweakListOptions)
 }
