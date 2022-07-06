@@ -26,12 +26,11 @@ import (
 	"strings"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
+	"github.com/kcp-dev/code-generator/pkg/generators/parser"
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -69,10 +68,10 @@ type pkgPaths struct {
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	reg := &markers.Registry{}
 	if err := markers.RegisterAll(reg,
-		clientgen.GenclientMarker,
-		clientgen.NonNamespacedMarker,
-		clientgen.SkipVerbsMarker,
-		clientgen.OnlyVerbsMarker,
+		parser.GenclientMarker,
+		parser.NonNamespacedMarker,
+		parser.SkipVerbsMarker,
+		parser.OnlyVerbsMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -123,7 +122,7 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	if err != nil {
 		return err
 	}
-	gvs, err := clientgen.GetGV(f)
+	gvs, err := parser.GetGV(f)
 	if err != nil {
 		return err
 	}
@@ -169,15 +168,14 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 				var outContent bytes.Buffer
 
 				// if not enabled for this type, skip
-				if !clientgen.IsEnabledForMethod(info) {
+				if !parser.IsEnabledForMethod(info) {
 					return
 				}
 				if err := g.writeHeader(&outContent); err != nil {
 					root.AddError(err)
 				}
 
-				klog.Infof("Generating lister for GroupVersionKind %s:%s/%s", gv.Group.String(), version.String(), info.Name)
-				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, path, !clientgen.IsClusterScoped(info), &outContent)
+				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, path, !parser.IsClusterScoped(info), &outContent)
 				if err != nil {
 					root.AddError(err)
 					return
