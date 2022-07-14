@@ -20,13 +20,13 @@ import (
 	"io"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/pkg/parser"
 )
 
 type Factory struct {
 	OutputPackage    string
 	ClientsetPackage string
-	Groups           []types.Group
+	Groups           []parser.Group
 
 	PackageName string
 }
@@ -73,7 +73,7 @@ import (
 	{{$outputPackage := .outputPackage -}}
 	{{$packageName := .packageName -}}
 	{{range .groups -}}
-	{{.}} "{{$outputPackage}}/{{.}}"
+	{{.Name}} "{{$outputPackage}}/{{.Name}}"
 	{{end -}}
 	"{{.outputPackage}}/internalinterfaces"
 )
@@ -218,13 +218,13 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	{{range .groups}}{{.String|upperFirst}}() {{.}}.Interface
+	{{range .groups}}{{.GoName|upperFirst}}() {{.Name}}.Interface
 	{{end}}
 }
 
 {{range .groups}}
-func (f *sharedInformerFactory) {{.String|upperFirst}}() {{.}}.Interface {
-  return {{.}}.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) {{.GoName|upperFirst}}() {{.Name}}.Interface {
+  return {{.Name}}.New(f, f.namespace, f.tweakListOptions)
 }
 {{end}}
 `

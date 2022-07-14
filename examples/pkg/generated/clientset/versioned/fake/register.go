@@ -23,7 +23,7 @@ import (
 	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1alpha1"
 	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
 	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v2"
-	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
+	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
 	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/secondexample/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +40,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	examplev1alpha1.AddToScheme,
 	examplev1beta1.AddToScheme,
 	examplev2.AddToScheme,
-	example3v1.AddToScheme,
+	thirdexamplev1.AddToScheme,
 	secondexamplev1.AddToScheme,
 }
 

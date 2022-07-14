@@ -20,12 +20,13 @@ import (
 	"io"
 	"text/template"
 
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
 type GroupInterface struct {
 	OutputPackage string
-	Group         types.Group
+	Group         parser.Group
 	Versions      []types.PackageVersion
 }
 
@@ -36,7 +37,7 @@ func (g *GroupInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"packageName":   g.Group.String(),
+		"packageName":   g.Group.Name,
 		"versions":      g.Versions,
 		"outputPackage": g.OutputPackage,
 	}

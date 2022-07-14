@@ -19,12 +19,14 @@ package informergen
 import (
 	"io"
 	"text/template"
+
+	"github.com/kcp-dev/code-generator/pkg/parser"
 )
 
 type VersionInterface struct {
 	OutputPackage string
 	PackageName   string
-	Kinds         []Kind
+	Kinds         []parser.Kind
 }
 
 func (v *VersionInterface) WriteContent(w io.Writer) error {

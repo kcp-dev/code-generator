@@ -26,8 +26,8 @@ import (
 	"strings"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/generators/parser"
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"

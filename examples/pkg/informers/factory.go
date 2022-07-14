@@ -181,7 +181,7 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Example() example.Interface
-	Example3() example3.Interface
+	ThirdExample() example3.Interface
 	Secondexample() secondexample.Interface
 }
 
@@ -189,7 +189,7 @@ func (f *sharedInformerFactory) Example() example.Interface {
 	return example.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) Example3() example3.Interface {
+func (f *sharedInformerFactory) ThirdExample() example3.Interface {
 	return example3.New(f, f.namespace, f.tweakListOptions)
 }
 
