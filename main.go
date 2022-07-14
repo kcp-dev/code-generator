@@ -58,7 +58,7 @@ func main() {
 						  --output-dir examples/pkg 
 						  --group-versions example:v1
 		
-		# To generate listers and informers (Yet to be implemented):
+		# To generate listers and informers:
 		code-gen "client,lister,informer" --clientset-name clusterclient --go-header-file examples/header.txt 
 						  --clientset-api-path=github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned 
 						  --input-dir github.com/kcp-dev/code-generator/examples 
@@ -67,7 +67,7 @@ func main() {
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				return fmt.Errorf("no arguments provided to the command. Accepted values are clients, informers and listers.")
+				return fmt.Errorf("no arguments provided to the command. Accepted values are client, informer and lister.")
 			}
 
 			// This argument is expected to be of the form
