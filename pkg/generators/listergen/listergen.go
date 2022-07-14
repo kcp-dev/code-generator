@@ -31,6 +31,7 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -175,6 +176,7 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 					root.AddError(err)
 				}
 
+				klog.Infof("Generating lister for GroupVersionKind %s:%s/%s", gv.Group.String(), version.String(), info.Name)
 				a, err := listergen.NewAPI(root, info, string(version.Version), gv.PackageName, path, !clientgen.IsClusterScoped(info), &outContent)
 				if err != nil {
 					root.AddError(err)
@@ -202,7 +204,7 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 			}
 
 			if len(byType) == 0 {
-				return nil
+				continue
 			}
 
 			for typeName, content := range byType {
