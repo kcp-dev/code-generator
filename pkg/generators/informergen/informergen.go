@@ -26,11 +26,9 @@ import (
 	"sort"
 	"strings"
 
-	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
-	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
@@ -79,9 +77,11 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 	if err := markers.RegisterAll(reg,
 		parser.GenclientMarker,
 		parser.NonNamespacedMarker,
+		parser.GroupNameMarker,
+		parser.NoVerbsMarker,
+		parser.ReadOnlyMarker,
 		parser.SkipVerbsMarker,
 		parser.OnlyVerbsMarker,
-		parser.GroupNameMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -101,7 +101,7 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 		return err
 	}
 
-	if g.groupVersionKinds, err = g.GetGVKs(ctx); err != nil {
+	if g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.groupVersions, []string{"list", "watch"}); err != nil {
 		return err
 	}
 
@@ -110,17 +110,15 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 
 // configure sets the Generator's configuration using the given flags.
 func (g *Generator) configure(f flag.Flags) error {
-	if err := flag.ValidateFlags(f); err != nil {
+	var err error
+
+	if err = flag.ValidateFlags(f); err != nil {
 		return err
 	}
 
 	g.inputDir = f.InputDir
-	absoluteInputDir, err := filepath.Abs(g.inputDir)
-	if err != nil {
-		return err
-	}
 
-	pkg, hasGoMod := util.CurrentPackage(absoluteInputDir)
+	pkg, hasGoMod := util.CurrentPackage(g.inputDir)
 	if len(pkg) == 0 {
 		return fmt.Errorf("error finding the module path for this package %q", f.InputDir)
 	}
@@ -158,76 +156,6 @@ func (g *Generator) configure(f flag.Flags) error {
 	g.groupVersions = append(g.groupVersions, gvs...)
 
 	return nil
-}
-
-func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[parser.Group]map[types.PackageVersion][]parser.Kind, error) {
-
-	gvks := map[parser.Group]map[types.PackageVersion][]parser.Kind{}
-
-	for _, gv := range g.groupVersions {
-		group := parser.Group{Name: gv.Group.String(), GoName: gv.Group.String(), FullName: gv.Group.String()}
-		for _, packageVersion := range gv.Versions {
-
-			abs, err := filepath.Abs(g.inputDir)
-			if err != nil {
-				return nil, err
-			}
-			path := filepath.Join(abs, group.Name, packageVersion.String())
-			pkgs, err := loader.LoadRootsWithConfig(&packages.Config{
-				Dir: g.inputDir, Mode: packages.NeedTypesInfo,
-			}, path)
-			if err != nil {
-				return nil, err
-			}
-			ctx.Roots = pkgs
-			for _, root := range ctx.Roots {
-				packageMarkers, _ := markers.PackageMarkers(ctx.Collector, root)
-				if packageMarkers != nil {
-					val, ok := packageMarkers.Get(parser.GroupNameMarker.Name).(markers.RawArguments)
-					if ok {
-						group.FullName = string(val)
-						groupGoName := strings.Split(group.FullName, ".")[0]
-						if groupGoName != "" {
-							group.GoName = groupGoName
-						}
-					}
-				}
-
-				// Initialize the map down here so that we can use the group with the proper GoName as the key
-				if _, ok := gvks[group]; !ok {
-					gvks[group] = map[types.PackageVersion][]parser.Kind{}
-				}
-				if _, ok := gvks[group][packageVersion]; !ok {
-					gvks[group][packageVersion] = []parser.Kind{}
-				}
-
-				if typeErr := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
-
-					// if not enabled for this type, skip
-					if !parser.IsEnabledForMethod(info) {
-						return
-					}
-					namespaced := !parser.IsClusterScoped(info)
-					gvks[group][packageVersion] = append(gvks[group][packageVersion], parser.NewKind(info.Name, namespaced))
-
-				}); typeErr != nil {
-					return nil, typeErr
-				}
-			}
-			sort.Slice(gvks[group][packageVersion], func(i, j int) bool {
-				return gvks[group][packageVersion][i].String() < gvks[group][packageVersion][j].String()
-			})
-			if len(gvks[group][packageVersion]) == 0 {
-				klog.Warningf("No types discovered for %s:%s, will skip generation for this GroupVersion", group.Name, packageVersion.String())
-				delete(gvks[group], packageVersion)
-			}
-		}
-		if len(gvks[group]) == 0 {
-			delete(gvks, group)
-		}
-	}
-
-	return gvks, nil
 }
 
 // generate first generates the wrapper for all the interfaces provided in the input.

@@ -17,57 +17,16 @@ limitations under the License.
 package listergen
 
 import (
-	"fmt"
-	"go/types"
-	"io"
 	"strings"
 	"text/template"
 
-	"sigs.k8s.io/controller-tools/pkg/loader"
-	"sigs.k8s.io/controller-tools/pkg/markers"
+	"github.com/kcp-dev/code-generator/pkg/util"
 )
 
-// funcMap contains the list of functions which are to be registered with
-// the templates.
-var funcMap = template.FuncMap{
-	"lowerFirst": func(s string) string {
-		return strings.ToLower(string(s[0])) + s[1:]
-	},
-}
-
-// api contains info about each type
-// TODO: This would be modified as we add more markers to client-gen.
-type api struct {
-	Name         string
-	Version      string
-	PkgName      string
-	writer       *io.Writer
-	IsNamespaced bool
-	APIPath      string
-}
-
-func NewAPI(root *loader.Package, info *markers.TypeInfo, version, group, apiPath string, isNamespaced bool, w io.Writer) (*api, error) {
-	typeInfo := root.TypesInfo.TypeOf(info.RawSpec.Name)
-	if typeInfo == types.Typ[types.Invalid] {
-		return nil, fmt.Errorf("unknown type: %s", info.Name)
+var (
+	templateFuncs = template.FuncMap{
+		"upperFirst": util.UpperFirst,
+		"lowerFirst": util.LowerFirst,
+		"toLower":    strings.ToLower,
 	}
-
-	api := &api{
-		Name:         info.RawSpec.Name.Name,
-		Version:      version,
-		PkgName:      group,
-		writer:       &w,
-		IsNamespaced: isNamespaced,
-		APIPath:      apiPath,
-	}
-
-	return api, nil
-}
-
-func (a *api) WriteContent() error {
-	templ, err := template.New("api").Funcs(funcMap).Parse(apiWrapper)
-	if err != nil {
-		return err
-	}
-	return templ.Execute(*a.writer, a)
-}
+)
