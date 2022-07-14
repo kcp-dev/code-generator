@@ -2,9 +2,20 @@
 
 ### Usage:
 
+```
+code-generator <command> [input-flags]
+```
+
+where `<command>` can be one of:
+- client
+- lister
+- informer
+
+It is possible to run the code generation for multiple components at once `code-generator client,lister,informer [input-flags]`
+
 #### Input flags:
 
-1. `--input-dir` - The directory path where APIs are defined. Make sure that the types are defined in `<inputDir>/pkg/apis/{$GROUP}/{$VERSION}`. For example, if your input apis are defined in `types.go` inside `testdata/pkg/apis/apps/v1/types.go`, the input directory should be specified as `testdata/pkg`. `{$GROUP}/{$VERSION}` is appended in the input path.
+1. `--input-dir` - The directory path where APIs are defined. Make sure that the types are defined in `<inputDir>/pkg/apis/{$GROUP}/{$VERSION}`. For example, if your input apis are defined in `types.go` inside `examples/pkg/apis/apps/v1/types.go`, the input directory should be specified as `examples/pkg`. `{$GROUP}/{$VERSION}` is appended in the input path.
 **Note**: This is the relative path to the input directory where APIs live.
 
 2. `--output-dir` - The directory where output clients are to be generated. It defaults to the `clientset` folder under current working directory.
@@ -15,7 +26,7 @@
 
 4. `--clientset-name` - The name of the generated clientset package. It defaults to `clientset`.
 
-5. `--group-versions` - List of group versions in the format `group:version`. Define multiple groups by specifying the flag again. For example, the inputs can be: 
+5. `--group-versions` - List of group versions in the format `group:version`. Define multiple groups by specifying the flag again. For example, the inputs can be:
     - `--group-version="apps:v1"`
     - `--group-versions="rbac:v1" --group-versions="apps:v1"`
     - `--group-version="rbac:v1,v2"`
@@ -26,10 +37,11 @@ Example:
 To run it locally and see how it works, use the following command:
 
 ```
-go run main.go client --clientset-name clusterclient --go-header-file testdata/header.txt 
-                      --clientset-api-path=github.com/kcp-dev/code-generator/testdata/pkg/generated/clientset/versioned 
-                      --input-dir testdata/pkg/apis 
+mkdir -p testdata/pkg
+go run main.go client,lister,informer --clientset-name clusterclient --go-header-file examples/header.txt \
+                      --clientset-api-path=github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
+                      --input-dir examples/pkg/apis \
                       --output-dir testdata/pkg --group-versions example:v1
 ```
 
-will create an output folder in `testdata/pkg/clientset`.
+will create output folders in `testdata/pkg`.
