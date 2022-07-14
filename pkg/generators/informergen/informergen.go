@@ -28,6 +28,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
@@ -202,6 +203,13 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 			sort.Slice(gvks[gv.Group][packageVersion], func(i, j int) bool {
 				return gvks[gv.Group][packageVersion][i].String() < gvks[gv.Group][packageVersion][j].String()
 			})
+			if len(gvks[gv.Group][packageVersion]) == 0 {
+				klog.Warningf("No types discovered for %s:%s, will skip generation for this GroupVersion", gv.Group.String(), packageVersion.String())
+				delete(gvks[gv.Group], packageVersion)
+			}
+		}
+		if len(gvks[gv.Group]) == 0 {
+			delete(gvks, gv.Group)
 		}
 	}
 
@@ -219,14 +227,17 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 	sort.Slice(groups, func(i, j int) bool {
 		return groups[i].String() < groups[j].String()
 	})
+	klog.Info("Generating informer factory")
 	if err := g.writeFactory(ctx, groups); err != nil {
 		return err
 	}
 
+	klog.Info("Generating informer factory interfaces")
 	if err := g.writeFactoryInterface(ctx); err != nil {
 		return err
 	}
 
+	klog.Info("Generating generic informer")
 	if err := g.writeGeneric(ctx, groups); err != nil {
 		return err
 	}
@@ -239,17 +250,23 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 		sort.Slice(versions, func(i, j int) bool {
 			return versions[i].Version.String() < versions[j].Version.String()
 		})
+		klog.Infof("Generating group interface for %s", group.String())
 		if err := g.writeGroupInterface(ctx, group, versions); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 
 		for version, kinds := range versionKinds {
+			klog.Infof("Generating version interface for %s:%s", group.String(), version.String())
 			if err := g.writeVersionInterface(ctx, group, version, kinds); err != nil {
-				return err
+				klog.Error(err)
+				continue
 			}
 			for _, kind := range kinds {
+				klog.Infof("Generating informer for GVK %s:%s/%s", group.String(), version.String(), kind.String())
 				if err := g.writeInformer(ctx, group, version, kind); err != nil {
-					return err
+					klog.Error(err)
+					continue
 				}
 			}
 		}
