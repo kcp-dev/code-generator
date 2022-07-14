@@ -28,6 +28,7 @@ type Generic struct {
 
 	PackageName       string
 	GroupVersionKinds map[types.Group]map[types.PackageVersion][]Kind
+	Groups            []types.Group
 }
 
 func (g *Generic) WriteContent(w io.Writer) error {
@@ -40,6 +41,7 @@ func (g *Generic) WriteContent(w io.Writer) error {
 		"inputPackage":      g.InputPackage,
 		"packageName":       g.PackageName,
 		"groupVersionKinds": g.GroupVersionKinds,
+		"groups":            g.Groups,
 	}
 	return templ.Execute(w, m)
 }
@@ -62,8 +64,9 @@ import (
 
 	{{$inputPackage := .inputPackage -}}
 	{{$packageName := .packageName -}}
-	{{range $group, $versionKinds := .groupVersionKinds -}}
-	{{range $version, $_ := $versionKinds -}}
+	{{$groupVersionKinds := .groupVersionKinds -}}
+	{{range $group := .groups -}}
+	{{range  $version := (index $groupVersionKinds $group) |sortVersions -}}
 	{{$group}}{{$version.Version}} "{{$inputPackage}}/{{$group}}/{{$version.Version}}"
 	{{end -}}{{end -}}
 )
@@ -94,10 +97,12 @@ func (f *genericInformer) Lister() *kcpcache.GenericClusterLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-		{{range $group, $versions := .groupVersionKinds -}}
-			{{range $version, $kinds := $versions -}}
+	{{$groupVersionKinds := .groupVersionKinds -}}
+	{{range $group := .groups -}}
+	{{$versionKinds := index $groupVersionKinds $group -}}
+	{{range $version := $versionKinds | sortVersions -}}
 	// Group={{$group.String}}, Version={{$version.String}}
-				{{range $kind := $kinds -}}
+				{{range $kind := index $versionKinds $version -}}
 	case {{$group.String}}{{$version.String}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.{{$group.String|upperFirst}}().{{$version.String|upperFirst}}().{{$kind.Plural}}().Informer()}, nil
 				{{end}}

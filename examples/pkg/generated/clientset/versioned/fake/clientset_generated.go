@@ -22,6 +22,16 @@ import (
 	clientset "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
 	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1"
 	fakeexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1/fake"
+	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1"
+	fakeexamplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1/fake"
+	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
+	fakeexamplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1/fake"
+	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
+	fakeexamplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2/fake"
+	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
+	fakeexample3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
+	fakesecondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -82,4 +92,29 @@ var (
 // ExampleV1 retrieves the ExampleV1Client
 func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
 	return &fakeexamplev1.FakeExampleV1{Fake: &c.Fake}
+}
+
+// ExampleV1alpha1 retrieves the ExampleV1alpha1Client
+func (c *Clientset) ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface {
+	return &fakeexamplev1alpha1.FakeExampleV1alpha1{Fake: &c.Fake}
+}
+
+// ExampleV1beta1 retrieves the ExampleV1beta1Client
+func (c *Clientset) ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface {
+	return &fakeexamplev1beta1.FakeExampleV1beta1{Fake: &c.Fake}
+}
+
+// ExampleV2 retrieves the ExampleV2Client
+func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
+	return &fakeexamplev2.FakeExampleV2{Fake: &c.Fake}
+}
+
+// Example3V1 retrieves the Example3V1Client
+func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
+	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
+}
+
+// SecondexampleV1 retrieves the SecondexampleV1Client
+func (c *Clientset) SecondexampleV1() secondexamplev1.SecondexampleV1Interface {
+	return &fakesecondexamplev1.FakeSecondexampleV1{Fake: &c.Fake}
 }

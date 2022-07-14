@@ -32,6 +32,21 @@ import (
 
 	examplev1client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/example/v1"
 	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1"
+
+	examplev2client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/example/v2"
+	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
+
+	examplev1alpha1client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/example/v1alpha1"
+	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1"
+
+	examplev1beta1client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/example/v1beta1"
+	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
+
+	secondexamplev1client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/secondexample/v1"
+	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
+
+	example3v1client "github.com/kcp-dev/code-generator/examples/pkg/clusterclient/typed/example3/v1"
+	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
 )
 
 // NewForConfig creates a new ClusterClient for the given config.
@@ -83,4 +98,29 @@ func (w *wrappedInterface) Discovery() discovery.DiscoveryInterface {
 // ExampleV1 retrieves the ExampleV1Client.
 func (w *wrappedInterface) ExampleV1() examplev1.ExampleV1Interface {
 	return examplev1client.New(w.cluster, w.delegate.ExampleV1())
+}
+
+// ExampleV2 retrieves the ExampleV2Client.
+func (w *wrappedInterface) ExampleV2() examplev2.ExampleV2Interface {
+	return examplev2client.New(w.cluster, w.delegate.ExampleV2())
+}
+
+// ExampleV1alpha1 retrieves the ExampleV1alpha1Client.
+func (w *wrappedInterface) ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface {
+	return examplev1alpha1client.New(w.cluster, w.delegate.ExampleV1alpha1())
+}
+
+// ExampleV1beta1 retrieves the ExampleV1beta1Client.
+func (w *wrappedInterface) ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface {
+	return examplev1beta1client.New(w.cluster, w.delegate.ExampleV1beta1())
+}
+
+// SecondexampleV1 retrieves the SecondexampleV1Client.
+func (w *wrappedInterface) SecondexampleV1() secondexamplev1.SecondexampleV1Interface {
+	return secondexamplev1client.New(w.cluster, w.delegate.SecondexampleV1())
+}
+
+// Example3V1 retrieves the Example3V1Client.
+func (w *wrappedInterface) Example3V1() example3v1.Example3V1Interface {
+	return example3v1client.New(w.cluster, w.delegate.Example3V1())
 }

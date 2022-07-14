@@ -24,9 +24,9 @@ import (
 )
 
 type Factory struct {
-	OutputPackage     string
-	ClientsetPackage  string
-	GroupVersionKinds map[types.Group]map[types.PackageVersion][]Kind
+	OutputPackage    string
+	ClientsetPackage string
+	Groups           []types.Group
 
 	PackageName string
 }
@@ -41,7 +41,7 @@ func (f *Factory) WriteContent(w io.Writer) error {
 		"packageName":        f.PackageName,
 		"clientsetPackage":   f.ClientsetPackage,
 		"clientsetInterface": "versioned.Interface",
-		"groupVersionKinds":  f.GroupVersionKinds,
+		"groups":             f.Groups,
 		"outputPackage":      f.OutputPackage,
 		//TODO(we may need some way to get gvGoNames, which are extracted from // +groupGoName=SomeUniqueShortName)
 	}
@@ -72,8 +72,8 @@ import (
 
 	{{$outputPackage := .outputPackage -}}
 	{{$packageName := .packageName -}}
-	{{range $group, $_ := .groupVersionKinds -}}
-	{{$group}} "{{$outputPackage}}/{{$group}}"
+	{{range .groups -}}
+	{{.}} "{{$outputPackage}}/{{.}}"
 	{{end -}}
 	"{{.outputPackage}}/internalinterfaces"
 )
@@ -218,13 +218,13 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	{{range $group, $_ := .groupVersionKinds}}{{$group.String|upperFirst}}() {{$group}}.Interface
+	{{range .groups}}{{.String|upperFirst}}() {{.}}.Interface
 	{{end}}
 }
 
-{{range $group, $_ := .groupVersionKinds}}
-func (f *sharedInformerFactory) {{$group.String|upperFirst}}() {{$group}}.Interface {
-  return {{$group}}.New(f, f.namespace, f.tweakListOptions)
+{{range .groups}}
+func (f *sharedInformerFactory) {{.String|upperFirst}}() {{.}}.Interface {
+  return {{.}}.New(f, f.namespace, f.tweakListOptions)
 }
 {{end}}
 `

@@ -60,6 +60,11 @@ codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_INFORMER_GEN) build
 		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
 		--input-base github.com/kcp-dev/code-generator/examples/pkg/apis \
 		--input example/v1 \
+		--input example/v1alpha1 \
+		--input example/v1beta1 \
+		--input example/v2 \
+		--input example3/v1 \
+		--input secondexample/v1 \
 		--output-base . \
 		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset \
 		--trim-path-prefix github.com/kcp-dev/code-generator
@@ -72,7 +77,12 @@ codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_INFORMER_GEN) build
 		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
 		--input-dir ./examples/pkg/apis \
 		--output-dir ./examples/pkg \
-		--group-versions example:v1
+		--group-versions example:v1 \
+		--group-versions example:v2 \
+		--group-versions example:v1alpha1 \
+		--group-versions example:v1beta1 \
+		--group-versions secondexample:v1 \
+		--group-versions example3:v1
 
 $(GOLANGCI_LINT):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)

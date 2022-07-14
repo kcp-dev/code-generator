@@ -30,6 +30,11 @@ import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 
 	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
+	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1alpha1"
+	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
+	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v2"
+	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
+	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/secondexample/v1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -63,6 +68,36 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1().ClusterTestTypes().Informer()}, nil
 	case examplev1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1().TestTypes().Informer()}, nil
+
+		// Group=example, Version=v1alpha1
+	case examplev1alpha1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1alpha1().ClusterTestTypes().Informer()}, nil
+	case examplev1alpha1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1alpha1().TestTypes().Informer()}, nil
+
+		// Group=example, Version=v1beta1
+	case examplev1beta1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1beta1().ClusterTestTypes().Informer()}, nil
+	case examplev1beta1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V1beta1().TestTypes().Informer()}, nil
+
+		// Group=example, Version=v2
+	case examplev2.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().ClusterTestTypes().Informer()}, nil
+	case examplev2.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().TestTypes().Informer()}, nil
+
+		// Group=example3, Version=v1
+	case example3v1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example3().V1().ClusterTestTypes().Informer()}, nil
+	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Example3().V1().TestTypes().Informer()}, nil
+
+		// Group=secondexample, Version=v1
+	case secondexamplev1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Secondexample().V1().ClusterTestTypes().Informer()}, nil
+	case secondexamplev1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Secondexample().V1().TestTypes().Informer()}, nil
 
 	}
 

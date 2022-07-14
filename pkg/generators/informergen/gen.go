@@ -212,7 +212,14 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 // Then for each type defined in the input, it recursively wraps the subsequent
 // interfaces to be kcp-aware.
 func (g *Generator) generate(ctx *genall.GenerationContext) error {
-	if err := g.writeFactory(ctx); err != nil {
+	groups := []types.Group{}
+	for group := range g.groupVersionKinds {
+		groups = append(groups, group)
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		return groups[i].String() < groups[j].String()
+	})
+	if err := g.writeFactory(ctx, groups); err != nil {
 		return err
 	}
 
@@ -220,7 +227,7 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	if err := g.writeGeneric(ctx); err != nil {
+	if err := g.writeGeneric(ctx, groups); err != nil {
 		return err
 	}
 
@@ -229,6 +236,9 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 		for version := range versionKinds {
 			versions = append(versions, version)
 		}
+		sort.Slice(versions, func(i, j int) bool {
+			return versions[i].Version.String() < versions[j].Version.String()
+		})
 		if err := g.writeGroupInterface(ctx, group, versions); err != nil {
 			return err
 		}
@@ -260,7 +270,7 @@ func (g *Generator) writeHeader(out io.Writer) error {
 	return nil
 }
 
-func (g *Generator) writeFactory(ctx *genall.GenerationContext) error {
+func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []types.Group) error {
 	var out bytes.Buffer
 
 	if err := g.writeHeader(&out); err != nil {
@@ -268,9 +278,9 @@ func (g *Generator) writeFactory(ctx *genall.GenerationContext) error {
 	}
 
 	factory := informergen.Factory{
-		OutputPackage:     g.outputPkgPath,
-		ClientsetPackage:  g.clientSetAPIPath,
-		GroupVersionKinds: g.groupVersionKinds,
+		OutputPackage:    g.outputPkgPath,
+		ClientsetPackage: g.clientSetAPIPath,
+		Groups:           groups,
 
 		PackageName: "externalversions",
 	}
@@ -310,7 +320,7 @@ func (g *Generator) writeFactoryInterface(ctx *genall.GenerationContext) error {
 	return util.WriteContent(formatted, "factory_interfaces.go", filepath.Join(g.outputDir, "informers", typedPackageName, "internalinterfaces"))
 }
 
-func (g *Generator) writeGeneric(ctx *genall.GenerationContext) error {
+func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.Group) error {
 	var out bytes.Buffer
 
 	if err := g.writeHeader(&out); err != nil {
@@ -321,6 +331,7 @@ func (g *Generator) writeGeneric(ctx *genall.GenerationContext) error {
 		InputPackage:      g.inputPkgPath,
 		PackageName:       typedPackageName,
 		GroupVersionKinds: g.groupVersionKinds,
+		Groups:            groups,
 	}
 	if err := generic.WriteContent(&out); err != nil {
 		return err
