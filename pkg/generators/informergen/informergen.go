@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
 	"github.com/kcp-dev/code-generator/pkg/flag"
-	"github.com/kcp-dev/code-generator/pkg/generators/parser"
 	"github.com/kcp-dev/code-generator/pkg/internal/informergen"
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
 )
 
@@ -64,7 +64,7 @@ type Generator struct {
 	groupVersions []types.GroupVersions
 
 	// GroupVersionKinds contains all the needed APIs to scaffold
-	groupVersionKinds map[types.Group]map[types.PackageVersion][]informergen.Kind
+	groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind
 
 	// headerText is the header text to be added to generated wrappers.
 	// It is obtained from `--go-header-text` flag.
@@ -81,6 +81,7 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 		parser.NonNamespacedMarker,
 		parser.SkipVerbsMarker,
 		parser.OnlyVerbsMarker,
+		parser.GroupNameMarker,
 	); err != nil {
 		return nil, fmt.Errorf("error registering markers")
 	}
@@ -159,24 +160,19 @@ func (g *Generator) configure(f flag.Flags) error {
 	return nil
 }
 
-func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[types.PackageVersion][]informergen.Kind, error) {
+func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[parser.Group]map[types.PackageVersion][]parser.Kind, error) {
 
-	gvks := map[types.Group]map[types.PackageVersion][]informergen.Kind{}
+	gvks := map[parser.Group]map[types.PackageVersion][]parser.Kind{}
 
 	for _, gv := range g.groupVersions {
-		if _, ok := gvks[gv.Group]; !ok {
-			gvks[gv.Group] = map[types.PackageVersion][]informergen.Kind{}
-		}
+		group := parser.Group{Name: gv.Group.String(), GoName: gv.Group.String(), FullName: gv.Group.String()}
 		for _, packageVersion := range gv.Versions {
-			if _, ok := gvks[gv.Group][packageVersion]; !ok {
-				gvks[gv.Group][packageVersion] = []informergen.Kind{}
-			}
 
 			abs, err := filepath.Abs(g.inputDir)
 			if err != nil {
 				return nil, err
 			}
-			path := filepath.Join(abs, gv.Group.String(), packageVersion.String())
+			path := filepath.Join(abs, group.Name, packageVersion.String())
 			pkgs, err := loader.LoadRootsWithConfig(&packages.Config{
 				Dir: g.inputDir, Mode: packages.NeedTypesInfo,
 			}, path)
@@ -185,6 +181,26 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 			}
 			ctx.Roots = pkgs
 			for _, root := range ctx.Roots {
+				packageMarkers, _ := markers.PackageMarkers(ctx.Collector, root)
+				if packageMarkers != nil {
+					val, ok := packageMarkers.Get(parser.GroupNameMarker.Name).(markers.RawArguments)
+					if ok {
+						group.FullName = string(val)
+						groupGoName := strings.Split(group.FullName, ".")[0]
+						if groupGoName != "" {
+							group.GoName = groupGoName
+						}
+					}
+				}
+
+				// Initialize the map down here so that we can use the group with the proper GoName as the key
+				if _, ok := gvks[group]; !ok {
+					gvks[group] = map[types.PackageVersion][]parser.Kind{}
+				}
+				if _, ok := gvks[group][packageVersion]; !ok {
+					gvks[group][packageVersion] = []parser.Kind{}
+				}
+
 				if typeErr := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
 
 					// if not enabled for this type, skip
@@ -192,22 +208,22 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 						return
 					}
 					namespaced := !parser.IsClusterScoped(info)
-					gvks[gv.Group][packageVersion] = append(gvks[gv.Group][packageVersion], informergen.NewKind(info.Name, namespaced))
+					gvks[group][packageVersion] = append(gvks[group][packageVersion], parser.NewKind(info.Name, namespaced))
 
 				}); typeErr != nil {
 					return nil, typeErr
 				}
 			}
-			sort.Slice(gvks[gv.Group][packageVersion], func(i, j int) bool {
-				return gvks[gv.Group][packageVersion][i].String() < gvks[gv.Group][packageVersion][j].String()
+			sort.Slice(gvks[group][packageVersion], func(i, j int) bool {
+				return gvks[group][packageVersion][i].String() < gvks[group][packageVersion][j].String()
 			})
-			if len(gvks[gv.Group][packageVersion]) == 0 {
-				klog.Warningf("No types discovered for %s:%s, will skip generation for this GroupVersion", gv.Group.String(), packageVersion.String())
-				delete(gvks[gv.Group], packageVersion)
+			if len(gvks[group][packageVersion]) == 0 {
+				klog.Warningf("No types discovered for %s:%s, will skip generation for this GroupVersion", group.Name, packageVersion.String())
+				delete(gvks[group], packageVersion)
 			}
 		}
-		if len(gvks[gv.Group]) == 0 {
-			delete(gvks, gv.Group)
+		if len(gvks[group]) == 0 {
+			delete(gvks, group)
 		}
 	}
 
@@ -218,12 +234,12 @@ func (g *Generator) GetGVKs(ctx *genall.GenerationContext) (map[types.Group]map[
 // Then for each type defined in the input, it recursively wraps the subsequent
 // interfaces to be kcp-aware.
 func (g *Generator) generate(ctx *genall.GenerationContext) error {
-	groups := []types.Group{}
+	groups := []parser.Group{}
 	for group := range g.groupVersionKinds {
 		groups = append(groups, group)
 	}
 	sort.Slice(groups, func(i, j int) bool {
-		return groups[i].String() < groups[j].String()
+		return groups[i].Name < groups[j].Name
 	})
 	klog.Info("Generating informer factory")
 	if err := g.writeFactory(ctx, groups); err != nil {
@@ -248,20 +264,20 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 		sort.Slice(versions, func(i, j int) bool {
 			return versions[i].Version.String() < versions[j].Version.String()
 		})
-		klog.Infof("Generating group interface for %s", group.String())
+		klog.Infof("Generating group interface for %s", group.Name)
 		if err := g.writeGroupInterface(ctx, group, versions); err != nil {
 			klog.Error(err)
 			continue
 		}
 
 		for version, kinds := range versionKinds {
-			klog.Infof("Generating version interface for %s:%s", group.String(), version.String())
+			klog.Infof("Generating version interface for %s:%s", group.Name, version.String())
 			if err := g.writeVersionInterface(ctx, group, version, kinds); err != nil {
 				klog.Error(err)
 				continue
 			}
 			for _, kind := range kinds {
-				klog.Infof("Generating informer for GVK %s:%s/%s", group.String(), version.String(), kind.String())
+				klog.Infof("Generating informer for GVK %s:%s/%s", group.Name, version.String(), kind.String())
 				if err := g.writeInformer(ctx, group, version, kind); err != nil {
 					klog.Error(err)
 					continue
@@ -285,7 +301,7 @@ func (g *Generator) writeHeader(out io.Writer) error {
 	return nil
 }
 
-func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []types.Group) error {
+func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []parser.Group) error {
 	var out bytes.Buffer
 
 	if err := g.writeHeader(&out); err != nil {
@@ -335,7 +351,7 @@ func (g *Generator) writeFactoryInterface(ctx *genall.GenerationContext) error {
 	return util.WriteContent(formatted, "factory_interfaces.go", filepath.Join(g.outputDir, "informers", "internalinterfaces"))
 }
 
-func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.Group) error {
+func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []parser.Group) error {
 	var out bytes.Buffer
 
 	if err := g.writeHeader(&out); err != nil {
@@ -354,14 +370,13 @@ func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.G
 
 	formatted, err := format.Source(out.Bytes())
 	if err != nil {
-		// return err
-		formatted = out.Bytes()
+		return err
 	}
 
 	return util.WriteContent(formatted, "generic.go", filepath.Join(g.outputDir, "informers"))
 }
 
-func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group types.Group, versions []types.PackageVersion) error {
+func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group parser.Group, versions []types.PackageVersion) error {
 	var out bytes.Buffer
 	if err := g.writeHeader(&out); err != nil {
 		return err
@@ -381,10 +396,10 @@ func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group typ
 		return err
 	}
 
-	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.String()))
+	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.Name))
 }
 
-func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group types.Group, version types.PackageVersion, kinds []informergen.Kind) error {
+func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group parser.Group, version types.PackageVersion, kinds []parser.Kind) error {
 	var out bytes.Buffer
 	if err := g.writeHeader(&out); err != nil {
 		return err
@@ -405,10 +420,10 @@ func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group t
 		return err
 	}
 
-	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.String(), version.Version.String()))
+	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.Name, version.Version.String()))
 }
 
-func (g *Generator) writeInformer(ctx *genall.GenerationContext, group types.Group, version types.PackageVersion, kind informergen.Kind) error {
+func (g *Generator) writeInformer(ctx *genall.GenerationContext, group parser.Group, version types.PackageVersion, kind parser.Kind) error {
 	var out bytes.Buffer
 	if err := g.writeHeader(&out); err != nil {
 		return err
@@ -434,5 +449,5 @@ func (g *Generator) writeInformer(ctx *genall.GenerationContext, group types.Gro
 		return err
 	}
 
-	return util.WriteContent(formatted, strings.ToLower(kind.Plural())+".go", filepath.Join(g.outputDir, "informers", group.String(), version.Version.String()))
+	return util.WriteContent(formatted, strings.ToLower(kind.Plural())+".go", filepath.Join(g.outputDir, "informers", group.Name, version.Version.String()))
 }

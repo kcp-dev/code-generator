@@ -20,6 +20,7 @@ import (
 	"io"
 	"text/template"
 
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
@@ -29,9 +30,9 @@ type Informer struct {
 	ClientsetPackage string
 	ListerPackage    string
 	PackageName      string
-	Group            types.Group
+	Group            parser.Group
 	Version          types.PackageVersion
-	Kind             Kind
+	Kind             parser.Kind
 }
 
 func (i *Informer) WriteContent(w io.Writer) error {
@@ -73,10 +74,10 @@ import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
 
-	{{.group}}{{.version.Version}} "{{.inputPackage}}/{{.group}}/{{.version.Version}}"
+	{{.group.Name}}{{.version.Version}} "{{.inputPackage}}/{{.group.Name}}/{{.version.Version}}"
 	versioned "{{.clientsetPackage}}"
 	"{{.outputPackage}}/internalinterfaces"
-	{{.version.Version}} "{{.listerPackage}}/{{.group}}/{{.version.Version}}"
+	{{.version.Version}} "{{.listerPackage}}/{{.group.Name}}/{{.version.Version}}"
 )
 
 // {{.kind.String}}Informer provides access to a shared informer and lister for
@@ -109,16 +110,16 @@ func NewFiltered{{.kind.String}}Informer(client {{.clientsetInterface}}{{if .kin
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.{{.group.String|upperFirst}}{{.version.Version.String|upperFirst}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end}}).List(context.TODO(), options)
+				return client.{{.group.GoName|upperFirst}}{{.version.Version.String|upperFirst}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end}}).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.{{.group.String|upperFirst}}{{.version.Version.String|upperFirst}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end}}).Watch(context.TODO(), options)
+				return client.{{.group.GoName|upperFirst}}{{.version.Version.String|upperFirst}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end}}).Watch(context.TODO(), options)
 			},
 		},
-		&{{.group}}{{.version.Version}}.{{.kind.String}}{},
+		&{{.group.Name}}{{.version.Version}}.{{.kind.String}}{},
 		resyncPeriod,
 		indexers,
 	)
@@ -138,7 +139,7 @@ func (f *{{.kind.String|lowerFirst}}Informer) defaultInformer(client {{.clientse
 }
 
 func (f *{{.kind.String|lowerFirst}}Informer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&{{.group}}{{.version.Version}}.{{.kind.String}}{}, f.defaultInformer)
+	return f.factory.InformerFor(&{{.group.Name}}{{.version.Version}}.{{.kind.String}}{}, f.defaultInformer)
 }
 
 func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{.version.Version}}.{{.kind.String}}ClusterLister {

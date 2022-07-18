@@ -28,8 +28,8 @@ import (
 	fakeexamplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1/fake"
 	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
 	fakeexamplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2/fake"
-	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
-	fakeexample3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
+	fakethirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1/fake"
 	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	fakesecondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -109,9 +109,9 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 	return &fakeexamplev2.FakeExampleV2{Fake: &c.Fake}
 }
 
-// Example3V1 retrieves the Example3V1Client
-func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
-	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
+// ThirdExampleV1 retrieves the ThirdExampleV1Client
+func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
+	return &fakethirdexamplev1.FakeThirdExampleV1{Fake: &c.Fake}
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client

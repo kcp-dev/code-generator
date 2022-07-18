@@ -56,7 +56,7 @@ type clusterTestTypes struct {
 }
 
 // newClusterTestTypes returns a ClusterTestTypes
-func newClusterTestTypes(c *Example3V1Client) *clusterTestTypes {
+func newClusterTestTypes(c *ThirdExampleV1Client) *clusterTestTypes {
 	return &clusterTestTypes{
 		client: c.RESTClient(),
 	}

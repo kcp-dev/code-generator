@@ -21,8 +21,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
-	"github.com/kcp-dev/code-generator/third_party/namer"
 	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
@@ -35,7 +35,7 @@ var (
 	}
 )
 
-func sortVersions(versionKinds map[types.PackageVersion][]Kind) []types.PackageVersion {
+func sortVersions(versionKinds map[types.PackageVersion][]parser.Kind) []types.PackageVersion {
 	versions := []types.PackageVersion{}
 	for version := range versionKinds {
 		versions = append(versions, version)
@@ -44,35 +44,4 @@ func sortVersions(versionKinds map[types.PackageVersion][]Kind) []types.PackageV
 		return versions[i].Version.String() < versions[j].Version.String()
 	})
 	return versions
-}
-
-type Kind struct {
-	kind       string
-	namespaced bool
-	namer      namer.Namer
-}
-
-func (k *Kind) Plural() string {
-	return k.namer.Name(k.kind)
-}
-
-func (k *Kind) String() string {
-	return k.kind
-}
-
-func (k *Kind) IsNamespaced() bool {
-	return k.namespaced
-}
-
-func NewKind(kind string, namespaced bool) Kind {
-	return Kind{
-		kind:       kind,
-		namespaced: namespaced,
-		namer: namer.Namer{
-			Finalize: util.UpperFirst,
-			Exceptions: map[string]string{
-				"Endpoints": "Endpoints",
-			},
-		},
-	}
 }

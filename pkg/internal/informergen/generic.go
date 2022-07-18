@@ -20,6 +20,7 @@ import (
 	"io"
 	"text/template"
 
+	"github.com/kcp-dev/code-generator/pkg/parser"
 	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
@@ -27,8 +28,8 @@ type Generic struct {
 	InputPackage string
 
 	PackageName       string
-	GroupVersionKinds map[types.Group]map[types.PackageVersion][]Kind
-	Groups            []types.Group
+	GroupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind
+	Groups            []parser.Group
 }
 
 func (g *Generic) WriteContent(w io.Writer) error {
@@ -67,7 +68,7 @@ import (
 	{{$groupVersionKinds := .groupVersionKinds -}}
 	{{range $group := .groups -}}
 	{{range  $version := (index $groupVersionKinds $group) |sortVersions -}}
-	{{$group}}{{$version.Version}} "{{$inputPackage}}/{{$group}}/{{$version.Version}}"
+	{{$group.Name}}{{$version.Version}} "{{$inputPackage}}/{{$group.Name}}/{{$version.Version}}"
 	{{end -}}{{end -}}
 )
 
@@ -101,10 +102,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	{{range $group := .groups -}}
 	{{$versionKinds := index $groupVersionKinds $group -}}
 	{{range $version := $versionKinds | sortVersions -}}
-	// Group={{$group.String}}, Version={{$version.String}}
+	// Group={{$group.FullName}}, Version={{$version.String}}
 				{{range $kind := index $versionKinds $version -}}
-	case {{$group.String}}{{$version.String}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.{{$group.String|upperFirst}}().{{$version.String|upperFirst}}().{{$kind.Plural}}().Informer()}, nil
+	case {{$group.Name}}{{$version.String}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.{{$group.GoName|upperFirst}}().{{$version.String|upperFirst}}().{{$kind.Plural}}().Informer()}, nil
 				{{end}}
 			{{end}}
 		{{end -}}

@@ -26,7 +26,7 @@ import (
 	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1"
 	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
 	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
-	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
+	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
 	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -39,7 +39,7 @@ type Interface interface {
 	ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface
 	ExampleV2() examplev2.ExampleV2Interface
-	Example3V1() example3v1.Example3V1Interface
+	ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface
 	SecondexampleV1() secondexamplev1.SecondexampleV1Interface
 }
 
@@ -51,7 +51,7 @@ type Clientset struct {
 	exampleV1alpha1 *examplev1alpha1.ExampleV1alpha1Client
 	exampleV1beta1  *examplev1beta1.ExampleV1beta1Client
 	exampleV2       *examplev2.ExampleV2Client
-	example3V1      *example3v1.Example3V1Client
+	thirdExampleV1  *thirdexamplev1.ThirdExampleV1Client
 	secondexampleV1 *secondexamplev1.SecondexampleV1Client
 }
 
@@ -75,9 +75,9 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 	return c.exampleV2
 }
 
-// Example3V1 retrieves the Example3V1Client
-func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
-	return c.example3V1
+// ThirdExampleV1 retrieves the ThirdExampleV1Client
+func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
+	return c.thirdExampleV1
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client
@@ -145,7 +145,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
-	cs.example3V1, err = example3v1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.thirdExampleV1, err = thirdexamplev1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func New(c rest.Interface) *Clientset {
 	cs.exampleV1alpha1 = examplev1alpha1.New(c)
 	cs.exampleV1beta1 = examplev1beta1.New(c)
 	cs.exampleV2 = examplev2.New(c)
-	cs.example3V1 = example3v1.New(c)
+	cs.thirdExampleV1 = thirdexamplev1.New(c)
 	cs.secondexampleV1 = secondexamplev1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
