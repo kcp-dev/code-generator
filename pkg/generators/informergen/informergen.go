@@ -42,8 +42,6 @@ import (
 const (
 	// GeneratorName is the name of the generator.
 	GeneratorName = "informer"
-	// packageName for typed client wrappers.
-	typedPackageName = "externalversions"
 )
 
 type Generator struct {
@@ -142,7 +140,7 @@ func (g *Generator) configure(f flag.Flags) error {
 	} else {
 		g.baseOutputPkgPath = pkg
 	}
-	g.outputPkgPath = filepath.Join(g.baseOutputPkgPath, "informers", typedPackageName)
+	g.outputPkgPath = filepath.Join(g.baseOutputPkgPath, "informers")
 
 	g.clientSetAPIPath = f.ClientsetAPIPath
 
@@ -299,7 +297,7 @@ func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []types.G
 		ClientsetPackage: g.clientSetAPIPath,
 		Groups:           groups,
 
-		PackageName: "externalversions",
+		PackageName: "informers",
 	}
 	if err := factory.WriteContent(&out); err != nil {
 		return err
@@ -311,7 +309,7 @@ func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []types.G
 		return err
 	}
 
-	return util.WriteContent(formatted, "factory.go", filepath.Join(g.outputDir, "informers", typedPackageName))
+	return util.WriteContent(formatted, "factory.go", filepath.Join(g.outputDir, "informers"))
 }
 
 func (g *Generator) writeFactoryInterface(ctx *genall.GenerationContext) error {
@@ -334,7 +332,7 @@ func (g *Generator) writeFactoryInterface(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	return util.WriteContent(formatted, "factory_interfaces.go", filepath.Join(g.outputDir, "informers", typedPackageName, "internalinterfaces"))
+	return util.WriteContent(formatted, "factory_interfaces.go", filepath.Join(g.outputDir, "informers", "internalinterfaces"))
 }
 
 func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.Group) error {
@@ -346,7 +344,7 @@ func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.G
 
 	generic := informergen.Generic{
 		InputPackage:      g.inputPkgPath,
-		PackageName:       typedPackageName,
+		PackageName:       "informers",
 		GroupVersionKinds: g.groupVersionKinds,
 		Groups:            groups,
 	}
@@ -360,7 +358,7 @@ func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []types.G
 		formatted = out.Bytes()
 	}
 
-	return util.WriteContent(formatted, "generic.go", filepath.Join(g.outputDir, "informers", typedPackageName))
+	return util.WriteContent(formatted, "generic.go", filepath.Join(g.outputDir, "informers"))
 }
 
 func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group types.Group, versions []types.PackageVersion) error {
@@ -383,7 +381,7 @@ func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group typ
 		return err
 	}
 
-	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", typedPackageName, group.String()))
+	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.String()))
 }
 
 func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group types.Group, version types.PackageVersion, kinds []informergen.Kind) error {
@@ -407,7 +405,7 @@ func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group t
 		return err
 	}
 
-	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", typedPackageName, group.String(), version.Version.String()))
+	return util.WriteContent(formatted, "interface.go", filepath.Join(g.outputDir, "informers", group.String(), version.Version.String()))
 }
 
 func (g *Generator) writeInformer(ctx *genall.GenerationContext, group types.Group, version types.PackageVersion, kind informergen.Kind) error {
@@ -436,5 +434,5 @@ func (g *Generator) writeInformer(ctx *genall.GenerationContext, group types.Gro
 		return err
 	}
 
-	return util.WriteContent(formatted, strings.ToLower(kind.Plural())+".go", filepath.Join(g.outputDir, "informers", typedPackageName, group.String(), version.Version.String()))
+	return util.WriteContent(formatted, strings.ToLower(kind.Plural())+".go", filepath.Join(g.outputDir, "informers", group.String(), version.Version.String()))
 }
