@@ -23,10 +23,8 @@ import (
 
 	v1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 )
 
@@ -49,35 +47,6 @@ func (c *FakeTestTypes) Get(ctx context.Context, name string, options v1.GetOpti
 		return nil, err
 	}
 	return obj.(*v1beta1.TestType), err
-}
-
-// List takes label and field selectors, and returns the list of TestTypes that match those selectors.
-func (c *FakeTestTypes) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.TestTypeList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(testtypesResource, testtypesKind, c.ns, opts), &v1beta1.TestTypeList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.TestTypeList{ListMeta: obj.(*v1beta1.TestTypeList).ListMeta}
-	for _, item := range obj.(*v1beta1.TestTypeList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested testTypes.
-func (c *FakeTestTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(testtypesResource, c.ns, opts))
-
 }
 
 // Create takes the representation of a testType and creates it.  Returns the server's representation of the testType, and an error, if there is any.

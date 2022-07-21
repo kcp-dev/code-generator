@@ -26,7 +26,6 @@ import (
 	scheme "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -43,8 +42,6 @@ type TestTypeInterface interface {
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.TestType, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.TestTypeList, error)
-	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.TestType, err error)
 	TestTypeExpansion
 }
@@ -74,38 +71,6 @@ func (c *testTypes) Get(ctx context.Context, name string, options v1.GetOptions)
 		Do(ctx).
 		Into(result)
 	return
-}
-
-// List takes label and field selectors, and returns the list of TestTypes that match those selectors.
-func (c *testTypes) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.TestTypeList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1beta1.TestTypeList{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("testtypes").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested testTypes.
-func (c *testTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Namespace(c.ns).
-		Resource("testtypes").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
 }
 
 // Create takes the representation of a testType and creates it.  Returns the server's representation of the testType, and an error, if there is any.
