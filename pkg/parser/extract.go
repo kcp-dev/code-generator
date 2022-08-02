@@ -18,13 +18,16 @@ package parser
 
 import (
 	"fmt"
+
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/args"
+	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
@@ -83,7 +86,7 @@ func GetGV(f flag.Flags) ([]types.GroupVersions, error) {
 	return groupVersions, nil
 }
 
-func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []types.GroupVersions) (map[Group]map[types.PackageVersion][]Kind, error) {
+func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []types.GroupVersions, requiredVerbs []string) (map[Group]map[types.PackageVersion][]Kind, error) {
 
 	gvks := map[Group]map[types.PackageVersion][]Kind{}
 
@@ -130,6 +133,15 @@ func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []typ
 					if !IsEnabledForMethod(info) {
 						return
 					}
+					supportedVerbs, err := getSupportedVerbs(info)
+					if err != nil {
+						klog.Error(err)
+						return
+					}
+					if !supportedVerbs.HasAll(requiredVerbs...) {
+						klog.Infof("Skipping generation for %s:%s/%s because it does not support all of '%v'", group.Name, packageVersion.String(), info.Name, requiredVerbs)
+						return
+					}
 					namespaced := !IsClusterScoped(info)
 					gvks[group][packageVersion] = append(gvks[group][packageVersion], NewKind(info.Name, namespaced))
 
@@ -151,4 +163,41 @@ func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []typ
 	}
 
 	return gvks, nil
+}
+
+func getSupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
+	supportedVerbs := sets.String{}
+
+	if info.Markers.Get(NoVerbsMarker.Name) != nil {
+		return supportedVerbs, nil
+	}
+
+	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
+		supportedVerbs.Insert(genutil.ReadonlyVerbs...)
+		return supportedVerbs, nil
+	}
+
+	// Extract values from only verbs marker.
+	if onlyVerbs := info.Markers.Get(OnlyVerbsMarker.Name); onlyVerbs != nil {
+		val, ok := onlyVerbs.(markers.RawArguments)
+		if !ok {
+			return supportedVerbs, fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name)
+		}
+		supportedVerbs.Insert(strings.Split(string(val), ",")...)
+		return supportedVerbs, nil
+	}
+
+	// Following checks disallow verbs so defaulting them all to supported now
+	supportedVerbs.Insert(genutil.SupportedVerbs...)
+
+	// Extract values from skip verbs marker.
+	if skipVerbs := info.Markers.Get(SkipVerbsMarker.Name); skipVerbs != nil {
+		val, ok := skipVerbs.(markers.RawArguments)
+		if !ok {
+			return supportedVerbs, fmt.Errorf("marker defined in wrong format %q", SkipVerbsMarker.Name)
+		}
+		supportedVerbs.Delete(strings.Split(string(val), ",")...)
+	}
+
+	return supportedVerbs, nil
 }
