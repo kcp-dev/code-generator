@@ -25,21 +25,24 @@ import (
 )
 
 type GroupInterface struct {
-	OutputPackage string
-	Group         parser.Group
-	Versions      []types.PackageVersion
+	OutputPackage                     string
+	Group                             parser.Group
+	Versions                          []types.PackageVersion
+	UpstreamInternalInterfacesPackage string
 }
 
-func (g *GroupInterface) WriteContent(w io.Writer) error {
+func (g GroupInterface) WriteContent(w io.Writer) error {
 	templ, err := template.New("groupInterface").Funcs(templateFuncs).Parse(groupInterface)
 	if err != nil {
 		return err
 	}
 
 	m := map[string]interface{}{
-		"packageName":   g.Group.Name,
-		"versions":      g.Versions,
-		"outputPackage": g.OutputPackage,
+		"packageName":                       g.Group.Name,
+		"versions":                          g.Versions,
+		"outputPackage":                     g.OutputPackage,
+		"upstreamInternalInterfacesPackage": g.UpstreamInternalInterfacesPackage,
+		"useUpstreamInterfaces":             g.UpstreamInternalInterfacesPackage != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -59,18 +62,14 @@ import (
 	{{$version.Version}} "{{$outputPackage}}/{{$packageName}}/{{$version.Version}}"
 	{{end -}}
 
+	{{if not .useUpstreamInterfaces -}}
 	"{{.outputPackage}}/internalinterfaces"
+	{{else -}}
+	internalinterfaces "{{.upstreamInternalInterfacesPackage}}"
+	{{end -}}
 )
 
-// Interface provides access to each of this group's versions.
-type Interface interface {
-	{{range $_, $version := .versions -}}
-		// {{$version.Version.String|upperFirst}} provides access to shared informers for resources in {{$version.Version.String|upperFirst}}.
-		{{$version.Version.String|upperFirst}}() {{$version.Version}}.Interface
-	{{end}}
-}
-
-type group struct {
+type Interface  struct {
 	factory internalinterfaces.SharedInformerFactory
 	namespace string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -78,12 +77,12 @@ type group struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return Interface{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
 {{range .versions}}
 // {{.Version.String|upperFirst}} returns a new {{.Version}}.Interface.
-func (g *group) {{.Version.String|upperFirst}}() {{.Version}}.Interface {
+func (g Interface) {{.Version.String|upperFirst}}() {{.Version}}.Interface {
 	return {{.Version}}.New(g.factory, g.namespace, g.tweakListOptions)
 }
 {{end}}

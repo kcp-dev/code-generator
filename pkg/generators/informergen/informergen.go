@@ -70,6 +70,15 @@ type Generator struct {
 
 	// path to where generated clientsets are found.
 	clientSetAPIPath string
+
+	// path to where generated informers are found.
+	informersPackage string
+
+	// path to where generated informer internal interfaces are found.
+	informerInternalInterfacesPackage string
+
+	// path to where generated listers are found.
+	listersPackage string
 }
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
@@ -142,6 +151,13 @@ func (g *Generator) configure(f flag.Flags) error {
 	g.outputPkgPath = filepath.Join(g.baseOutputPkgPath, "informers")
 
 	g.clientSetAPIPath = f.ClientsetAPIPath
+	g.informersPackage = f.InformersPackage
+	if f.InformersPackage != "" && f.InformersInternalInterfacesPackage == "" {
+		g.informerInternalInterfacesPackage = strings.Join([]string{f.InformersPackage, "internalinterfaces"}, "/")
+	} else {
+		g.informerInternalInterfacesPackage = f.InformersInternalInterfacesPackage
+	}
+	g.listersPackage = f.ListersPackage
 
 	g.headerText, err = util.GetHeaderText(f.GoHeaderFilePath)
 	if err != nil {
@@ -174,9 +190,11 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	klog.Info("Generating informer factory interfaces")
-	if err := g.writeFactoryInterface(ctx); err != nil {
-		return err
+	if g.informersPackage == "" {
+		klog.Info("Generating informer factory interfaces")
+		if err := g.writeFactoryInterface(ctx); err != nil {
+			return err
+		}
 	}
 
 	klog.Info("Generating generic informer")
@@ -241,7 +259,9 @@ func (g *Generator) writeFactory(ctx *genall.GenerationContext, groups []parser.
 		ClientsetPackage: g.clientSetAPIPath,
 		Groups:           groups,
 
-		PackageName: "informers",
+		PackageName:                       "informers",
+		UpstreamInformerPackage:           g.informersPackage,
+		UpstreamInternalInterfacesPackage: g.informerInternalInterfacesPackage,
 	}
 	if err := factory.WriteContent(&out); err != nil {
 		return err
@@ -287,10 +307,11 @@ func (g *Generator) writeGeneric(ctx *genall.GenerationContext, groups []parser.
 	}
 
 	generic := informergen.Generic{
-		InputPackage:      g.inputPkgPath,
-		PackageName:       "informers",
-		GroupVersionKinds: g.groupVersionKinds,
-		Groups:            groups,
+		InputPackage:            g.inputPkgPath,
+		PackageName:             "informers",
+		GroupVersionKinds:       g.groupVersionKinds,
+		Groups:                  groups,
+		UpstreamInformerPackage: g.informersPackage,
 	}
 	if err := generic.WriteContent(&out); err != nil {
 		return err
@@ -310,9 +331,10 @@ func (g *Generator) writeGroupInterface(ctx *genall.GenerationContext, group par
 		return err
 	}
 	groupInterface := informergen.GroupInterface{
-		OutputPackage: g.outputPkgPath,
-		Group:         group,
-		Versions:      versions,
+		OutputPackage:                     g.outputPkgPath,
+		Group:                             group,
+		Versions:                          versions,
+		UpstreamInternalInterfacesPackage: g.informerInternalInterfacesPackage,
 	}
 
 	if err := groupInterface.WriteContent(&out); err != nil {
@@ -339,6 +361,11 @@ func (g *Generator) writeVersionInterface(ctx *genall.GenerationContext, group p
 		Kinds:         kinds,
 	}
 
+	if g.informersPackage != "" {
+		versionInterface.UpstreamInformerPackage = strings.Join([]string{g.informersPackage, group.Name, version.String()}, "/")
+		versionInterface.UpstreamInternalInterfacesPackage = g.informerInternalInterfacesPackage
+	}
+
 	if err := versionInterface.WriteContent(&out); err != nil {
 		return err
 	}
@@ -358,14 +385,16 @@ func (g *Generator) writeInformer(ctx *genall.GenerationContext, group parser.Gr
 	}
 
 	informer := informergen.Informer{
-		InputPackage:     g.inputPkgPath,
-		OutputPackage:    g.outputPkgPath,
-		ClientsetPackage: g.clientSetAPIPath,
-		ListerPackage:    filepath.Join(g.baseOutputPkgPath, "listers"),
-		PackageName:      version.String(),
-		Group:            group,
-		Version:          version,
-		Kind:             kind,
+		InputPackage:                      g.inputPkgPath,
+		OutputPackage:                     g.outputPkgPath,
+		ClientsetPackage:                  g.clientSetAPIPath,
+		ListerPackage:                     filepath.Join(g.baseOutputPkgPath, "listers"),
+		PackageName:                       version.String(),
+		Group:                             group,
+		Version:                           version,
+		Kind:                              kind,
+		UpstreamListerPackage:             g.listersPackage,
+		UpstreamInternalInterfacesPackage: g.informerInternalInterfacesPackage,
 	}
 
 	if err := informer.WriteContent(&out); err != nil {

@@ -27,6 +27,7 @@ import (
 	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
 	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
 	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
+	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -40,6 +41,7 @@ type Interface interface {
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface
 	ExampleV2() examplev2.ExampleV2Interface
 	ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface
+	ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface
 	SecondexampleV1() secondexamplev1.SecondexampleV1Interface
 }
 
@@ -47,12 +49,13 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	exampleV1       *examplev1.ExampleV1Client
-	exampleV1alpha1 *examplev1alpha1.ExampleV1alpha1Client
-	exampleV1beta1  *examplev1beta1.ExampleV1beta1Client
-	exampleV2       *examplev2.ExampleV2Client
-	thirdExampleV1  *thirdexamplev1.ThirdExampleV1Client
-	secondexampleV1 *secondexamplev1.SecondexampleV1Client
+	exampleV1            *examplev1.ExampleV1Client
+	exampleV1alpha1      *examplev1alpha1.ExampleV1alpha1Client
+	exampleV1beta1       *examplev1beta1.ExampleV1beta1Client
+	exampleV2            *examplev2.ExampleV2Client
+	thirdExampleV1       *thirdexamplev1.ThirdExampleV1Client
+	existingInterfacesV1 *existinginterfacesv1.ExistingInterfacesV1Client
+	secondexampleV1      *secondexamplev1.SecondexampleV1Client
 }
 
 // ExampleV1 retrieves the ExampleV1Client
@@ -78,6 +81,11 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 // ThirdExampleV1 retrieves the ThirdExampleV1Client
 func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
 	return c.thirdExampleV1
+}
+
+// ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client
+func (c *Clientset) ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface {
+	return c.existingInterfacesV1
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client
@@ -149,6 +157,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.existingInterfacesV1, err = existinginterfacesv1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.secondexampleV1, err = secondexamplev1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -179,6 +191,7 @@ func New(c rest.Interface) *Clientset {
 	cs.exampleV1beta1 = examplev1beta1.New(c)
 	cs.exampleV2 = examplev2.New(c)
 	cs.thirdExampleV1 = thirdexamplev1.New(c)
+	cs.existingInterfacesV1 = existinginterfacesv1.New(c)
 	cs.secondexampleV1 = secondexamplev1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

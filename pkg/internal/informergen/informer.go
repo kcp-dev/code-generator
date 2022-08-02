@@ -25,14 +25,16 @@ import (
 )
 
 type Informer struct {
-	InputPackage     string
-	OutputPackage    string
-	ClientsetPackage string
-	ListerPackage    string
-	PackageName      string
-	Group            parser.Group
-	Version          types.PackageVersion
-	Kind             parser.Kind
+	InputPackage                      string
+	OutputPackage                     string
+	ClientsetPackage                  string
+	ListerPackage                     string
+	PackageName                       string
+	Group                             parser.Group
+	Version                           types.PackageVersion
+	Kind                              parser.Kind
+	UpstreamListerPackage             string
+	UpstreamInternalInterfacesPackage string
 }
 
 func (i *Informer) WriteContent(w io.Writer) error {
@@ -41,15 +43,18 @@ func (i *Informer) WriteContent(w io.Writer) error {
 		return err
 	}
 	m := map[string]interface{}{
-		"inputPackage":       i.InputPackage,
-		"outputPackage":      i.OutputPackage,
-		"packageName":        i.PackageName,
-		"clientsetPackage":   i.ClientsetPackage,
-		"clientsetInterface": "versioned.Interface",
-		"listerPackage":      i.ListerPackage,
-		"group":              i.Group,
-		"version":            i.Version,
-		"kind":               &i.Kind,
+		"inputPackage":                      i.InputPackage,
+		"outputPackage":                     i.OutputPackage,
+		"packageName":                       i.PackageName,
+		"clientsetPackage":                  i.ClientsetPackage,
+		"clientsetInterface":                "versioned.Interface",
+		"listerPackage":                     i.ListerPackage,
+		"group":                             i.Group,
+		"version":                           i.Version,
+		"kind":                              &i.Kind,
+		"upstreamListerPackage":             i.UpstreamListerPackage,
+		"useUpstreamInterfaces":             i.UpstreamListerPackage != "",
+		"upstreamInternalInterfacesPackage": i.UpstreamInternalInterfacesPackage,
 	}
 	return templ.Execute(w, m)
 }
@@ -76,18 +81,20 @@ import (
 
 	{{.group.Name}}{{.version.Version}} "{{.inputPackage}}/{{.group.Name}}/{{.version.Version}}"
 	versioned "{{.clientsetPackage}}"
-	"{{.outputPackage}}/internalinterfaces"
 	{{.version.Version}} "{{.listerPackage}}/{{.group.Name}}/{{.version.Version}}"
+
+	{{if not .useUpstreamInterfaces -}}
+	"{{.outputPackage}}/internalinterfaces"
+	{{else -}}
+	internalinterfaces "{{.upstreamInternalInterfacesPackage}}"
+	{{.group.Name}}{{.version.String}}listers "{{.upstreamListerPackage}}/{{.group.Name}}/{{.version.String}}"
+	{{end -}}
 )
+
 
 // {{.kind.String}}Informer provides access to a shared informer and lister for
 // {{.kind.Plural}}.
-type {{.kind.String}}Informer interface {
-	Informer() cache.SharedIndexInformer
-	Lister() {{.version.Version}}.{{.kind.String}}ClusterLister
-}
-
-type {{.kind.String|lowerFirst}}Informer struct {
+type {{.kind.String}}Informer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	{{if .kind.IsNamespaced}}namespace string{{end}}
@@ -125,7 +132,7 @@ func NewFiltered{{.kind.String}}Informer(client {{.clientsetInterface}}{{if .kin
 	)
 }
 
-func (f *{{.kind.String|lowerFirst}}Informer) defaultInformer(client {{.clientsetInterface}}, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f {{.kind.String}}Informer) defaultInformer(client {{.clientsetInterface}}, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFiltered{{.kind.String}}Informer(
 		client,
 		{{if .kind.IsNamespaced}}f.namespace,{{end -}}
@@ -138,11 +145,15 @@ func (f *{{.kind.String|lowerFirst}}Informer) defaultInformer(client {{.clientse
 	)
 }
 
-func (f *{{.kind.String|lowerFirst}}Informer) Informer() cache.SharedIndexInformer {
+func (f {{.kind.String}}Informer) Informer() cache.SharedIndexInformer {
 	return f.factory.InformerFor(&{{.group.Name}}{{.version.Version}}.{{.kind.String}}{}, f.defaultInformer)
 }
 
-func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{.version.Version}}.{{.kind.String}}ClusterLister {
+{{if not .useUpstreamInterfaces -}}
+func (f {{.kind.String}}Informer) Lister() *{{.version.Version}}.{{.kind.String}}ClusterLister {
+{{else -}}
+func (f {{.kind.String}}Informer) Lister() {{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister {
+{{end -}}
 	return {{.version.Version}}.New{{.kind.String}}ClusterLister(f.Informer().GetIndexer())
 }
 `

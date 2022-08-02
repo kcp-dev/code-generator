@@ -25,13 +25,7 @@ import (
 	"github.com/kcp-dev/code-generator/examples/pkg/informers/internalinterfaces"
 )
 
-// Interface provides access to all the informers in this group version.
-type Interface interface {
-	// ClusterTestTypes returns a ClusterTestTypeInformer.
-	ClusterTestTypes() ClusterTestTypeInformer
-}
-
-type version struct {
+type Interface struct {
 	factory          internalinterfaces.SharedInformerFactory
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -39,10 +33,10 @@ type version struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return Interface{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
 // ClusterTestTypes returns a ClusterTestTypeInformer.
-func (v *version) ClusterTestTypes() ClusterTestTypeInformer {
-	return &clusterTestTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+func (v Interface) ClusterTestTypes() *ClusterTestTypeInformer {
+	return &ClusterTestTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
