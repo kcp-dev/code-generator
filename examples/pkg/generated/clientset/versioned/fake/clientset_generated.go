@@ -30,6 +30,8 @@ import (
 	fakeexamplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2/fake"
 	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
 	fakethirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
+	fakeexistinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1/fake"
 	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	fakesecondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -112,6 +114,11 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 // ThirdExampleV1 retrieves the ThirdExampleV1Client
 func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
 	return &fakethirdexamplev1.FakeThirdExampleV1{Fake: &c.Fake}
+}
+
+// ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client
+func (c *Clientset) ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface {
+	return &fakeexistinginterfacesv1.FakeExistingInterfacesV1{Fake: &c.Fake}
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client

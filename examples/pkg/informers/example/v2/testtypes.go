@@ -35,18 +35,14 @@ import (
 
 	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v2"
 	versioned "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
-	"github.com/kcp-dev/code-generator/examples/pkg/informers/internalinterfaces"
 	v2 "github.com/kcp-dev/code-generator/examples/pkg/listers/example/v2"
+
+	"github.com/kcp-dev/code-generator/examples/pkg/informers/internalinterfaces"
 )
 
 // TestTypeInformer provides access to a shared informer and lister for
 // TestTypes.
-type TestTypeInformer interface {
-	Informer() cache.SharedIndexInformer
-	Lister() v2.TestTypeClusterLister
-}
-
-type testTypeInformer struct {
+type TestTypeInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
@@ -84,7 +80,7 @@ func NewFilteredTestTypeInformer(client versioned.Interface, namespace string, r
 	)
 }
 
-func (f *testTypeInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f TestTypeInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredTestTypeInformer(
 		client,
 		f.namespace, resyncPeriod,
@@ -95,10 +91,10 @@ func (f *testTypeInformer) defaultInformer(client versioned.Interface, resyncPer
 	)
 }
 
-func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
+func (f TestTypeInformer) Informer() cache.SharedIndexInformer {
 	return f.factory.InformerFor(&examplev2.TestType{}, f.defaultInformer)
 }
 
-func (f *testTypeInformer) Lister() v2.TestTypeClusterLister {
+func (f TestTypeInformer) Lister() *v2.TestTypeClusterLister {
 	return v2.NewTestTypeClusterLister(f.Informer().GetIndexer())
 }

@@ -29,7 +29,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
 	versioned "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
@@ -41,9 +40,9 @@ import (
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
-type SharedInformerOption func(*sharedInformerFactory) *sharedInformerFactory
+type SharedInformerOption func(*SharedInformerFactory) *SharedInformerFactory
 
-type sharedInformerFactory struct {
+type SharedInformerFactory struct {
 	client           versioned.Interface
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -59,7 +58,7 @@ type sharedInformerFactory struct {
 
 // WithCustomResyncConfig sets a custom resync period for the specified informer types.
 func WithCustomResyncConfig(resyncConfig map[metav1.Object]time.Duration) SharedInformerOption {
-	return func(factory *sharedInformerFactory) *sharedInformerFactory {
+	return func(factory *SharedInformerFactory) *SharedInformerFactory {
 		for k, v := range resyncConfig {
 			factory.customResync[reflect.TypeOf(k)] = v
 		}
@@ -69,7 +68,7 @@ func WithCustomResyncConfig(resyncConfig map[metav1.Object]time.Duration) Shared
 
 // WithTweakListOptions sets a custom filter on all listers of the configured SharedInformerFactory.
 func WithTweakListOptions(tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerOption {
-	return func(factory *sharedInformerFactory) *sharedInformerFactory {
+	return func(factory *SharedInformerFactory) *SharedInformerFactory {
 		factory.tweakListOptions = tweakListOptions
 		return factory
 	}
@@ -77,28 +76,31 @@ func WithTweakListOptions(tweakListOptions internalinterfaces.TweakListOptionsFu
 
 // WithNamespace limits the SharedInformerFactory to the specified namespace.
 func WithNamespace(namespace string) SharedInformerOption {
-	return func(factory *sharedInformerFactory) *sharedInformerFactory {
+	return func(factory *SharedInformerFactory) *SharedInformerFactory {
 		factory.namespace = namespace
 		return factory
 	}
 }
 
-// NewSharedInformerFactory constructs a new instance of sharedInformerFactory for all namespaces.
-func NewSharedInformerFactory(client versioned.Interface, defaultResync time.Duration) SharedInformerFactory {
+// NewSharedInformerFactory constructs a new instance of SharedInformerFactory for all namespaces.
+
+func NewSharedInformerFactory(client versioned.Interface, defaultResync time.Duration) *SharedInformerFactory {
 	return NewSharedInformerFactoryWithOptions(client, defaultResync)
 }
 
-// NewFilteredSharedInformerFactory constructs a new instance of sharedInformerFactory.
+// NewFilteredSharedInformerFactory constructs a new instance of SharedInformerFactory.
 // Listers obtained via this SharedInformerFactory will be subject to the same filters
 // as specified here.
 // Deprecated: Please use NewSharedInformerFactoryWithOptions instead
-func NewFilteredSharedInformerFactory(client versioned.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerFactory {
+
+func NewFilteredSharedInformerFactory(client versioned.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) *SharedInformerFactory {
 	return NewSharedInformerFactoryWithOptions(client, defaultResync, WithNamespace(namespace), WithTweakListOptions(tweakListOptions))
 }
 
 // NewSharedInformerFactoryWithOptions constructs a new instance of a SharedInformerFactory with additional options.
-func NewSharedInformerFactoryWithOptions(client versioned.Interface, defaultResync time.Duration, options ...SharedInformerOption) SharedInformerFactory {
-	factory := &sharedInformerFactory{
+
+func NewSharedInformerFactoryWithOptions(client versioned.Interface, defaultResync time.Duration, options ...SharedInformerOption) *SharedInformerFactory {
+	factory := &SharedInformerFactory{
 		client:           client,
 		namespace:        v1.NamespaceAll,
 		defaultResync:    defaultResync,
@@ -116,7 +118,7 @@ func NewSharedInformerFactoryWithOptions(client versioned.Interface, defaultResy
 }
 
 // Start initializes all requested informers.
-func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
+func (f *SharedInformerFactory) Start(stopCh <-chan struct{}) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -129,7 +131,7 @@ func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
 }
 
 // WaitForCacheSync waits for all started informers' cache were synced.
-func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool {
+func (f *SharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool {
 	informers := func() map[reflect.Type]cache.SharedIndexInformer {
 		f.lock.Lock()
 		defer f.lock.Unlock()
@@ -152,7 +154,7 @@ func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[ref
 
 // InternalInformerFor returns the SharedIndexInformer for obj using an internal
 // client.
-func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer {
+func (f *SharedInformerFactory) InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -173,26 +175,14 @@ func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internal
 	return informer
 }
 
-// SharedInformerFactory provides shared informers for resources in all known
-// API group versions.
-type SharedInformerFactory interface {
-	internalinterfaces.SharedInformerFactory
-	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
-	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
-
-	Example() example.Interface
-	ThirdExample() example3.Interface
-	Secondexample() secondexample.Interface
-}
-
-func (f *sharedInformerFactory) Example() example.Interface {
+func (f *SharedInformerFactory) Example() example.Interface {
 	return example.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) ThirdExample() example3.Interface {
+func (f *SharedInformerFactory) ThirdExample() example3.Interface {
 	return example3.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) Secondexample() secondexample.Interface {
+func (f *SharedInformerFactory) Secondexample() secondexample.Interface {
 	return secondexample.New(f, f.namespace, f.tweakListOptions)
 }

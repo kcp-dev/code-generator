@@ -9,10 +9,11 @@ import (
 )
 
 type Lister struct {
-	APIPath string
-	Group   parser.Group
-	Version types.PackageVersion
-	Kind    parser.Kind
+	APIPath         string
+	Group           parser.Group
+	Version         types.PackageVersion
+	Kind            parser.Kind
+	UpstreamAPIPath string
 }
 
 func (l *Lister) WriteContent(w io.Writer) error {
@@ -22,10 +23,12 @@ func (l *Lister) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"apiPath": l.APIPath,
-		"group":   l.Group,
-		"version": l.Version,
-		"kind":    &l.Kind,
+		"apiPath":               l.APIPath,
+		"group":                 l.Group,
+		"version":               l.Version,
+		"kind":                  &l.Kind,
+		"upstreamAPIPath":       l.UpstreamAPIPath,
+		"useUpstreamInterfaces": l.UpstreamAPIPath != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -46,66 +49,75 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
+	{{if .useUpstreamInterfaces -}}
+	{{.group.Name}}{{.version.String}}listers "{{.upstreamAPIPath}}/{{.group.Name}}/{{.version.String}}"
+	{{end -}}
 )
 
-// {{.kind.String}}Lister helps list {{.group.Name}}{{.version.String}}.{{.kind.String}}.
-// All objects returned here must be treated as read-only.
-type {{.kind.String}}ClusterLister interface {
-	// List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error)
+{{if .useUpstreamInterfaces -}}
+var _ {{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister = &{{.kind.String}}ClusterLister{}
+{{end -}}
 
-	// Cluster returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}} from the given logical cluster.
-	Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister
-}
-
-// {{lowerFirst .kind.String}}ClusterLister implements the {{.kind.String}}ClusterLister interface.
-type {{lowerFirst .kind.String}}ClusterLister struct {
+{{if not .useUpstreamInterfaces -}}
+// {{.kind.String}}ClusterLister can list everything or scope by workspace
+{{else -}}
+// {{.kind.String}}ClusterLister implements the {{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister interface.
+{{end -}}
+type {{.kind.String}}ClusterLister struct {
 	indexer cache.Indexer
 }
 
 // New{{.kind.String}}ClusterLister returns a new {{.kind.String}}ClusterLister.
-func New{{.kind.String}}ClusterLister(indexer cache.Indexer) {{.kind.String}}ClusterLister {
-	return &{{lowerFirst .kind.String}}ClusterLister{indexer: indexer}
+{{if not .useUpstreamInterfaces -}}
+func New{{.kind.String}}ClusterLister(indexer cache.Indexer) *{{.kind.String}}ClusterLister {
+{{else -}}
+func New{{.kind.String}}ClusterLister(indexer cache.Indexer) {{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister {
+{{end -}}
+	return &{{.kind.String}}ClusterLister{indexer: indexer}
 }
 
 // List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer.
-func (s *{{lowerFirst .kind.String}}ClusterLister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
+func (s {{.kind.String}}ClusterLister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*{{.group.Name}}{{.version.String}}.{{.kind.String}}))
 	})
 	return ret, err
 }
+{{ if and .useUpstreamInterfaces (not .kind.IsNamespaced) -}}
+// Get retrieves the {{.group.Name}}{{.version.String}}.{{.kind.String}} from the indexer for a given name.
+func (s {{.kind.String}}ClusterLister) Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error) {
+	panic("Calling 'Get' is not supported before scoping lister to a workspace")
+}
+{{end -}}
+{{ if and .useUpstreamInterfaces .kind.IsNamespaced -}}
+// {{.kind.Plural}} returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
+func (s {{.kind.String}}ClusterLister) {{.kind.Plural}}(namespace string) {{.group.Name}}{{.version.String}}listers.{{.kind.String}}NamespaceLister {
+	panic("Calling '{{.kind.Plural}}' is not supported before scoping lister to a workspace")
+}
+{{end -}}
 
 // Cluster returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
-func (s *{{lowerFirst .kind.String}}ClusterLister) Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister {
-	return &{{lowerFirst .kind.String}}Lister{indexer: s.indexer, cluster: cluster}
+
+{{if not .useUpstreamInterfaces -}}
+func (s {{.kind.String}}ClusterLister) Cluster(cluster logicalcluster.Name) *{{.kind.String}}Lister {
+{{else -}}
+func (s {{.kind.String}}ClusterLister) Cluster(cluster logicalcluster.Name){{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister {
+{{end -}}
+	return &{{.kind.String}}Lister{indexer: s.indexer, cluster: cluster}
 }
 
-// {{.kind.String}}Lister helps list {{.group.Name}}{{.version.String}}.{{.kind.String}}.
-// All objects returned here must be treated as read-only.
-type {{.kind.String}}Lister interface {
-	// List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error)
-	{{ if .kind.IsNamespaced -}}
-	// {{.kind.String}}s returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
-	{{.kind.String}}s(namespace string) {{.kind.String}}NamespaceLister
-	{{ else -}}
-	// Get retrieves the {{.group.Name}}{{.version.String}}.{{.kind.String}} from the indexer for a given name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error)
-	{{ end -}}
-}
-
-// {{lowerFirst .kind.String}}Lister implements the {{.kind.String}}Lister interface.
-type {{lowerFirst .kind.String}}Lister struct {
+{{if not .useUpstreamInterfaces -}}
+// {{.kind.String}}Lister can list everything inside a cluster or scope by namespace
+{{else -}}
+// {{.kind.String}}Lister implements the {{.group.Name}}{{.version.String}}listers.{{.kind.String}}Lister interface.
+{{end -}}
+type {{.kind.String}}Lister struct {
 	indexer cache.Indexer
 	cluster logicalcluster.Name
 }
 
 // List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer.
-func (s *{{lowerFirst .kind.String}}Lister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
+func (s {{.kind.String}}Lister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
 	selectAll := selector == nil || selector.Empty()
 
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", "")
@@ -130,43 +142,42 @@ func (s *{{lowerFirst .kind.String}}Lister) List(selector labels.Selector) (ret 
 
 {{ if  not .kind.IsNamespaced -}}
 // Get retrieves the {{.group.Name}}{{.version.String}}.{{.kind.String}} from the indexer for a given name.
-func (s {{lowerFirst .kind.String}}Lister) Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error) {
+func (s {{.kind.String}}Lister) Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error) {
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.Name}}{{.version.String}}.Resource("{{lowerFirst .kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.Name}}{{.version.String}}.Resource("{{.kind.String}}"), name)
 	}
 	return obj.(*{{.group.Name}}{{.version.String}}.{{.kind.String}}), nil
 }
 {{ else -}}
-// {{.kind.String}}s returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
-func (s *{{lowerFirst .kind.String}}Lister) {{.kind.String}}s(namespace string) {{.kind.String}}NamespaceLister {
-	return {{lowerFirst .kind.String}}NamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
+// {{.kind.Plural}} returns an object that can list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
+{{if not .useUpstreamInterfaces -}}
+func (s {{.kind.String}}Lister) {{.kind.Plural}}(namespace string) *{{.kind.String}}NamespaceLister {
+{{else -}}
+func (s {{.kind.String}}Lister) {{.kind.Plural}}(namespace string) {{.group.Name}}{{.version.String}}listers.{{.kind.String}}NamespaceLister {
+{{end -}}
+	return &{{.kind.String}}NamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
 }
 
+{{ if not .useUpstreamInterfaces -}}
 // {{.kind.String}}NamespaceLister helps list and get {{.group.Name}}{{.version.String}}.{{.kind.String}}.
 // All objects returned here must be treated as read-only.
-type {{.kind.String}}NamespaceLister interface {
-	// List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error)
-	// Get retrieves the {{.group.Name}}{{.version.String}}.{{.kind.String}} from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error)
-}
-
-// {{lowerFirst .kind.String}}NamespaceLister implements the {{.kind.String}}NamespaceLister interface.
-type {{lowerFirst .kind.String}}NamespaceLister struct {
+{{ end -}}
+{{ if .useUpstreamInterfaces -}}
+// {{.kind.String}}NamespaceLister implements the {{.group.Name}}{{.version.String}}listers.{{.kind.String}}NamespaceLister interface.
+{{ end -}}
+type {{.kind.String}}NamespaceLister struct {
 	indexer   cache.Indexer
 	cluster   logicalcluster.Name
 	namespace string
 }
 
 // List lists all {{.group.Name}}{{.version.String}}.{{.kind.String}} in the indexer for a given namespace.
-func (s {{lowerFirst .kind.String}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
+func (s {{.kind.String}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.Name}}{{.version.String}}.{{.kind.String}}, err error) {
 	selectAll := selector == nil || selector.Empty()
 
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, "")
@@ -189,14 +200,14 @@ func (s {{lowerFirst .kind.String}}NamespaceLister) List(selector labels.Selecto
 }
 
 // Get retrieves the {{.group.Name}}{{.version.String}}.{{.kind.String}} from the indexer for a given namespace and name.
-func (s {{lowerFirst .kind.String}}NamespaceLister) Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error) {
+func (s {{.kind.String}}NamespaceLister) Get(name string) (*{{.group.Name}}{{.version.String}}.{{.kind.String}}, error) {
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.Name}}{{.version.String}}.Resource("{{lowerFirst .kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.Name}}{{.version.String}}.Resource("{{.kind.String}}"), name)
 	}
 	return obj.(*{{.group.Name}}{{.version.String}}.{{.kind.String}}), nil
 }

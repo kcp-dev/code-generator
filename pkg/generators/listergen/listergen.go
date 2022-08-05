@@ -67,6 +67,9 @@ type Generator struct {
 
 	// path to where generated clientsets are found.
 	clientSetAPIPath string
+
+	// path to where generated listers are found.
+	listersPackage string
 }
 
 func (g Generator) RegisterMarker() (*markers.Registry, error) {
@@ -144,6 +147,7 @@ func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	}
 
 	g.clientSetAPIPath = f.ClientsetAPIPath
+	g.listersPackage = f.ListersPackage
 
 	g.headerText, err = util.GetHeaderText(f.GoHeaderFilePath)
 	if err != nil {
@@ -171,10 +175,11 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 				}
 				klog.Infof("Generating lister for GVK %s:%s/%s", group.Name, version.String(), kind.String())
 				lister := listergen.Lister{
-					Group:   group,
-					Version: version,
-					Kind:    kind,
-					APIPath: filepath.Join(g.inputPkgPath, group.Name, version.String()),
+					Group:           group,
+					Version:         version,
+					Kind:            kind,
+					APIPath:         filepath.Join(g.inputPkgPath, group.Name, version.String()),
+					UpstreamAPIPath: g.listersPackage,
 				}
 				if err := lister.WriteContent(&out); err != nil {
 					klog.Error(err)

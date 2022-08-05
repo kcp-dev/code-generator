@@ -30,7 +30,14 @@ GOLANGCI_LINT := $(GOBIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
 
 KUBE_CLIENT_GEN_VER := v0.24.0
 KUBE_CLIENT_GEN_BIN := client-gen
+KUBE_LISTER_GEN_VER := v0.24.0
+KUBE_LISTER_GEN_BIN := lister-gen
+KUBE_INFORMER_GEN_VER := v0.24.0
+KUBE_INFORMER_GEN_BIN := informer-gen
+
 KUBE_CLIENT_GEN := $(GOBIN_DIR)/$(KUBE_CLIENT_GEN_BIN)-$(KUBE_CLIENT_GEN_VER)
+KUBE_LISTER_GEN := $(GOBIN_DIR)/$(KUBE_LISTER_GEN_BIN)-$(KUBE_LISTER_GEN_VER)
+KUBE_INFORMER_GEN := $(GOBIN_DIR)/$(KUBE_INFORMER_GEN_BIN)-$(KUBE_INFORMER_GEN_VER)
 
 
 $(CONTROLLER_GEN):
@@ -38,6 +45,10 @@ $(CONTROLLER_GEN):
 
 $(KUBE_CLIENT_GEN):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/client-gen $(KUBE_CLIENT_GEN_BIN) $(KUBE_CLIENT_GEN_VER)
+$(KUBE_LISTER_GEN):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/lister-gen $(KUBE_LISTER_GEN_BIN) $(KUBE_LISTER_GEN_VER)
+$(KUBE_INFORMER_GEN):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/informer-gen $(KUBE_INFORMER_GEN_BIN) $(KUBE_INFORMER_GEN_VER)
 
 
 .PHONY: build
@@ -50,7 +61,7 @@ install:
 	go install
 
 .PHONY: codegen
-codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_INFORMER_GEN) build
+codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_LISTER_GEN) $(KUBE_INFORMER_GEN) build
 	# Generate deepcopy functions
 	${CONTROLLER_GEN} object paths=./examples/pkg/apis/...
 
@@ -65,11 +76,28 @@ codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_INFORMER_GEN) build
 		--input example/v2 \
 		--input example3/v1 \
 		--input secondexample/v1 \
+		--input existinginterfaces/v1 \
 		--output-base . \
 		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset \
 		--trim-path-prefix github.com/kcp-dev/code-generator
 
-	# Generate cluster clientset and listers
+	$(KUBE_LISTER_GEN) \
+		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
+		--input-dirs github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1 \
+		--output-base . \
+		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
+		--trim-path-prefix github.com/kcp-dev/code-generator
+
+	$(KUBE_INFORMER_GEN) \
+		--versioned-clientset-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
+		--listers-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
+		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
+		--input-dirs github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1 \
+		--output-base . \
+		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/informers \
+		--trim-path-prefix github.com/kcp-dev/code-generator
+
+	# Generate cluster informers and listers
 	bin/code-generator \
 		lister,informer \
 		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
@@ -82,6 +110,17 @@ codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_INFORMER_GEN) build
 		--group-versions example:v1beta1 \
 		--group-versions secondexample:v1 \
 		--group-versions example3:v1
+
+	# Generate cluster informers and listers that are compatible with upstream interfaces
+	bin/code-generator \
+		lister,informer \
+		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
+		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
+		--listers-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
+		--informers-package github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions \
+		--input-dir ./examples/pkg/apis \
+		--output-dir ./examples/pkg/legacy \
+		--group-versions existinginterfaces:v1
 
 $(GOLANGCI_LINT):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)

@@ -30,29 +30,18 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// TestTypeLister helps list examplev1.TestType.
-// All objects returned here must be treated as read-only.
-type TestTypeClusterLister interface {
-	// List lists all examplev1.TestType in the indexer.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*examplev1.TestType, err error)
-
-	// Cluster returns an object that can list and get examplev1.TestType from the given logical cluster.
-	Cluster(cluster logicalcluster.Name) TestTypeLister
-}
-
-// testTypeClusterLister implements the TestTypeClusterLister interface.
-type testTypeClusterLister struct {
+// TestTypeClusterLister can list everything or scope by workspace
+type TestTypeClusterLister struct {
 	indexer cache.Indexer
 }
 
 // NewTestTypeClusterLister returns a new TestTypeClusterLister.
-func NewTestTypeClusterLister(indexer cache.Indexer) TestTypeClusterLister {
-	return &testTypeClusterLister{indexer: indexer}
+func NewTestTypeClusterLister(indexer cache.Indexer) *TestTypeClusterLister {
+	return &TestTypeClusterLister{indexer: indexer}
 }
 
 // List lists all examplev1.TestType in the indexer.
-func (s *testTypeClusterLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
+func (s TestTypeClusterLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*examplev1.TestType))
 	})
@@ -60,28 +49,19 @@ func (s *testTypeClusterLister) List(selector labels.Selector) (ret []*examplev1
 }
 
 // Cluster returns an object that can list and get examplev1.TestType.
-func (s *testTypeClusterLister) Cluster(cluster logicalcluster.Name) TestTypeLister {
-	return &testTypeLister{indexer: s.indexer, cluster: cluster}
+
+func (s TestTypeClusterLister) Cluster(cluster logicalcluster.Name) *TestTypeLister {
+	return &TestTypeLister{indexer: s.indexer, cluster: cluster}
 }
 
-// TestTypeLister helps list examplev1.TestType.
-// All objects returned here must be treated as read-only.
-type TestTypeLister interface {
-	// List lists all examplev1.TestType in the indexer.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*examplev1.TestType, err error)
-	// TestTypes returns an object that can list and get examplev1.TestType.
-	TestTypes(namespace string) TestTypeNamespaceLister
-}
-
-// testTypeLister implements the TestTypeLister interface.
-type testTypeLister struct {
+// TestTypeLister can list everything inside a cluster or scope by namespace
+type TestTypeLister struct {
 	indexer cache.Indexer
 	cluster logicalcluster.Name
 }
 
 // List lists all examplev1.TestType in the indexer.
-func (s *testTypeLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
+func (s TestTypeLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), "", "")
@@ -105,30 +85,20 @@ func (s *testTypeLister) List(selector labels.Selector) (ret []*examplev1.TestTy
 }
 
 // TestTypes returns an object that can list and get examplev1.TestType.
-func (s *testTypeLister) TestTypes(namespace string) TestTypeNamespaceLister {
-	return testTypeNamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
+func (s TestTypeLister) TestTypes(namespace string) *TestTypeNamespaceLister {
+	return &TestTypeNamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
 }
 
 // TestTypeNamespaceLister helps list and get examplev1.TestType.
 // All objects returned here must be treated as read-only.
-type TestTypeNamespaceLister interface {
-	// List lists all examplev1.TestType in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*examplev1.TestType, err error)
-	// Get retrieves the examplev1.TestType from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*examplev1.TestType, error)
-}
-
-// testTypeNamespaceLister implements the TestTypeNamespaceLister interface.
-type testTypeNamespaceLister struct {
+type TestTypeNamespaceLister struct {
 	indexer   cache.Indexer
 	cluster   logicalcluster.Name
 	namespace string
 }
 
 // List lists all examplev1.TestType in the indexer for a given namespace.
-func (s testTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
+func (s TestTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev1.TestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, "")
@@ -151,14 +121,14 @@ func (s testTypeNamespaceLister) List(selector labels.Selector) (ret []*examplev
 }
 
 // Get retrieves the examplev1.TestType from the indexer for a given namespace and name.
-func (s testTypeNamespaceLister) Get(name string) (*examplev1.TestType, error) {
+func (s TestTypeNamespaceLister) Get(name string) (*examplev1.TestType, error) {
 	key := apimachinerycache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(examplev1.Resource("testType"), name)
+		return nil, errors.NewNotFound(examplev1.Resource("TestType"), name)
 	}
 	return obj.(*examplev1.TestType), nil
 }

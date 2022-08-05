@@ -24,9 +24,11 @@ import (
 )
 
 type VersionInterface struct {
-	OutputPackage string
-	PackageName   string
-	Kinds         []parser.Kind
+	OutputPackage                     string
+	PackageName                       string
+	Kinds                             []parser.Kind
+	UpstreamInformerPackage           string
+	UpstreamInternalInterfacesPackage string
 }
 
 func (v *VersionInterface) WriteContent(w io.Writer) error {
@@ -36,9 +38,12 @@ func (v *VersionInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"outputPackage": v.OutputPackage,
-		"packageName":   v.PackageName,
-		"kinds":         v.Kinds,
+		"outputPackage":                     v.OutputPackage,
+		"packageName":                       v.PackageName,
+		"kinds":                             v.Kinds,
+		"upstreamInformerPackage":           v.UpstreamInformerPackage,
+		"useUpstreamInterfaces":             v.UpstreamInformerPackage != "",
+		"upstreamInternalInterfacesPackage": v.UpstreamInternalInterfacesPackage,
 	}
 	return templ.Execute(w, m)
 }
@@ -52,18 +57,16 @@ var versionInterfaceTemplate = `
 package {{.packageName}}
 
 import (
+	{{if not .useUpstreamInterfaces -}}
 	"{{.outputPackage}}/internalinterfaces"
+	{{else -}}
+	internalinterfaces "{{.upstreamInternalInterfacesPackage}}"
+	upstreaminformers "{{.upstreamInformerPackage}}"
+	{{end -}}
 )
 
-// Interface provides access to all the informers in this group version.
-type Interface interface {
-	{{range .kinds -}}
-		// {{.Plural}} returns a {{.String}}Informer.
-		{{.Plural}}() {{.String}}Informer
-	{{end}}
-}
 
-type version struct {
+type Interface struct {
 	factory          internalinterfaces.SharedInformerFactory
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -71,13 +74,20 @@ type version struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return Interface{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+
+{{$useUpstreamInterfaces := .useUpstreamInterfaces}}
 {{range .kinds}}
 // {{.Plural}} returns a {{.String}}Informer.
-func (v *version) {{.Plural}}() {{.String}}Informer {
-	return &{{.String|lowerFirst}}Informer{factory: v.factory{{if .IsNamespaced}}, namespace: v.namespace{{end}}, tweakListOptions: v.tweakListOptions}
+{{if not $useUpstreamInterfaces -}}
+func (v Interface) {{.Plural}}() *{{.String}}Informer {
+{{end -}}
+{{if $useUpstreamInterfaces -}}
+func (v Interface) {{.Plural}}() upstreaminformers.{{.String}}Informer {
+{{end -}}
+	return &{{.String}}Informer{factory: v.factory{{if .IsNamespaced}}, namespace: v.namespace{{end}}, tweakListOptions: v.tweakListOptions}
 }
 {{end}}
 `

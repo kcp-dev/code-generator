@@ -30,6 +30,8 @@ type Generic struct {
 	PackageName       string
 	GroupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind
 	Groups            []parser.Group
+
+	UpstreamInformerPackage string
 }
 
 func (g *Generic) WriteContent(w io.Writer) error {
@@ -39,10 +41,12 @@ func (g *Generic) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"inputPackage":      g.InputPackage,
-		"packageName":       g.PackageName,
-		"groupVersionKinds": g.GroupVersionKinds,
-		"groups":            g.Groups,
+		"inputPackage":            g.InputPackage,
+		"packageName":             g.PackageName,
+		"groupVersionKinds":       g.GroupVersionKinds,
+		"groups":                  g.Groups,
+		"upstreamInformerPackage": g.UpstreamInformerPackage,
+		"useUpstreamInterfaces":   g.UpstreamInformerPackage != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -70,33 +74,38 @@ import (
 	{{range  $version := (index $groupVersionKinds $group) |sortVersions -}}
 	{{$group.Name}}{{$version.Version}} "{{$inputPackage}}/{{$group.Name}}/{{$version.Version}}"
 	{{end -}}{{end -}}
+
+	{{ if .useUpstreamInterfaces -}}
+	upstreaminformers "{{.upstreamInformerPackage}}"
+	{{end -}}
 )
 
-// GenericInformer is type of SharedIndexInformer which will locate and delegate to other
-// sharedInformers based on type
-type GenericInformer interface {
-	Informer() cache.SharedIndexInformer
-	Lister() *kcpcache.GenericClusterLister
-}
-
-type genericInformer struct {
+type GenericInformer struct {
 	informer cache.SharedIndexInformer
 	resource schema.GroupResource
 }
 
 // Informer returns the SharedIndexInformer.
-func (f *genericInformer) Informer() cache.SharedIndexInformer {
+func (f *GenericInformer) Informer() cache.SharedIndexInformer {
 	return f.informer
 }
 
 // Lister returns the GenericClusterLister.
-func (f *genericInformer) Lister() *kcpcache.GenericClusterLister {
+{{if not .useUpstreamInterfaces -}}
+func (f *GenericInformer) Lister() *kcpcache.GenericClusterLister {
+{{else -}}
+func (f *GenericInformer) Lister() cache.GenericLister {
+{{end -}}
 	return kcpcache.NewGenericClusterLister(f.Informer().GetIndexer(), f.resource)
 }
 
 // ForResource gives generic access to a shared informer of the matching type
 // TODO extend this to unknown resources with a client pool
-func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
+{{ if not .useUpstreamInterfaces -}}
+func (f *SharedInformerFactory) ForResource(resource schema.GroupVersionResource) (*GenericInformer, error) {
+{{else -}}
+func (f *SharedInformerFactory) ForResource(resource schema.GroupVersionResource) (upstreaminformers.GenericInformer, error) {
+{{end -}}
 	switch resource {
 	{{$groupVersionKinds := .groupVersionKinds -}}
 	{{range $group := .groups -}}
@@ -105,7 +114,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group={{$group.FullName}}, Version={{$version.String}}
 				{{range $kind := index $versionKinds $version -}}
 	case {{$group.Name}}{{$version.String}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.{{$group.GoName|upperFirst}}().{{$version.String|upperFirst}}().{{$kind.Plural}}().Informer()}, nil
+		return &GenericInformer{resource: resource.GroupResource(), informer: f.{{$group.GoName|upperFirst}}().{{$version.String|upperFirst}}().{{$kind.Plural}}().Informer()}, nil
 				{{end}}
 			{{end}}
 		{{end -}}
