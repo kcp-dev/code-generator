@@ -74,24 +74,17 @@ const (
 // be derived from the GOPATH.
 // This logic is taken from k8.io/code-generator, but has a change of letting user pass the
 // directory whose package is to be found.
-func CurrentPackage(dir string) (string, bool) {
+func CurrentPackage(dir string) (string, string, error) {
 	goModPath, err := getGoModPath(dir)
 	if err != nil {
-		return "", false
-	}
-
-	// hasGoMod returns true if go.mod was found in the parent dir which was
-	// given as input.
-	var hasGoMod bool
-	if goModPath == dir {
-		hasGoMod = true
+		return "", "", err
 	}
 
 	gomod, err := ioutil.ReadFile(filepath.Join(goModPath, "go.mod"))
 	if err != nil {
-		return "", false
+		return "", "", err
 	}
-	return modfile.ModulePath(gomod), hasGoMod
+	return modfile.ModulePath(gomod), goModPath, nil
 }
 
 // getGoModPath recursively traverses up the directory path
