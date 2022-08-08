@@ -123,27 +123,23 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 
 func (g *Generator) setDefaults(f flag.Flags) (err error) {
 	g.inputDir = f.InputDir
-
-	pkg, hasGoMod := util.CurrentPackage(g.inputDir)
-	if len(pkg) == 0 {
-		return fmt.Errorf("error finding the module path for this package %q", f.InputDir)
-	}
-	cleanPkgPath := util.CleanInputDir(g.inputDir)
-	if !hasGoMod && cleanPkgPath != "" {
-		g.inputPkgPath = filepath.Join(pkg, cleanPkgPath)
-	} else {
-		g.inputPkgPath = pkg
-	}
 	g.outputDir = f.OutputDir
-	pkg, hasGoMod = util.CurrentPackage(f.OutputDir)
-	if len(pkg) == 0 {
-		return fmt.Errorf("error finding the module path for this package %q", f.OutputDir)
-	}
 
-	if !hasGoMod {
-		g.outputPkgPath = util.GetCleanRealtivePath(pkg, filepath.Clean(g.outputDir))
-	} else {
-		g.outputPkgPath = pkg
+	for input, output := range map[string]*string{
+		g.inputDir:  &g.inputPkgPath,
+		g.outputDir: &g.outputPkgPath,
+	} {
+		input = filepath.Clean(input)
+		packageImportName, rootDir, err := util.CurrentPackage(input)
+		if err != nil {
+			return fmt.Errorf("error finding the module path for package %q: %w", f.InputDir, err)
+		}
+		relpath, err := filepath.Rel(rootDir, input)
+		if err != nil {
+			// this should never happen, as we walk up from inputDir to find rootDir
+			return fmt.Errorf("go.mod found in %q, which is not a parent directory of input %q", rootDir, input)
+		}
+		*output = filepath.Join(packageImportName, relpath)
 	}
 
 	g.clientSetAPIPath = f.ClientsetAPIPath
