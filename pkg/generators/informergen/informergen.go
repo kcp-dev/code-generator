@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -106,6 +107,10 @@ func (g Generator) GetName() string {
 // errors while generating interface wrappers, it prints it out.
 func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	var err error
+	// make the outputDir if it does not already exist
+	if err = os.MkdirAll(f.OutputDir, os.ModePerm); err != nil {
+		return err
+	}
 	if err = g.configure(f); err != nil {
 		return err
 	}
