@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -96,6 +97,11 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 	var err error
 
 	if err = flag.ValidateFlags(f); err != nil {
+		return err
+	}
+
+	// make the outputDir if it does not already exist
+	if err = os.MkdirAll(f.OutputDir, os.ModePerm); err != nil {
 		return err
 	}
 	if err = g.setDefaults(f); err != nil {
