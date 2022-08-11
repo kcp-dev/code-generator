@@ -171,20 +171,20 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 					UpstreamAPIPath: g.listersPackage,
 				}
 				if err := lister.WriteContent(&out); err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to generate lister content: %v", err)
 					continue
 				}
 
 				outBytes := out.Bytes()
 				formattedBytes, err := format.Source(outBytes)
 				if err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to format source: %v", err)
 					continue
 				}
 				filename := strings.ToLower(kind.String()) + util.ExtensionGo
 				err = util.WriteContent(formattedBytes, filename, filepath.Join(g.outputDir, "listers", group.Name, string(version.Version)))
 				if err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to write lister content: %v", err)
 					continue
 				}
 			}
