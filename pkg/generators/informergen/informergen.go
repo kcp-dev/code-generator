@@ -115,7 +115,7 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 		return err
 	}
 
-	if g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.groupVersions, []string{"list", "watch"}); err != nil {
+	if g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.inputPkgPath, g.groupVersions, []string{"list", "watch"}); err != nil {
 		return err
 	}
 

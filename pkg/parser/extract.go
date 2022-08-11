@@ -85,7 +85,7 @@ func GetGV(f flag.Flags) ([]types.GroupVersions, error) {
 	return groupVersions, nil
 }
 
-func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []types.GroupVersions, requiredVerbs []string) (map[Group]map[types.PackageVersion][]Kind, error) {
+func GetGVKs(ctx *genall.GenerationContext, inputDir, inputImportName string, groupVersions []types.GroupVersions, requiredVerbs []string) (map[Group]map[types.PackageVersion][]Kind, error) {
 
 	gvks := map[Group]map[types.PackageVersion][]Kind{}
 
@@ -93,13 +93,9 @@ func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []typ
 		group := Group{Name: gv.Group.String(), GoName: gv.Group.String(), FullName: gv.Group.String()}
 		for _, packageVersion := range gv.Versions {
 
-			abs, err := filepath.Abs(inputDir)
-			if err != nil {
-				return nil, err
-			}
-			path := filepath.Join(abs, group.Name, packageVersion.String())
+			path := filepath.Join(inputImportName, group.Name, packageVersion.String())
 			pkgs, err := loader.LoadRootsWithConfig(&packages.Config{
-				Dir: inputDir, Mode: packages.NeedTypesInfo,
+				Mode: packages.NeedTypesInfo,
 			}, path)
 			if err != nil {
 				return nil, err
