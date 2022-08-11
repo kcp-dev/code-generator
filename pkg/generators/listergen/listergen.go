@@ -30,11 +30,9 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
 	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
-	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
-	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
@@ -108,23 +106,12 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 		return err
 	}
 
-	g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.groupVersions, []string{"list", "watch"})
+	g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.inputPkgPath, g.groupVersions, []string{"list", "watch"})
 	if err != nil {
 		return err
 	}
 
-	if err = g.generate(ctx); err != nil {
-		return err
-	}
-
-	// print all the errors consolidated from packages in the generation context.
-	// skip the type errors since they occur when input path does not contain
-	// go.mod files.
-	hadErr := loader.PrintErrors(ctx.Roots, packages.TypeError)
-	if hadErr {
-		return fmt.Errorf("generator did not run successfully")
-	}
-	return nil
+	return g.generate(ctx)
 }
 
 func (g *Generator) setDefaults(f flag.Flags) (err error) {
@@ -184,20 +171,20 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 					UpstreamAPIPath: g.listersPackage,
 				}
 				if err := lister.WriteContent(&out); err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to generate lister content: %v", err)
 					continue
 				}
 
 				outBytes := out.Bytes()
 				formattedBytes, err := format.Source(outBytes)
 				if err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to format source: %v", err)
 					continue
 				}
 				filename := strings.ToLower(kind.String()) + util.ExtensionGo
 				err = util.WriteContent(formattedBytes, filename, filepath.Join(g.outputDir, "listers", group.Name, string(version.Version)))
 				if err != nil {
-					klog.Error(err)
+					klog.Errorf("failed to write lister content: %v", err)
 					continue
 				}
 			}
