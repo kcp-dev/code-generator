@@ -30,11 +30,9 @@ import (
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
 	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
-	"golang.org/x/tools/go/packages"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
-	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
@@ -113,18 +111,7 @@ func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
 		return err
 	}
 
-	if err = g.generate(ctx); err != nil {
-		return err
-	}
-
-	// print all the errors consolidated from packages in the generation context.
-	// skip the type errors since they occur when input path does not contain
-	// go.mod files.
-	hadErr := loader.PrintErrors(ctx.Roots, packages.TypeError)
-	if hadErr {
-		return fmt.Errorf("generator did not run successfully")
-	}
-	return nil
+	return g.generate(ctx)
 }
 
 func (g *Generator) setDefaults(f flag.Flags) (err error) {

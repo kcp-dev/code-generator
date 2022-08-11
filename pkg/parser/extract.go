@@ -18,7 +18,6 @@ package parser
 
 import (
 	"fmt"
-
 	"path/filepath"
 	"sort"
 	"strings"
@@ -107,6 +106,9 @@ func GetGVKs(ctx *genall.GenerationContext, inputDir string, groupVersions []typ
 			}
 			ctx.Roots = pkgs
 			for _, root := range ctx.Roots {
+			if loader.PrintErrors(pkgs) {
+				return nil, fmt.Errorf("loader did not run successfully")
+			}
 				packageMarkers, _ := markers.PackageMarkers(ctx.Collector, root)
 				if packageMarkers != nil {
 					val, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
