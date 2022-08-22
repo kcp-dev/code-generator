@@ -25,7 +25,7 @@ import (
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1"
 	existinginterfacesv1listers "github.com/kcp-dev/code-generator/examples/pkg/generated/listers/existinginterfaces/v1"
-	"github.com/kcp-dev/logicalcluster"
+	"github.com/kcp-dev/logicalcluster/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
