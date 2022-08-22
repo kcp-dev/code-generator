@@ -44,7 +44,7 @@ package {{.version.String}}
 import (
 	
 	{{.group.Name}}{{.version.String}} "{{.apiPath}}"
-	"github.com/kcp-dev/logicalcluster"
+	"github.com/kcp-dev/logicalcluster/v2"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"

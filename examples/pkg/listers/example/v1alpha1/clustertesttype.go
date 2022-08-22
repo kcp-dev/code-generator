@@ -24,7 +24,7 @@ package v1alpha1
 import (
 	apimachinerycache "github.com/kcp-dev/apimachinery/pkg/cache"
 	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1alpha1"
-	"github.com/kcp-dev/logicalcluster"
+	"github.com/kcp-dev/logicalcluster/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
