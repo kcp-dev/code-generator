@@ -17,6 +17,11 @@ limitations under the License.
 package parser
 
 import (
+	"fmt"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
@@ -31,7 +36,8 @@ var (
 	SkipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
 	OnlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
 
-	GroupNameMarker = markers.Must(markers.MakeDefinition("groupName", markers.DescribesPackage, markers.RawArguments("")))
+	GroupNameMarker   = markers.Must(markers.MakeDefinition("groupName", markers.DescribesPackage, markers.RawArguments("")))
+	GroupGoNameMarker = markers.Must(markers.MakeDefinition("groupGoName", markers.DescribesPackage, markers.RawArguments("")))
 
 	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
 	// markers are not a part of genclient, since they do not accept any values.
@@ -48,34 +54,65 @@ type GenClient struct {
 	Result      *string
 }
 
-// IsEnabledForMethod verifies if the genclient marker is enabled for
+// ClientsGeneratedForType verifies if the genclient marker is enabled for
 // this type or not.
-func IsEnabledForMethod(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(GenclientMarker.Name)
-	return enabled != nil
+func ClientsGeneratedForType(info *markers.TypeInfo) bool {
+	return info.Markers.Get(GenclientMarker.Name) != nil
 }
 
 // IsClusterScoped verifies if the genclient marker for this
 // type is namespaced or clusterscoped.
 func IsClusterScoped(info *markers.TypeInfo) bool {
-	enabled := info.Markers.Get(NonNamespacedMarker.Name)
-	return enabled != nil
+	return info.Markers.Get(NonNamespacedMarker.Name) != nil
 }
 
-// hasStatusSubresource verifies if updateStatus verb is to be scaffolded.
-// if `noStatus` marker is present is returns false. Else it checks if
-// the type has Status field.
-func HasStatusSubresource(info *markers.TypeInfo) bool {
-	if info.Markers.Get(NoStatusMarker.Name) != nil {
-		return false
+// IsNamespaced verifies if the genclient marker for this
+// type is namespaced.
+func IsNamespaced(info *markers.TypeInfo) bool {
+	return !IsClusterScoped(info)
+}
+
+// SupportedVerbs determines which verbs the type supports
+func SupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
+	if info.Markers.Get(NoVerbsMarker.Name) != nil {
+		return sets.NewString(), nil
 	}
 
-	hasStatusField := false
-	for _, f := range info.Fields {
-		if f.Name == "Status" {
-			hasStatusField = true
-			break
-		}
+	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
+		return sets.NewString(genutil.ReadonlyVerbs...), nil
 	}
-	return hasStatusField
+
+	extractVerbs := func(info *markers.TypeInfo, name string) ([]string, error) {
+		if items := info.Markers.Get(name); items != nil {
+			val, ok := items.(markers.RawArguments)
+			if !ok {
+				return nil, fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name)
+			}
+			return strings.Split(string(val), ","), nil
+		}
+		return nil, nil
+	}
+
+	onlyVerbs, err := extractVerbs(info, OnlyVerbsMarker.Name)
+	if err != nil {
+		return sets.NewString(), err
+	}
+	if len(onlyVerbs) > 0 {
+		return sets.NewString(onlyVerbs...), nil
+	}
+
+	skipVerbs, err := extractVerbs(info, SkipVerbsMarker.Name)
+	if err != nil {
+		return sets.NewString(), err
+	}
+	return sets.NewString(genutil.SupportedVerbs...).Difference(sets.NewString(skipVerbs...)), nil
+}
+
+// SupportsVerbs determines if the type supports all the verbs.
+func SupportsVerbs(info *markers.TypeInfo, verbs ...string) (bool, error) {
+	supported, err := SupportedVerbs(info)
+	if err != nil {
+		return false, err
+	}
+	return supported.HasAll(verbs...), nil
 }
