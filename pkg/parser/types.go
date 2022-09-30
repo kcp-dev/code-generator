@@ -19,18 +19,20 @@ package parser
 import (
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"github.com/kcp-dev/code-generator/third_party/namer"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
 type Kind struct {
-	kind       string
-	namespaced bool
-	namer      namer.Namer
+	kind           string
+	namespaced     bool
+	supportedVerbs sets.String
+	namer          namer.Namer
 }
 
 type Group struct {
-	Name     string
-	GoName   string
-	FullName string
+	types.Group
+	GoName string
 }
 
 func (k *Kind) Plural() string {
@@ -45,10 +47,15 @@ func (k *Kind) IsNamespaced() bool {
 	return k.namespaced
 }
 
-func NewKind(kind string, namespaced bool) Kind {
+func (k *Kind) SupportsListWatch() bool {
+	return k.supportedVerbs.HasAll("list", "watch")
+}
+
+func NewKind(kind string, namespaced bool, supportedVerbs sets.String) Kind {
 	return Kind{
-		kind:       kind,
-		namespaced: namespaced,
+		kind:           kind,
+		namespaced:     namespaced,
+		supportedVerbs: supportedVerbs,
 		namer: namer.Namer{
 			Finalize: util.UpperFirst,
 			Exceptions: map[string]string{

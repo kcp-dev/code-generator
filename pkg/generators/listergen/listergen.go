@@ -17,63 +17,38 @@ limitations under the License.
 package listergen
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"go/format"
-	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/kcp-dev/code-generator/pkg/flag"
 	"github.com/kcp-dev/code-generator/pkg/internal/listergen"
 	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
 	"k8s.io/code-generator/cmd/client-gen/types"
+	"k8s.io/gengo/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
-const (
-	// GeneratorName is the name of the generator.
-	GeneratorName = "lister"
-)
-
 type Generator struct {
-	// inputDir is the path where types are defined.
-	inputDir string
+	// HeaderFile specifies the header text (e.g. license) to prepend to generated files.
+	HeaderFile string `marker:",optional"`
 
-	//inputPkgPath stores the input package for the apis.
-	inputPkgPath string
+	// Year specifies the year to substitute for " YEAR" in the header file.
+	Year string `marker:",optional"`
 
-	// outputPkgPath stores the output package path for listers.
-	outputPkgPath string
+	// APIPackagePath is the root directory under which API types exist.
+	// e.g. "k8s.io/api"
+	APIPackagePath string `marker:"apiPackagePath"`
 
-	// output Dir where the wrappers are to be written.
-	outputDir string
-
-	// GroupVersions for whom the clients are to be generated.
-	groupVersions []types.GroupVersions
-
-	// GroupVersionKinds contains all the needed APIs to scaffold
-	groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind
-
-	// headerText is the header text to be added to generated wrappers.
-	// It is obtained from `--go-header-text` flag.
-	headerText string
-
-	// path to where generated clientsets are found.
-	clientSetAPIPath string
-
-	// path to where generated listers are found.
-	listersPackage string
+	// SingleClusterListerPackagePath is the root directory under which single-cluster-aware listers exist,
+	// for the case where we're only generating new code "on top" to enable multi-cluster use-cases.
+	// e.g. "k8s.io/client-go/listers"
+	SingleClusterListerPackagePath string `marker:",optional"`
 }
 
-func (g Generator) RegisterMarker() (*markers.Registry, error) {
-	reg := &markers.Registry{}
-	if err := markers.RegisterAll(reg,
+func (Generator) RegisterMarkers(into *markers.Registry) error {
+	return markers.RegisterAll(into,
 		parser.GenclientMarker,
 		parser.NonNamespacedMarker,
 		parser.GroupNameMarker,
@@ -81,111 +56,48 @@ func (g Generator) RegisterMarker() (*markers.Registry, error) {
 		parser.ReadOnlyMarker,
 		parser.SkipVerbsMarker,
 		parser.OnlyVerbsMarker,
-	); err != nil {
-		return nil, fmt.Errorf("error registering markers")
-	}
-	return reg, nil
+	)
 }
 
-func (g Generator) GetName() string {
-	return GeneratorName
-}
+// Generate will generate listers for all types that have generated clients and support LIST + WATCH verbs.
+func (g Generator) Generate(ctx *genall.GenerationContext) error {
+	var headerText string
 
-func (g Generator) Run(ctx *genall.GenerationContext, f flag.Flags) error {
-	var err error
-
-	if err = flag.ValidateFlags(f); err != nil {
-		return err
-	}
-
-	// make the outputDir if it does not already exist
-	if err = os.MkdirAll(f.OutputDir, os.ModePerm); err != nil {
-		return err
-	}
-	if err = g.setDefaults(f); err != nil {
-		return err
-	}
-
-	g.groupVersionKinds, err = parser.GetGVKs(ctx, g.inputDir, g.inputPkgPath, g.groupVersions, []string{"list", "watch"})
-	if err != nil {
-		return err
-	}
-
-	return g.generate(ctx)
-}
-
-func (g *Generator) setDefaults(f flag.Flags) (err error) {
-	g.inputDir = f.InputDir
-	g.outputDir = f.OutputDir
-
-	for input, output := range map[string]*string{
-		g.inputDir:  &g.inputPkgPath,
-		g.outputDir: &g.outputPkgPath,
-	} {
-		input = filepath.Clean(input)
-		packageImportName, rootDir, err := util.CurrentPackage(input)
+	if g.HeaderFile != "" {
+		headerBytes, err := ctx.ReadFile(g.HeaderFile)
 		if err != nil {
-			return fmt.Errorf("error finding the module path for package %q: %w", f.InputDir, err)
+			return err
 		}
-		relpath, err := filepath.Rel(rootDir, input)
-		if err != nil {
-			// this should never happen, as we walk up from inputDir to find rootDir
-			return fmt.Errorf("go.mod found in %q, which is not a parent directory of input %q", rootDir, input)
-		}
-		*output = filepath.Join(packageImportName, relpath)
+		headerText = string(headerBytes)
 	}
+	headerText = strings.ReplaceAll(headerText, " YEAR", " "+g.Year)
 
-	g.clientSetAPIPath = f.ClientsetAPIPath
-	g.listersPackage = f.ListersPackage
-
-	g.headerText, err = util.GetHeaderText(f.GoHeaderFilePath)
+	groupVersionKinds, err := parser.CollectKinds(ctx, "list", "watch")
 	if err != nil {
 		return err
 	}
 
-	gvs, err := parser.GetGV(f)
-	if err != nil {
-		return err
-	}
-
-	g.groupVersions = append(g.groupVersions, gvs...)
-
-	return nil
-}
-
-func (g *Generator) generate(ctx *genall.GenerationContext) error {
-	for group, versionKinds := range g.groupVersionKinds {
-		for version, kinds := range versionKinds {
+	for group, versions := range groupVersionKinds {
+		for version, kinds := range versions {
+			groupInfo := toGroupVersionInfo(group, version)
 			for _, kind := range kinds {
-				var out bytes.Buffer
-				if err := g.writeHeader(&out); err != nil {
-					klog.Error(err)
-					continue
-				}
-				klog.Infof("Generating lister for GVK %s:%s/%s", group.Name, version.String(), kind.String())
-				lister := listergen.Lister{
-					Group:           group,
-					Version:         version,
-					Kind:            kind,
-					APIPath:         filepath.Join(g.inputPkgPath, group.Name, version.String()),
-					UpstreamAPIPath: g.listersPackage,
-				}
-				if err := lister.WriteContent(&out); err != nil {
-					klog.Errorf("failed to generate lister content: %v", err)
-					continue
-				}
+				listerDir := filepath.Join("clients", "listers", group.PackageName(), version.PackageName())
+				outputFile := filepath.Join(listerDir, strings.ToLower(kind.String())+".go")
+				logger := klog.Background().WithValues(
+					"group", group.String(),
+					"version", version.String(),
+					"kind", kind.String(),
+					"path", outputFile,
+				)
+				logger.Info("generating lister")
 
-				outBytes := out.Bytes()
-				formattedBytes, err := format.Source(outBytes)
-				if err != nil {
-					klog.Errorf("failed to format source: %v", err)
-					continue
-				}
-				filename := strings.ToLower(kind.String()) + util.ExtensionGo
-				err = util.WriteContent(formattedBytes, filename, filepath.Join(g.outputDir, "listers", group.Name, string(version.Version)))
-				if err != nil {
-					klog.Errorf("failed to write lister content: %v", err)
-					continue
+				if err := util.WriteGeneratedCode(ctx, headerText, &listergen.Lister{
+					Group:                          groupInfo,
+					APIPackagePath:                 g.APIPackagePath,
+					Kind:                           kind,
+					SingleClusterListerPackagePath: g.SingleClusterListerPackagePath,
+				}, outputFile); err != nil {
+					return err
 				}
 			}
 		}
@@ -194,14 +106,13 @@ func (g *Generator) generate(ctx *genall.GenerationContext) error {
 	return nil
 }
 
-func (g *Generator) writeHeader(out io.Writer) error {
-	n, err := out.Write([]byte(g.headerText))
-	if err != nil {
-		return err
+// adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
+func toGroupVersionInfo(group parser.Group, version types.PackageVersion) types.GroupVersionInfo {
+	return types.GroupVersionInfo{
+		Group:                group.Group,
+		Version:              types.Version(namer.IC(version.Version.String())),
+		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
+		GroupGoName:          group.GoName,
+		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
-
-	if n < len([]byte(g.headerText)) {
-		return errors.New("header text was not written properly.")
-	}
-	return nil
 }
