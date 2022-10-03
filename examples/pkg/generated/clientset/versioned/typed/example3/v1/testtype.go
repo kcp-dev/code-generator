@@ -22,12 +22,13 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
-	scheme "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	v1 "acme.corp/pkg/apis/example3/v1"
+	scheme "acme.corp/pkg/generated/clientset/versioned/scheme"
 )
 
 // TestTypesGetter has a method to return a TestTypeInterface.
@@ -56,7 +57,7 @@ type testTypes struct {
 }
 
 // newTestTypes returns a TestTypes
-func newTestTypes(c *ThirdExampleV1Client, namespace string) *testTypes {
+func newTestTypes(c *Example3V1Client, namespace string) *testTypes {
 	return &testTypes{
 		client: c.RESTClient(),
 		ns:     namespace,

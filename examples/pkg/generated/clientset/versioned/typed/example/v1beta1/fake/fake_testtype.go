@@ -21,11 +21,12 @@ package fake
 import (
 	"context"
 
-	v1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	testing "k8s.io/client-go/testing"
+
+	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
 )
 
 // FakeTestTypes implements TestTypeInterface

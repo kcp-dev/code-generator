@@ -21,9 +21,10 @@ package v1
 import (
 	"net/http"
 
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/secondexample/v1"
-	"github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
+
+	v1 "acme.corp/pkg/apis/secondexample/v1"
+	"acme.corp/pkg/generated/clientset/versioned/scheme"
 )
 
 type SecondexampleV1Interface interface {

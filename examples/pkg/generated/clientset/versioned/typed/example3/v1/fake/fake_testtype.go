@@ -21,24 +21,25 @@ package fake
 import (
 	"context"
 
-	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
+
+	example3v1 "acme.corp/pkg/apis/example3/v1"
 )
 
 // FakeTestTypes implements TestTypeInterface
 type FakeTestTypes struct {
-	Fake *FakeThirdExampleV1
+	Fake *FakeExample3V1
 	ns   string
 }
 
-var testtypesResource = schema.GroupVersionResource{Group: "ThirdExample", Version: "v1", Resource: "testtypes"}
+var testtypesResource = schema.GroupVersionResource{Group: "example3.some.corp", Version: "v1", Resource: "testtypes"}
 
-var testtypesKind = schema.GroupVersionKind{Group: "ThirdExample", Version: "v1", Kind: "TestType"}
+var testtypesKind = schema.GroupVersionKind{Group: "example3.some.corp", Version: "v1", Kind: "TestType"}
 
 // Get takes name of the testType, and returns the corresponding testType object, and an error if there is any.
 func (c *FakeTestTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *example3v1.TestType, err error) {

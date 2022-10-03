@@ -21,23 +21,24 @@ package fake
 import (
 	"context"
 
-	example3v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
+
+	example3v1 "acme.corp/pkg/apis/example3/v1"
 )
 
 // FakeClusterTestTypes implements ClusterTestTypeInterface
 type FakeClusterTestTypes struct {
-	Fake *FakeThirdExampleV1
+	Fake *FakeExample3V1
 }
 
-var clustertesttypesResource = schema.GroupVersionResource{Group: "ThirdExample", Version: "v1", Resource: "clustertesttypes"}
+var clustertesttypesResource = schema.GroupVersionResource{Group: "example3.some.corp", Version: "v1", Resource: "clustertesttypes"}
 
-var clustertesttypesKind = schema.GroupVersionKind{Group: "ThirdExample", Version: "v1", Kind: "ClusterTestType"}
+var clustertesttypesKind = schema.GroupVersionKind{Group: "example3.some.corp", Version: "v1", Kind: "ClusterTestType"}
 
 // Get takes name of the clusterTestType, and returns the corresponding clusterTestType object, and an error if there is any.
 func (c *FakeClusterTestTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *example3v1.ClusterTestType, err error) {

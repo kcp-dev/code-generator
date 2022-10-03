@@ -22,7 +22,8 @@ TMPDIR := $(shell mktemp -d)
 
 CONTROLLER_GEN_VER := v0.8.0
 CONTROLLER_GEN_BIN := controller-gen
-CONTROLLER_GEN := $(TOOLS_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
+CONTROLLER_GEN := $(GOBIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
+export CONTROLLER_GEN
 
 GOLANGCI_LINT_VER := v1.49.0
 GOLANGCI_LINT_BIN := golangci-lint
@@ -36,9 +37,24 @@ KUBE_INFORMER_GEN_VER := v0.24.0
 KUBE_INFORMER_GEN_BIN := informer-gen
 
 KUBE_CLIENT_GEN := $(GOBIN_DIR)/$(KUBE_CLIENT_GEN_BIN)-$(KUBE_CLIENT_GEN_VER)
+export KUBE_CLIENT_GEN
 KUBE_LISTER_GEN := $(GOBIN_DIR)/$(KUBE_LISTER_GEN_BIN)-$(KUBE_LISTER_GEN_VER)
+export KUBE_LISTER_GEN
 KUBE_INFORMER_GEN := $(GOBIN_DIR)/$(KUBE_INFORMER_GEN_BIN)-$(KUBE_INFORMER_GEN_VER)
+export KUBE_INFORMER_GEN
 
+OPENSHIFT_GOIMPORTS_VER := c72f1dc2e3aacfa00aece3391d938c9bc734e791
+OPENSHIFT_GOIMPORTS_BIN := openshift-goimports
+OPENSHIFT_GOIMPORTS := $(TOOLS_DIR)/$(OPENSHIFT_GOIMPORTS_BIN)-$(OPENSHIFT_GOIMPORTS_VER)
+export OPENSHIFT_GOIMPORTS # so hack scripts can use it
+
+$(OPENSHIFT_GOIMPORTS):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/openshift-eng/openshift-goimports $(OPENSHIFT_GOIMPORTS_BIN) $(OPENSHIFT_GOIMPORTS_VER)
+
+imports: $(OPENSHIFT_GOIMPORTS)
+	$(OPENSHIFT_GOIMPORTS) -m github.com/kcp-dev/code-generator
+	$(OPENSHIFT_GOIMPORTS) --path ./examples -m acme.corp
+.PHONY: imports
 
 $(CONTROLLER_GEN):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_VER)
@@ -62,65 +78,8 @@ install:
 
 .PHONY: codegen
 codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_LISTER_GEN) $(KUBE_INFORMER_GEN) build
-	# Generate deepcopy functions
-	${CONTROLLER_GEN} object paths=./examples/pkg/apis/...
-
-	# Generate standard clientset
-	$(KUBE_CLIENT_GEN) \
-		--clientset-name versioned \
-		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--input-base github.com/kcp-dev/code-generator/examples/pkg/apis \
-		--input example/v1 \
-		--input example/v1alpha1 \
-		--input example/v1beta1 \
-		--input example/v2 \
-		--input example3/v1 \
-		--input secondexample/v1 \
-		--input existinginterfaces/v1 \
-		--output-base . \
-		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset \
-		--trim-path-prefix github.com/kcp-dev/code-generator
-
-	$(KUBE_LISTER_GEN) \
-		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--input-dirs github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1 \
-		--output-base . \
-		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
-		--trim-path-prefix github.com/kcp-dev/code-generator
-
-	$(KUBE_INFORMER_GEN) \
-		--versioned-clientset-package github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
-		--listers-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
-		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--input-dirs github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1 \
-		--output-base . \
-		--output-package github.com/kcp-dev/code-generator/examples/pkg/generated/informers \
-		--trim-path-prefix github.com/kcp-dev/code-generator
-
-	# Generate cluster informers and listers
-	bin/code-generator \
-		lister,informer \
-		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
-		--input-dir ./examples/pkg/apis \
-		--output-dir ./examples/pkg \
-		--group-versions example:v1 \
-		--group-versions example:v2 \
-		--group-versions example:v1alpha1 \
-		--group-versions example:v1beta1 \
-		--group-versions secondexample:v1 \
-		--group-versions example3:v1
-
-	# Generate cluster informers and listers that are compatible with upstream interfaces
-	bin/code-generator \
-		lister,informer \
-		--go-header-file hack/boilerplate/boilerplate.generatego.txt \
-		--clientset-api-path github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned \
-		--listers-package github.com/kcp-dev/code-generator/examples/pkg/generated/listers \
-		--informers-package github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions \
-		--input-dir ./examples/pkg/apis \
-		--output-dir ./examples/pkg/legacy \
-		--group-versions existinginterfaces:v1
+	./hack/update-codegen.sh
+	$(MAKE) imports
 
 $(GOLANGCI_LINT):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)

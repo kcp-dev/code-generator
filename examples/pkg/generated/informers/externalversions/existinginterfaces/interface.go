@@ -19,8 +19,8 @@ limitations under the License.
 package existinginterfaces
 
 import (
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions/existinginterfaces/v1"
-	internalinterfaces "github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions/internalinterfaces"
+	v1 "acme.corp/pkg/generated/informers/externalversions/existinginterfaces/v1"
+	internalinterfaces "acme.corp/pkg/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

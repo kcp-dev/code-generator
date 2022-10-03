@@ -21,13 +21,14 @@ package fake
 import (
 	"context"
 
-	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
+
+	examplev1 "acme.corp/pkg/apis/example/v1"
 )
 
 // FakeClusterTestTypes implements ClusterTestTypeInterface
