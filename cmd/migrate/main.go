@@ -32,6 +32,7 @@ import (
 	"github.com/dave/dst/dstutil"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/packages"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
