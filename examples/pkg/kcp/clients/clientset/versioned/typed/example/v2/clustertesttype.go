@@ -34,15 +34,15 @@ import (
 	examplev2client "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
 )
 
-// ClusterTestTypesClusterGetter has a method to return a ClusterTestTypesClusterInterface.
+// ClusterTestTypesClusterGetter has a method to return a ClusterTestTypeClusterInterface.
 // A group's cluster client should implement this interface.
 type ClusterTestTypesClusterGetter interface {
-	ClusterTestTypes() ClusterTestTypesClusterInterface
+	ClusterTestTypes() ClusterTestTypeClusterInterface
 }
 
-// ClusterTestTypesClusterInterface can operate on ClusterTestTypes across all clusters,
+// ClusterTestTypeClusterInterface can operate on ClusterTestTypes across all clusters,
 // or scope down to one cluster and return a examplev2client.ClusterTestTypeInterface.
-type ClusterTestTypesClusterInterface interface {
+type ClusterTestTypeClusterInterface interface {
 	Cluster(logicalcluster.Name) examplev2client.ClusterTestTypeInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*examplev2.ClusterTestTypeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)

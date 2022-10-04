@@ -34,15 +34,15 @@ import (
 	existinginterfacesv1client "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 )
 
-// TestTypesClusterGetter has a method to return a TestTypesClusterInterface.
+// TestTypesClusterGetter has a method to return a TestTypeClusterInterface.
 // A group's cluster client should implement this interface.
 type TestTypesClusterGetter interface {
-	TestTypes() TestTypesClusterInterface
+	TestTypes() TestTypeClusterInterface
 }
 
-// TestTypesClusterInterface can operate on TestTypes across all clusters,
+// TestTypeClusterInterface can operate on TestTypes across all clusters,
 // or scope down to one cluster and return a TestTypesNamespacer.
-type TestTypesClusterInterface interface {
+type TestTypeClusterInterface interface {
 	Cluster(logicalcluster.Name) TestTypesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*existinginterfacesv1.TestTypeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
