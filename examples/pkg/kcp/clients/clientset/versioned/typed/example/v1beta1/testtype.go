@@ -28,14 +28,14 @@ import (
 	examplev1beta1client "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
 )
 
-// TestTypesClusterGetter has a method to return a TestTypesClusterInterface.
+// TestTypesClusterGetter has a method to return a TestTypeClusterInterface.
 // A group's cluster client should implement this interface.
 type TestTypesClusterGetter interface {
-	TestTypes() TestTypesClusterInterface
+	TestTypes() TestTypeClusterInterface
 }
 
-// TestTypesClusterInterface can scope down to one cluster and return a TestTypesNamespacer.
-type TestTypesClusterInterface interface {
+// TestTypeClusterInterface can scope down to one cluster and return a TestTypesNamespacer.
+type TestTypeClusterInterface interface {
 	Cluster(logicalcluster.Name) TestTypesNamespacer
 }
 

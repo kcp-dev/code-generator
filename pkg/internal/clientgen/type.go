@@ -68,19 +68,19 @@ import (
 	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
-// {{.kind.Plural}}ClusterGetter has a method to return a {{.kind.Plural}}ClusterInterface.
+// {{.kind.Plural}}ClusterGetter has a method to return a {{.kind.String}}ClusterInterface.
 // A group's cluster client should implement this interface.
 type {{.kind.Plural}}ClusterGetter interface {
-	{{.kind.Plural}}() {{.kind.Plural}}ClusterInterface
+	{{.kind.Plural}}() {{.kind.String}}ClusterInterface
 }
 
 {{ if .kind.SupportsListWatch -}}
-// {{.kind.Plural}}ClusterInterface can operate on {{.kind.Plural}} across all clusters,
+// {{.kind.String}}ClusterInterface can operate on {{.kind.Plural}} across all clusters,
 // or scope down to one cluster and return a {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}}.
 {{ else -}}
-// {{.kind.Plural}}ClusterInterface can scope down to one cluster and return a {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}}.
+// {{.kind.String}}ClusterInterface can scope down to one cluster and return a {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}}.
 {{ end -}}
-type {{.kind.Plural}}ClusterInterface interface {
+type {{.kind.String}}ClusterInterface interface {
 	Cluster(logicalcluster.Name) {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} 
 {{- if .kind.SupportsListWatch }}
 	List(ctx context.Context, opts metav1.ListOptions) (*{{.group.PackageAlias}}.{{.kind.String}}List, error)
