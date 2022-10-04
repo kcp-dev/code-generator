@@ -22,14 +22,15 @@ import (
 	"context"
 	time "time"
 
-	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1"
-	versioned "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
-	internalinterfaces "github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions/internalinterfaces"
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/listers/existinginterfaces/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+
+	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
+	versioned "acme.corp/pkg/generated/clientset/versioned"
+	internalinterfaces "acme.corp/pkg/generated/informers/externalversions/internalinterfaces"
+	v1 "acme.corp/pkg/generated/listers/existinginterfaces/v1"
 )
 
 // ClusterTestTypeInformer provides access to a shared informer and lister for

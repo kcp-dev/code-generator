@@ -21,34 +21,35 @@ package v1
 import (
 	"net/http"
 
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
-	"github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
+
+	v1 "acme.corp/pkg/apis/example3/v1"
+	"acme.corp/pkg/generated/clientset/versioned/scheme"
 )
 
-type ThirdExampleV1Interface interface {
+type Example3V1Interface interface {
 	RESTClient() rest.Interface
 	ClusterTestTypesGetter
 	TestTypesGetter
 }
 
-// ThirdExampleV1Client is used to interact with features provided by the ThirdExample group.
-type ThirdExampleV1Client struct {
+// Example3V1Client is used to interact with features provided by the example3.some.corp group.
+type Example3V1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ThirdExampleV1Client) ClusterTestTypes() ClusterTestTypeInterface {
+func (c *Example3V1Client) ClusterTestTypes() ClusterTestTypeInterface {
 	return newClusterTestTypes(c)
 }
 
-func (c *ThirdExampleV1Client) TestTypes(namespace string) TestTypeInterface {
+func (c *Example3V1Client) TestTypes(namespace string) TestTypeInterface {
 	return newTestTypes(c, namespace)
 }
 
-// NewForConfig creates a new ThirdExampleV1Client for the given config.
+// NewForConfig creates a new Example3V1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*ThirdExampleV1Client, error) {
+func NewForConfig(c *rest.Config) (*Example3V1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -60,9 +61,9 @@ func NewForConfig(c *rest.Config) (*ThirdExampleV1Client, error) {
 	return NewForConfigAndClient(&config, httpClient)
 }
 
-// NewForConfigAndClient creates a new ThirdExampleV1Client for the given config and http client.
+// NewForConfigAndClient creates a new Example3V1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ThirdExampleV1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*Example3V1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -71,12 +72,12 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ThirdExampleV1Clien
 	if err != nil {
 		return nil, err
 	}
-	return &ThirdExampleV1Client{client}, nil
+	return &Example3V1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new ThirdExampleV1Client for the given config and
+// NewForConfigOrDie creates a new Example3V1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ThirdExampleV1Client {
+func NewForConfigOrDie(c *rest.Config) *Example3V1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -84,9 +85,9 @@ func NewForConfigOrDie(c *rest.Config) *ThirdExampleV1Client {
 	return client
 }
 
-// New creates a new ThirdExampleV1Client for the given RESTClient.
-func New(c rest.Interface) *ThirdExampleV1Client {
-	return &ThirdExampleV1Client{c}
+// New creates a new Example3V1Client for the given RESTClient.
+func New(c rest.Interface) *Example3V1Client {
+	return &Example3V1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -104,7 +105,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *ThirdExampleV1Client) RESTClient() rest.Interface {
+func (c *Example3V1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

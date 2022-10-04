@@ -19,18 +19,19 @@ limitations under the License.
 package scheme
 
 import (
-	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1"
-	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1alpha1"
-	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
-	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v2"
-	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example3/v1"
-	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces/v1"
-	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/apis/secondexample/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	examplev1 "acme.corp/pkg/apis/example/v1"
+	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
+	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
+	examplev2 "acme.corp/pkg/apis/example/v2"
+	example3v1 "acme.corp/pkg/apis/example3/v1"
+	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
+	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
 
 var Scheme = runtime.NewScheme()
@@ -41,7 +42,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	examplev1alpha1.AddToScheme,
 	examplev1beta1.AddToScheme,
 	examplev2.AddToScheme,
-	thirdexamplev1.AddToScheme,
+	example3v1.AddToScheme,
 	existinginterfacesv1.AddToScheme,
 	secondexamplev1.AddToScheme,
 }

@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/kcp-dev/code-generator/examples/pkg/apis/existinginterfaces"
+	"acme.corp/pkg/apis/existinginterfaces"
 )
 
 // SchemeGroupVersion is group version used to register these objects

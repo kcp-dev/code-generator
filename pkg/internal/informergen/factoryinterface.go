@@ -22,7 +22,9 @@ import (
 )
 
 type FactoryInterface struct {
-	ClientsetPackage string
+	// ClientsetPackagePath is the package under which the cluster-aware client-set will be exposed.
+	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
+	ClientsetPackagePath string
 }
 
 func (f *FactoryInterface) WriteContent(w io.Writer) error {
@@ -32,8 +34,7 @@ func (f *FactoryInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"clientsetPackage":   f.ClientsetPackage,
-		"clientSetInterface": "versioned.Interface",
+		"clientsetPackagePath": f.ClientsetPackagePath,
 	}
 	return templ.Execute(w, m)
 }
@@ -53,11 +54,11 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"
 
-	versioned "{{.clientsetPackage}}"
+	client "{{.clientsetPackagePath}}"
 )
 
-// NewInformerFunc takes {{.clientSetInterface}} and time.Duration to return a SharedIndexInformer.
-type NewInformerFunc func({{.clientSetInterface}}, time.Duration) cache.SharedIndexInformer
+// NewInformerFunc takes client.ClusterInterface and time.Duration to return a SharedIndexInformer.
+type NewInformerFunc func(client.ClusterInterface, time.Duration) cache.SharedIndexInformer
 
 // SharedInformerFactory a small interface to allow for adding an informer without an import cycle
 type SharedInformerFactory interface {

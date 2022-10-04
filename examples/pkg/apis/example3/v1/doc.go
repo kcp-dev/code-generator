@@ -15,5 +15,5 @@ limitations under the License.
 */
 
 // +k8s:deepcopy-gen=package,register
-// +groupName=ThirdExample
+// +groupName=example3.some.corp
 package v1

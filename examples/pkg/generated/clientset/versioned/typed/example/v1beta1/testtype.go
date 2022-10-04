@@ -22,11 +22,12 @@ import (
 	"context"
 	"time"
 
-	v1beta1 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v1beta1"
-	scheme "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	rest "k8s.io/client-go/rest"
+
+	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
+	scheme "acme.corp/pkg/generated/clientset/versioned/scheme"
 )
 
 // TestTypesGetter has a method to return a TestTypeInterface.

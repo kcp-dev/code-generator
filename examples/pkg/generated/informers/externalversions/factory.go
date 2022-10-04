@@ -23,13 +23,17 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
-	existinginterfaces "github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions/existinginterfaces"
-	internalinterfaces "github.com/kcp-dev/code-generator/examples/pkg/generated/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
+
+	versioned "acme.corp/pkg/generated/clientset/versioned"
+	example "acme.corp/pkg/generated/informers/externalversions/example"
+	example3 "acme.corp/pkg/generated/informers/externalversions/example3"
+	existinginterfaces "acme.corp/pkg/generated/informers/externalversions/existinginterfaces"
+	internalinterfaces "acme.corp/pkg/generated/informers/externalversions/internalinterfaces"
+	secondexample "acme.corp/pkg/generated/informers/externalversions/secondexample"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -172,9 +176,24 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Example() example.Interface
+	Example3() example3.Interface
 	ExistingInterfaces() existinginterfaces.Interface
+	Secondexample() secondexample.Interface
+}
+
+func (f *sharedInformerFactory) Example() example.Interface {
+	return example.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example3() example3.Interface {
+	return example3.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) ExistingInterfaces() existinginterfaces.Interface {
 	return existinginterfaces.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Secondexample() secondexample.Interface {
+	return secondexample.New(f, f.namespace, f.tweakListOptions)
 }

@@ -21,9 +21,10 @@ import (
 	"strings"
 	"text/template"
 
+	"k8s.io/code-generator/cmd/client-gen/types"
+
 	"github.com/kcp-dev/code-generator/pkg/parser"
 	"github.com/kcp-dev/code-generator/pkg/util"
-	"k8s.io/code-generator/cmd/client-gen/types"
 )
 
 var (

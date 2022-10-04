@@ -17,185 +17,100 @@ limitations under the License.
 package parser
 
 import (
-	"fmt"
-	"path/filepath"
-	"sort"
 	"strings"
 
-	"golang.org/x/tools/go/packages"
-
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/code-generator/cmd/client-gen/args"
-	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
+	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/code-generator/cmd/client-gen/types"
+	"k8s.io/gengo/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
-	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
-
-	"github.com/kcp-dev/code-generator/pkg/flag"
 )
 
-// GetGV parses the Group Versions provided in the input through flags
-// and creates a list of []types.GroupVersions.
-func GetGV(f flag.Flags) ([]types.GroupVersions, error) {
-	dedupGVs := map[string][]types.GroupVersions{}
-	groupVersions := make([]types.GroupVersions, 0)
-
-	// Its already validated that list of group versions cannot be empty.
-	inputGVs := f.GroupVersions
-	for _, gv := range inputGVs {
-		// arr[0] -> group, arr[1] -> versions
-		arr := strings.Split(gv, ":")
-		if len(arr) != 2 {
-			return nil, fmt.Errorf("input to --group-version must be in <group>:<versions> format, ex: rbac:v1. Got %q", gv)
+// CollectKinds finds all groupVersionKinds for which the k8s client-generators are run and the set of
+// verbs are supported.
+// When we are looking at a package, we can determine the group and version by copying the upstream
+// logic:
+// https://github.com/kubernetes/kubernetes/blob/f046bdf24e69ac31d3e1ed56926d9a7c715f1cc8/staging/src/k8s.io/code-generator/cmd/lister-gen/generators/lister.go#L93-L106
+func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map[types.PackageVersion][]Kind, error) {
+	groupVersionKinds := map[Group]map[types.PackageVersion][]Kind{}
+	for _, root := range ctx.Roots {
+		logger := klog.Background()
+		logger.Info("processing " + root.PkgPath)
+		parts := strings.Split(root.PkgPath, "/")
+		groupName := types.Group(parts[len(parts)-2])
+		version := types.PackageVersion{
+			Version: types.Version(parts[len(parts)-1]),
+			Package: root.PkgPath,
 		}
-		if _, ok := dedupGVs[arr[0]]; !ok {
-			dedupGVs[arr[0]] = []types.GroupVersions{}
+
+		packageMarkers, err := markers.PackageMarkers(ctx.Collector, root)
+		if err != nil {
+			return nil, err
 		}
 
-		versions := strings.Split(arr[1], ",")
-		for _, v := range versions {
-			// input path is converted to <inputDir>/<group>/<version>.
-			// example for input directory of "k8s.io/client-go/kubernetes/pkg/apis/", it would
-			// be converted to "k8s.io/client-go/kubernetes/pkg/apis/rbac/v1".
-			input := filepath.Join(f.InputDir, arr[0], v)
-			groups := []types.GroupVersions{}
-			builder := args.NewGroupVersionsBuilder(&groups)
-			_ = args.NewGVPackagesValue(builder, []string{input})
-
-			dedupGVs[arr[0]] = append(dedupGVs[arr[0]], groups...)
+		groupNameRaw, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
+		if ok {
+			// If there's a comment of the form "// +groupName=somegroup" or
+			// "// +groupName=somegroup.foo.bar.io", use the first field (somegroup) as the name of the
+			// group when generating. [N.B.](skuznets): even though the generators do the indexing here, the group
+			// type does it for you, and handles the special case for "internal"
+			logger.WithValues("original", groupName, "override", string(groupNameRaw)).Info("found a group name override")
+			groupName = types.Group(groupNameRaw)
 		}
-	}
-	for _, groupversions := range dedupGVs {
-		finalGV := types.GroupVersions{}
+		groupGoName := namer.IC(groupName.PackageName())
+		// internal.apiserver.k8s.io needs to have a package name of apiserverinternal, but a Go name of internal ...
+		if parts := strings.Split(groupName.NonEmpty(), "."); parts[0] == "internal" && len(parts) > 1 {
+			groupGoName = namer.IC(parts[0])
+		}
 
-		for _, groupversion := range groupversions {
-			if finalGV.PackageName == "" {
-				finalGV.PackageName = groupversion.PackageName
+		groupGoNameRaw, ok := packageMarkers.Get(GroupGoNameMarker.Name).(markers.RawArguments)
+		if ok {
+			// If there's a comment of the form "// +groupGoName=SomeUniqueShortName", use that as
+			// the Go group identifier in CamelCase.
+			groupGoName = namer.IC(string(groupGoNameRaw))
+		}
+		group := Group{Group: groupName, GoName: groupGoName}
+
+		logger = logger.WithValues("group", group, "version", version, "goName", groupGoName)
+		logger.WithValues("package", root.PkgPath).Info("collecting kinds in package")
+
+		// find types which have generated clients and support LIST + WATCH
+		var kinds []Kind
+		var typeErrors []error
+		if err := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
+			logger = logger.WithValues("kind", info.Name)
+			if !ClientsGeneratedForType(info) {
+				logger.V(3).Info("skipping kind as it has no generated clients")
+				return
 			}
-			if finalGV.Group.String() == "" {
-				finalGV.Group = groupversion.Group
-			}
-			finalGV.Versions = append(finalGV.Versions, groupversion.Versions...)
 
-		}
-		groupVersions = append(groupVersions, finalGV)
-	}
-	return groupVersions, nil
-}
-
-func GetGVKs(ctx *genall.GenerationContext, inputDir, inputImportName string, groupVersions []types.GroupVersions, requiredVerbs []string) (map[Group]map[types.PackageVersion][]Kind, error) {
-
-	gvks := map[Group]map[types.PackageVersion][]Kind{}
-
-	for _, gv := range groupVersions {
-		group := Group{Name: gv.Group.String(), GoName: gv.Group.String(), FullName: gv.Group.String()}
-		for _, packageVersion := range gv.Versions {
-
-			path := filepath.Join(inputImportName, group.Name, packageVersion.String())
-			pkgs, err := loader.LoadRootsWithConfig(&packages.Config{
-				Mode: packages.NeedTypesInfo,
-			}, path)
+			supported, err := SupportedVerbs(info)
 			if err != nil {
-				return nil, err
+				typeErrors = append(typeErrors, err)
+				return
 			}
-			ctx.Roots = pkgs
-			for _, root := range ctx.Roots {
-			if loader.PrintErrors(pkgs) {
-				return nil, fmt.Errorf("loader did not run successfully")
+			if len(supported) == 0 || !supported.HasAll(verbs...) {
+				logger.Info("skipping kind as it does not support the necessary verbs")
+				return
 			}
-				packageMarkers, _ := markers.PackageMarkers(ctx.Collector, root)
-				if packageMarkers != nil {
-					val, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
-					if ok {
-						group.FullName = string(val)
-						groupGoName := strings.Split(group.FullName, ".")[0]
-						if groupGoName != "" {
-							group.GoName = groupGoName
-						}
-					}
-				}
 
-				// Initialize the map down here so that we can use the group with the proper GoName as the key
-				if _, ok := gvks[group]; !ok {
-					gvks[group] = map[types.PackageVersion][]Kind{}
-				}
-				if _, ok := gvks[group][packageVersion]; !ok {
-					gvks[group][packageVersion] = []Kind{}
-				}
-
-				if typeErr := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
-
-					// if not enabled for this type, skip
-					if !IsEnabledForMethod(info) {
-						return
-					}
-					supportedVerbs, err := getSupportedVerbs(info)
-					if err != nil {
-						klog.Error(err)
-						return
-					}
-					if !supportedVerbs.HasAll(requiredVerbs...) {
-						klog.Infof("Skipping generation for %s:%s/%s because it does not support all of '%v'", group.Name, packageVersion.String(), info.Name, requiredVerbs)
-						return
-					}
-					namespaced := !IsClusterScoped(info)
-					gvks[group][packageVersion] = append(gvks[group][packageVersion], NewKind(info.Name, namespaced))
-
-				}); typeErr != nil {
-					return nil, typeErr
-				}
-			}
-			sort.Slice(gvks[group][packageVersion], func(i, j int) bool {
-				return gvks[group][packageVersion][i].String() < gvks[group][packageVersion][j].String()
-			})
-			if len(gvks[group][packageVersion]) == 0 {
-				klog.Warningf("No types discovered for %s:%s, will skip generation for this GroupVersion", group.Name, packageVersion.String())
-				delete(gvks[group], packageVersion)
-			}
+			logger.Info("will generate for kind")
+			kinds = append(kinds, NewKind(info.Name, IsNamespaced(info), supported))
+		}); err != nil {
+			return nil, err
 		}
-		if len(gvks[group]) == 0 {
-			delete(gvks, group)
+		if len(typeErrors) > 0 {
+			return nil, errors.NewAggregate(typeErrors)
 		}
-	}
-
-	return gvks, nil
-}
-
-func getSupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
-	supportedVerbs := sets.String{}
-
-	if info.Markers.Get(NoVerbsMarker.Name) != nil {
-		return supportedVerbs, nil
-	}
-
-	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
-		supportedVerbs.Insert(genutil.ReadonlyVerbs...)
-		return supportedVerbs, nil
-	}
-
-	// Extract values from only verbs marker.
-	if onlyVerbs := info.Markers.Get(OnlyVerbsMarker.Name); onlyVerbs != nil {
-		val, ok := onlyVerbs.(markers.RawArguments)
-		if !ok {
-			return supportedVerbs, fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name)
+		if len(kinds) == 0 {
+			logger.Info("skipping group/version as it has no kinds that have generated clients")
+			continue
 		}
-		supportedVerbs.Insert(strings.Split(string(val), ",")...)
-		return supportedVerbs, nil
-	}
-
-	// Following checks disallow verbs so defaulting them all to supported now
-	supportedVerbs.Insert(genutil.SupportedVerbs...)
-
-	// Extract values from skip verbs marker.
-	if skipVerbs := info.Markers.Get(SkipVerbsMarker.Name); skipVerbs != nil {
-		val, ok := skipVerbs.(markers.RawArguments)
-		if !ok {
-			return supportedVerbs, fmt.Errorf("marker defined in wrong format %q", SkipVerbsMarker.Name)
+		if _, recorded := groupVersionKinds[group]; !recorded {
+			groupVersionKinds[group] = map[types.PackageVersion][]Kind{}
 		}
-		supportedVerbs.Delete(strings.Split(string(val), ",")...)
+		groupVersionKinds[group][version] = append(groupVersionKinds[group][version], kinds...)
 	}
-
-	return supportedVerbs, nil
+	return groupVersionKinds, nil
 }

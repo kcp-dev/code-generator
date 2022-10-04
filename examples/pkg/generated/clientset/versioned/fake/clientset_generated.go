@@ -19,26 +19,27 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned"
-	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1"
-	fakeexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1/fake"
-	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1"
-	fakeexamplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1/fake"
-	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
-	fakeexamplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1/fake"
-	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
-	fakeexamplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2/fake"
-	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
-	fakethirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1/fake"
-	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
-	fakeexistinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1/fake"
-	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
-	fakesecondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
+
+	clientset "acme.corp/pkg/generated/clientset/versioned"
+	examplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
+	fakeexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1/fake"
+	examplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1"
+	fakeexamplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1/fake"
+	examplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
+	fakeexamplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1/fake"
+	examplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
+	fakeexamplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2/fake"
+	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
+	fakeexample3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
+	fakeexistinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1/fake"
+	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
+	fakesecondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -111,9 +112,9 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 	return &fakeexamplev2.FakeExampleV2{Fake: &c.Fake}
 }
 
-// ThirdExampleV1 retrieves the ThirdExampleV1Client
-func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
-	return &fakethirdexamplev1.FakeThirdExampleV1{Fake: &c.Fake}
+// Example3V1 retrieves the Example3V1Client
+func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
+	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
 }
 
 // ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client

@@ -19,26 +19,27 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
+
+	v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
 )
 
-type FakeThirdExampleV1 struct {
+type FakeExample3V1 struct {
 	*testing.Fake
 }
 
-func (c *FakeThirdExampleV1) ClusterTestTypes() v1.ClusterTestTypeInterface {
+func (c *FakeExample3V1) ClusterTestTypes() v1.ClusterTestTypeInterface {
 	return &FakeClusterTestTypes{c}
 }
 
-func (c *FakeThirdExampleV1) TestTypes(namespace string) v1.TestTypeInterface {
+func (c *FakeExample3V1) TestTypes(namespace string) v1.TestTypeInterface {
 	return &FakeTestTypes{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeThirdExampleV1) RESTClient() rest.Interface {
+func (c *FakeExample3V1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

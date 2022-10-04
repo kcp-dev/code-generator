@@ -22,16 +22,17 @@ import (
 	"fmt"
 	"net/http"
 
-	examplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1"
-	examplev1alpha1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1alpha1"
-	examplev1beta1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v1beta1"
-	examplev2 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example/v2"
-	thirdexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/example3/v1"
-	existinginterfacesv1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
-	secondexamplev1 "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
+
+	examplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
+	examplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1"
+	examplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
+	examplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
+	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
+	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
+	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
 )
 
 type Interface interface {
@@ -40,7 +41,7 @@ type Interface interface {
 	ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface
 	ExampleV2() examplev2.ExampleV2Interface
-	ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface
+	Example3V1() example3v1.Example3V1Interface
 	ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface
 	SecondexampleV1() secondexamplev1.SecondexampleV1Interface
 }
@@ -53,7 +54,7 @@ type Clientset struct {
 	exampleV1alpha1      *examplev1alpha1.ExampleV1alpha1Client
 	exampleV1beta1       *examplev1beta1.ExampleV1beta1Client
 	exampleV2            *examplev2.ExampleV2Client
-	thirdExampleV1       *thirdexamplev1.ThirdExampleV1Client
+	example3V1           *example3v1.Example3V1Client
 	existingInterfacesV1 *existinginterfacesv1.ExistingInterfacesV1Client
 	secondexampleV1      *secondexamplev1.SecondexampleV1Client
 }
@@ -78,9 +79,9 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 	return c.exampleV2
 }
 
-// ThirdExampleV1 retrieves the ThirdExampleV1Client
-func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
-	return c.thirdExampleV1
+// Example3V1 retrieves the Example3V1Client
+func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
+	return c.example3V1
 }
 
 // ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client
@@ -153,7 +154,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
-	cs.thirdExampleV1, err = thirdexamplev1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.example3V1, err = example3v1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,7 @@ func New(c rest.Interface) *Clientset {
 	cs.exampleV1alpha1 = examplev1alpha1.New(c)
 	cs.exampleV1beta1 = examplev1beta1.New(c)
 	cs.exampleV2 = examplev2.New(c)
-	cs.thirdExampleV1 = thirdexamplev1.New(c)
+	cs.example3V1 = example3v1.New(c)
 	cs.existingInterfacesV1 = existinginterfacesv1.New(c)
 	cs.secondexampleV1 = secondexamplev1.New(c)
 

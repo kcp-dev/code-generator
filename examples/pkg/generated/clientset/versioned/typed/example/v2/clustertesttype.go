@@ -22,12 +22,13 @@ import (
 	"context"
 	"time"
 
-	v2 "github.com/kcp-dev/code-generator/examples/pkg/apis/example/v2"
-	scheme "github.com/kcp-dev/code-generator/examples/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	v2 "acme.corp/pkg/apis/example/v2"
+	scheme "acme.corp/pkg/generated/clientset/versioned/scheme"
 )
 
 // ClusterTestTypesGetter has a method to return a ClusterTestTypeInterface.
