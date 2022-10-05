@@ -87,6 +87,7 @@ $(GOLANGCI_LINT):
 .PHONY: lint
 lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --timeout=10m ./...
+	cd examples && $(GOLANGCI_LINT) run --timeout=10m ./...
 
 .PHONY: test
 test:
