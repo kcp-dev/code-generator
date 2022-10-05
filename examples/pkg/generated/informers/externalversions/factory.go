@@ -178,7 +178,7 @@ type SharedInformerFactory interface {
 
 	Example() example.Interface
 	Example3() example3.Interface
-	ExistingInterfaces() existinginterfaces.Interface
+	Existinginterfaces() existinginterfaces.Interface
 	Secondexample() secondexample.Interface
 }
 
@@ -190,7 +190,7 @@ func (f *sharedInformerFactory) Example3() example3.Interface {
 	return example3.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) ExistingInterfaces() existinginterfaces.Interface {
+func (f *sharedInformerFactory) Existinginterfaces() existinginterfaces.Interface {
 	return existinginterfaces.New(f, f.namespace, f.tweakListOptions)
 }
 

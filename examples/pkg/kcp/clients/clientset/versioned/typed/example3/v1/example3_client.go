@@ -53,11 +53,11 @@ func (c *Example3V1ClusterClient) Cluster(name logicalcluster.Name) example3v1.E
 	return c.clientCache.ClusterOrDie(name)
 }
 
-func (c *Example3V1ClusterClient) TestTypes() TestTypesClusterInterface {
+func (c *Example3V1ClusterClient) TestTypes() TestTypeClusterInterface {
 	return &testTypesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *Example3V1ClusterClient) ClusterTestTypes() ClusterTestTypesClusterInterface {
+func (c *Example3V1ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
 	return &clusterTestTypesClusterInterface{clientCache: c.clientCache}
 }
 

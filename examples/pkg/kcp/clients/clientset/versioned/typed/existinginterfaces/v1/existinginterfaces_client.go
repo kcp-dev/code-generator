@@ -53,11 +53,11 @@ func (c *ExistinginterfacesV1ClusterClient) Cluster(name logicalcluster.Name) ex
 	return c.clientCache.ClusterOrDie(name)
 }
 
-func (c *ExistinginterfacesV1ClusterClient) TestTypes() TestTypesClusterInterface {
+func (c *ExistinginterfacesV1ClusterClient) TestTypes() TestTypeClusterInterface {
 	return &testTypesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ExistinginterfacesV1ClusterClient) ClusterTestTypes() ClusterTestTypesClusterInterface {
+func (c *ExistinginterfacesV1ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
 	return &clusterTestTypesClusterInterface{clientCache: c.clientCache}
 }
 

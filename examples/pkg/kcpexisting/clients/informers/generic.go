@@ -85,7 +85,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V2().TestTypes().Informer()}, nil
 	case examplev2.SchemeGroupVersion.WithResource("clustertesttypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V2().ClusterTestTypes().Informer()}, nil
-	// Group=ExistingInterfaces, Version=V1
+	// Group=existinginterfaces.acme.corp, Version=V1
 	case existinginterfacesv1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Existinginterfaces().V1().TestTypes().Informer()}, nil
 	case existinginterfacesv1.SchemeGroupVersion.WithResource("clustertesttypes"):

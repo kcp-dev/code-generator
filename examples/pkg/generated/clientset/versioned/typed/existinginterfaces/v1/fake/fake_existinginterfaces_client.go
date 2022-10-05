@@ -25,21 +25,21 @@ import (
 	v1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 )
 
-type FakeExistingInterfacesV1 struct {
+type FakeExistinginterfacesV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeExistingInterfacesV1) ClusterTestTypes() v1.ClusterTestTypeInterface {
+func (c *FakeExistinginterfacesV1) ClusterTestTypes() v1.ClusterTestTypeInterface {
 	return &FakeClusterTestTypes{c}
 }
 
-func (c *FakeExistingInterfacesV1) TestTypes(namespace string) v1.TestTypeInterface {
+func (c *FakeExistinginterfacesV1) TestTypes(namespace string) v1.TestTypeInterface {
 	return &FakeTestTypes{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeExistingInterfacesV1) RESTClient() rest.Interface {
+func (c *FakeExistinginterfacesV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

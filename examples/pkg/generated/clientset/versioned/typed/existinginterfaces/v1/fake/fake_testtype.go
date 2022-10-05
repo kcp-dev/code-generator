@@ -33,13 +33,13 @@ import (
 
 // FakeTestTypes implements TestTypeInterface
 type FakeTestTypes struct {
-	Fake *FakeExistingInterfacesV1
+	Fake *FakeExistinginterfacesV1
 	ns   string
 }
 
-var testtypesResource = schema.GroupVersionResource{Group: "ExistingInterfaces", Version: "v1", Resource: "testtypes"}
+var testtypesResource = schema.GroupVersionResource{Group: "existinginterfaces.acme.corp", Version: "v1", Resource: "testtypes"}
 
-var testtypesKind = schema.GroupVersionKind{Group: "ExistingInterfaces", Version: "v1", Kind: "TestType"}
+var testtypesKind = schema.GroupVersionKind{Group: "existinginterfaces.acme.corp", Version: "v1", Kind: "TestType"}
 
 // Get takes name of the testType, and returns the corresponding testType object, and an error if there is any.
 func (c *FakeTestTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *existinginterfacesv1.TestType, err error) {
