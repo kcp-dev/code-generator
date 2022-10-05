@@ -82,7 +82,7 @@ func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(name log
 }
 
 {{ range .kinds}}
-func (c *{{$.group.GroupGoName}}{{$.group.Version}}ClusterClient) {{.Plural}}() {{.Plural}}ClusterInterface {
+func (c *{{$.group.GroupGoName}}{{$.group.Version}}ClusterClient) {{.Plural}}() {{.String}}ClusterInterface {
 	return &{{.Plural | lowerFirst}}ClusterInterface{clientCache: c.clientCache}
 }
 {{end -}}
