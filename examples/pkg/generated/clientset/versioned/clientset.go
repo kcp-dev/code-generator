@@ -42,7 +42,7 @@ type Interface interface {
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface
 	ExampleV2() examplev2.ExampleV2Interface
 	Example3V1() example3v1.Example3V1Interface
-	ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface
+	ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface
 	SecondexampleV1() secondexamplev1.SecondexampleV1Interface
 }
 
@@ -55,7 +55,7 @@ type Clientset struct {
 	exampleV1beta1       *examplev1beta1.ExampleV1beta1Client
 	exampleV2            *examplev2.ExampleV2Client
 	example3V1           *example3v1.Example3V1Client
-	existingInterfacesV1 *existinginterfacesv1.ExistingInterfacesV1Client
+	existinginterfacesV1 *existinginterfacesv1.ExistinginterfacesV1Client
 	secondexampleV1      *secondexamplev1.SecondexampleV1Client
 }
 
@@ -84,9 +84,9 @@ func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
 	return c.example3V1
 }
 
-// ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client
-func (c *Clientset) ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface {
-	return c.existingInterfacesV1
+// ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client
+func (c *Clientset) ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface {
+	return c.existinginterfacesV1
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client
@@ -158,7 +158,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
-	cs.existingInterfacesV1, err = existinginterfacesv1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.existinginterfacesV1, err = existinginterfacesv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func New(c rest.Interface) *Clientset {
 	cs.exampleV1beta1 = examplev1beta1.New(c)
 	cs.exampleV2 = examplev2.New(c)
 	cs.example3V1 = example3v1.New(c)
-	cs.existingInterfacesV1 = existinginterfacesv1.New(c)
+	cs.existinginterfacesV1 = existinginterfacesv1.New(c)
 	cs.secondexampleV1 = secondexamplev1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

@@ -87,11 +87,11 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example3().V1().TestTypes().Informer()}, nil
 
-		// Group=ExistingInterfaces, Version=v1
+		// Group=existinginterfaces.acme.corp, Version=v1
 	case existinginterfacesv1.SchemeGroupVersion.WithResource("clustertesttypes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.ExistingInterfaces().V1().ClusterTestTypes().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Existinginterfaces().V1().ClusterTestTypes().Informer()}, nil
 	case existinginterfacesv1.SchemeGroupVersion.WithResource("testtypes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.ExistingInterfaces().V1().TestTypes().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Existinginterfaces().V1().TestTypes().Informer()}, nil
 
 		// Group=secondexample, Version=v1
 	case secondexamplev1.SchemeGroupVersion.WithResource("clustertesttypes"):

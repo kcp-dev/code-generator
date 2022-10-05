@@ -117,9 +117,9 @@ func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
 	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
 }
 
-// ExistingInterfacesV1 retrieves the ExistingInterfacesV1Client
-func (c *Clientset) ExistingInterfacesV1() existinginterfacesv1.ExistingInterfacesV1Interface {
-	return &fakeexistinginterfacesv1.FakeExistingInterfacesV1{Fake: &c.Fake}
+// ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client
+func (c *Clientset) ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface {
+	return &fakeexistinginterfacesv1.FakeExistinginterfacesV1{Fake: &c.Fake}
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client

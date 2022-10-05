@@ -33,12 +33,12 @@ import (
 
 // FakeClusterTestTypes implements ClusterTestTypeInterface
 type FakeClusterTestTypes struct {
-	Fake *FakeExistingInterfacesV1
+	Fake *FakeExistinginterfacesV1
 }
 
-var clustertesttypesResource = schema.GroupVersionResource{Group: "ExistingInterfaces", Version: "v1", Resource: "clustertesttypes"}
+var clustertesttypesResource = schema.GroupVersionResource{Group: "existinginterfaces.acme.corp", Version: "v1", Resource: "clustertesttypes"}
 
-var clustertesttypesKind = schema.GroupVersionKind{Group: "ExistingInterfaces", Version: "v1", Kind: "ClusterTestType"}
+var clustertesttypesKind = schema.GroupVersionKind{Group: "existinginterfaces.acme.corp", Version: "v1", Kind: "ClusterTestType"}
 
 // Get takes name of the clusterTestType, and returns the corresponding clusterTestType object, and an error if there is any.
 func (c *FakeClusterTestTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *existinginterfacesv1.ClusterTestType, err error) {
