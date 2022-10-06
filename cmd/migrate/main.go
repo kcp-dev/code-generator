@@ -254,7 +254,7 @@ func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRest
 	switch node := cursor.Node().(type) {
 	case *dst.Ident:
 		for _, rule := range kcpClientTypeRules {
-			if !strings.HasPrefix(node.Path, rule.from) || strings.HasSuffix(node.Path, "scheme") || (node.Path == "k8s.io/client-go/kubernetes" && node.Name == "Interface") {
+			if !strings.HasPrefix(node.Path, rule.from) || strings.HasSuffix(node.Path, "scheme") {
 				continue
 			}
 			if !rule.nameMatcher.MatchString(node.Name) {
