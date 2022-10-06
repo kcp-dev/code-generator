@@ -6,6 +6,7 @@ replace acme.corp/pkg => ./pkg
 
 require (
 	github.com/kcp-dev/apimachinery v0.0.0-20221003220612-a61d757411af
+	github.com/kcp-dev/client-go v0.0.0-20221006161314-58ab4e8235bc
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.3
 	k8s.io/apimachinery v0.25.2
 	k8s.io/client-go v0.25.2
@@ -50,5 +51,5 @@ require (
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.2.0 // indirect
+	sigs.k8s.io/yaml v1.3.0 // indirect
 )
