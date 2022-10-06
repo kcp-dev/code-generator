@@ -117,6 +117,16 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
+	fakeDir := filepath.Join(clientsetDir, "fake")
+	fakeFile := filepath.Join(fakeDir, "clientset.go")
+	logger.WithValues("path", fakeFile).Info("generating scheme")
+
+	if err := util.WriteGeneratedCode(ctx, headerText, &clientgen.Fake{
+		SingleClusterFakeClientPackagePath: filepath.Join(g.SingleClusterClientPackagePath, "fake"),
+	}, fakeFile); err != nil {
+		return err
+	}
+
 	for group, versions := range groupVersionKinds {
 		for version, kinds := range versions {
 			groupDir := filepath.Join(clientsetDir, "typed", group.PackageName(), version.PackageName())
