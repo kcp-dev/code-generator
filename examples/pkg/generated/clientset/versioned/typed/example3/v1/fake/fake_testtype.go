@@ -28,6 +28,7 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 
+	examplev1 "acme.corp/pkg/apis/example/v1"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
 )
 
@@ -128,4 +129,37 @@ func (c *FakeTestTypes) Patch(ctx context.Context, name string, pt types.PatchTy
 		return nil, err
 	}
 	return obj.(*example3v1.TestType), err
+}
+
+// CreateField takes the representation of a field and creates it.  Returns the server's representation of the field, and an error, if there is any.
+func (c *FakeTestTypes) CreateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts v1.CreateOptions) (result *examplev1.Field, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewCreateSubresourceAction(testtypesResource, testTypeName, "field", c.ns, field), &examplev1.Field{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*examplev1.Field), err
+}
+
+// UpdateField takes the representation of a field and updates it. Returns the server's representation of the field, and an error, if there is any.
+func (c *FakeTestTypes) UpdateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts v1.UpdateOptions) (result *examplev1.Field, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(testtypesResource, "field", c.ns, field), &examplev1.Field{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*examplev1.Field), err
+}
+
+// GetField takes name of the testType, and returns the corresponding field object, and an error if there is any.
+func (c *FakeTestTypes) GetField(ctx context.Context, testTypeName string, options v1.GetOptions) (result *examplev1.Field, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewGetSubresourceAction(testtypesResource, c.ns, "field", testTypeName), &examplev1.Field{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*examplev1.Field), err
 }

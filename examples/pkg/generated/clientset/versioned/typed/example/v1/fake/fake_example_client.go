@@ -37,6 +37,10 @@ func (c *FakeExampleV1) TestTypes(namespace string) v1.TestTypeInterface {
 	return &FakeTestTypes{c, namespace}
 }
 
+func (c *FakeExampleV1) WithoutVerbTypes(namespace string) v1.WithoutVerbTypeInterface {
+	return &FakeWithoutVerbTypes{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeExampleV1) RESTClient() rest.Interface {

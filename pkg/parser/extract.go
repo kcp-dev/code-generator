@@ -20,12 +20,26 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/gengo/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
+
+// isForbiddenGroupVersion hacks around the k8s client-set, where types have +genclient but aren't meant to have
+// generated clients ... ?
+func isForbiddenGroupVersion(group types.Group, version types.Version) bool {
+	forbidden := map[string]sets.String{
+		"abac.authorization.kubernetes.io": sets.NewString("v0", "v1beta1"),
+		"componentconfig":                  sets.NewString("v1alpha1"),
+		"imagepolicy.k8s.io":               sets.NewString("v1alpha1"),
+		"admission.k8s.io":                 sets.NewString("v1", "v1beta1"),
+	}
+	versions, ok := forbidden[group.String()]
+	return ok && versions.Has(version.String())
+}
 
 // CollectKinds finds all groupVersionKinds for which the k8s client-generators are run and the set of
 // verbs are supported.
@@ -73,6 +87,10 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 		group := Group{Group: groupName, GoName: groupGoName}
 
 		logger = logger.WithValues("group", group, "version", version, "goName", groupGoName)
+		if isForbiddenGroupVersion(group.Group, version.Version) {
+			logger.WithValues("package", root.PkgPath).Info("skipping forbidden package")
+			continue
+		}
 		logger.WithValues("package", root.PkgPath).Info("collecting kinds in package")
 
 		// find types which have generated clients and support LIST + WATCH
@@ -90,13 +108,14 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 				typeErrors = append(typeErrors, err)
 				return
 			}
-			if len(supported) == 0 || !supported.HasAll(verbs...) {
+			extensions := ClientExtensions(info)
+			if len(verbs) > 0 && !supported.HasAll(verbs...) {
 				logger.Info("skipping kind as it does not support the necessary verbs")
 				return
 			}
 
 			logger.Info("will generate for kind")
-			kinds = append(kinds, NewKind(info.Name, IsNamespaced(info), supported))
+			kinds = append(kinds, NewKind(info.Name, IsNamespaced(info), supported, extensions))
 		}); err != nil {
 			return nil, err
 		}

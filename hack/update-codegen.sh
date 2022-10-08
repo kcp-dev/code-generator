@@ -45,6 +45,13 @@ ${KUBE_CLIENT_GEN} \
   --output-package acme.corp/pkg/generated/clientset \
   --trim-path-prefix acme.corp
 
+${KUBE_APPLYCONFIGURATION_GEN} \
+  --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
+  --input-dirs acme.corp/pkg/apis/example/v1,acme.corp/pkg/apis/example/v1alpha1,acme.corp/pkg/apis/example/v1beta1,acme.corp/pkg/apis/example/v2,acme.corp/pkg/apis/example3/v1,acme.corp/pkg/apis/secondexample/v1,acme.corp/pkg/apis/existinginterfaces/v1 \
+  --output-base . \
+  --output-package acme.corp/pkg/generated/applyconfigurations \
+  --trim-path-prefix acme.corp
+
 ${KUBE_LISTER_GEN} \
   --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
   --input-dirs acme.corp/pkg/apis/example/v1,acme.corp/pkg/apis/example/v1alpha1,acme.corp/pkg/apis/example/v1beta1,acme.corp/pkg/apis/example/v2,acme.corp/pkg/apis/example3/v1,acme.corp/pkg/apis/secondexample/v1,acme.corp/pkg/apis/existinginterfaces/v1 \
@@ -63,7 +70,7 @@ ${KUBE_INFORMER_GEN} \
 
 # Generate cluster-aware clients, informers and listers using generated single-cluster code
 ./../bin/code-generator \
-    "client:name=versioned,outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+    "client:name=versioned,outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "lister:apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "informer:outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "paths=./pkg/apis/..." \
@@ -71,7 +78,7 @@ ${KUBE_INFORMER_GEN} \
 
 # Generate cluster-aware clients, informers and listers assuming no single-cluster listers
 ./../bin/code-generator \
-  "client:name=versioned,outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+  "client:name=versioned,outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
   "lister:apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
   "informer:outputPackagePath=acme.corp/pkg/kcp,apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
   "paths=./pkg/apis/..." \
