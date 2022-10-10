@@ -31,6 +31,7 @@ type ExampleV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterTestTypesGetter
 	TestTypesGetter
+	WithoutVerbTypesGetter
 }
 
 // ExampleV1Client is used to interact with features provided by the example group.
@@ -44,6 +45,10 @@ func (c *ExampleV1Client) ClusterTestTypes() ClusterTestTypeInterface {
 
 func (c *ExampleV1Client) TestTypes(namespace string) TestTypeInterface {
 	return newTestTypes(c, namespace)
+}
+
+func (c *ExampleV1Client) WithoutVerbTypes(namespace string) WithoutVerbTypeInterface {
+	return newWithoutVerbTypes(c, namespace)
 }
 
 // NewForConfig creates a new ExampleV1Client for the given config.

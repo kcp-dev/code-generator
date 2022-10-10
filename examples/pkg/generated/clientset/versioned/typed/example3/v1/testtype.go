@@ -27,6 +27,7 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
 
+	examplev1 "acme.corp/pkg/apis/example/v1"
 	v1 "acme.corp/pkg/apis/example3/v1"
 	scheme "acme.corp/pkg/generated/clientset/versioned/scheme"
 )
@@ -47,6 +48,10 @@ type TestTypeInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*v1.TestTypeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.TestType, err error)
+	CreateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts metav1.CreateOptions) (*examplev1.Field, error)
+	UpdateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts metav1.UpdateOptions) (*examplev1.Field, error)
+	GetField(ctx context.Context, testTypeName string, options metav1.GetOptions) (*examplev1.Field, error)
+
 	TestTypeExpansion
 }
 
@@ -173,6 +178,50 @@ func (c *testTypes) Patch(ctx context.Context, name string, pt types.PatchType, 
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// CreateField takes the representation of a field and creates it.  Returns the server's representation of the field, and an error, if there is any.
+func (c *testTypes) CreateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts metav1.CreateOptions) (result *examplev1.Field, err error) {
+	result = &examplev1.Field{}
+	err = c.client.Post().
+		Namespace(c.ns).
+		Resource("testtypes").
+		Name(testTypeName).
+		SubResource("field").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(field).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateField takes the top resource name and the representation of a field and updates it. Returns the server's representation of the field, and an error, if there is any.
+func (c *testTypes) UpdateField(ctx context.Context, testTypeName string, field *examplev1.Field, opts metav1.UpdateOptions) (result *examplev1.Field, err error) {
+	result = &examplev1.Field{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("testtypes").
+		Name(testTypeName).
+		SubResource("field").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(field).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// GetField takes name of the testType, and returns the corresponding examplev1.Field object, and an error if there is any.
+func (c *testTypes) GetField(ctx context.Context, testTypeName string, options metav1.GetOptions) (result *examplev1.Field, err error) {
+	result = &examplev1.Field{}
+	err = c.client.Get().
+		Namespace(c.ns).
+		Resource("testtypes").
+		Name(testTypeName).
+		SubResource("field").
+		VersionedParams(&options, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
 	return

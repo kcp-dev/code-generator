@@ -29,3 +29,11 @@ type TestTypeListerExpansion interface{}
 // TestTypeNamespaceListerExpansion allows custom methods to be added to
 // TestTypeNamespaceLister.
 type TestTypeNamespaceListerExpansion interface{}
+
+// WithoutVerbTypeListerExpansion allows custom methods to be added to
+// WithoutVerbTypeLister.
+type WithoutVerbTypeListerExpansion interface{}
+
+// WithoutVerbTypeNamespaceListerExpansion allows custom methods to be added to
+// WithoutVerbTypeNamespaceLister.
+type WithoutVerbTypeNamespaceListerExpansion interface{}

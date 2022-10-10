@@ -21,3 +21,5 @@ package v1
 type ClusterTestTypeExpansion interface{}
 
 type TestTypeExpansion interface{}
+
+type WithoutVerbTypeExpansion interface{}

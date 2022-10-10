@@ -46,6 +46,10 @@ type Generator struct {
 	// e.g. "k8s.io/client-go/kubernetes"
 	SingleClusterClientPackagePath string `marker:""`
 
+	// SingleClusterApplyConfigurationsPackagePath is the root directory under which single-cluster-aware apply configurations exist.
+	// e.g. "k8s.io/client-go/applyconfigurations"
+	SingleClusterApplyConfigurationsPackagePath string `marker:""`
+
 	// OutputPackagePath is the root directory under which this tool will output files.
 	// e.g. "github.com/kcp-dev/client-go/clients"
 	OutputPackagePath string `marker:""`
@@ -117,13 +121,16 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	fakeDir := filepath.Join(clientsetDir, "fake")
-	fakeFile := filepath.Join(fakeDir, "clientset.go")
-	logger.WithValues("path", fakeFile).Info("generating scheme")
+	fakeClientsetDir := filepath.Join(clientsetDir, "fake")
+	fakeClientsetFile := filepath.Join(fakeClientsetDir, "clientset.go")
+	logger.WithValues("path", fakeClientsetFile).Info("generating scheme")
 
-	if err := util.WriteGeneratedCode(ctx, headerText, &clientgen.Fake{
-		SingleClusterFakeClientPackagePath: filepath.Join(g.SingleClusterClientPackagePath, "fake"),
-	}, fakeFile); err != nil {
+	if err := util.WriteGeneratedCode(ctx, headerText, &clientgen.FakeClientset{
+		Name:                           g.Name,
+		PackagePath:                    filepath.Join(g.OutputPackagePath, clientsetDir),
+		Groups:                         groupInfo,
+		SingleClusterClientPackagePath: g.SingleClusterClientPackagePath,
+	}, fakeClientsetFile); err != nil {
 		return err
 	}
 
@@ -145,6 +152,22 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 				return err
 			}
 
+			fakeGroupDir := filepath.Join(fakeClientsetDir, "typed", group.PackageName(), version.PackageName())
+			outputFile = filepath.Join(fakeGroupDir, group.PackageName()+"_client.go")
+			logger = logger.WithValues(
+				"group", group.String(),
+				"version", version.String(),
+			)
+			logger.WithValues("path", outputFile).Info("generating fake group client")
+			if err := util.WriteGeneratedCode(ctx, headerText, &clientgen.FakeGroup{
+				Group:                          groupInfo,
+				Kinds:                          kinds,
+				PackagePath:                    filepath.Join(g.OutputPackagePath, clientsetDir),
+				SingleClusterClientPackagePath: g.SingleClusterClientPackagePath,
+			}, outputFile); err != nil {
+				return err
+			}
+
 			for _, kind := range kinds {
 				outputFile := filepath.Join(groupDir, strings.ToLower(kind.String())+".go")
 				logger := logger.WithValues(
@@ -157,6 +180,23 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 					Kind:                           kind,
 					APIPackagePath:                 g.APIPackagePath,
 					SingleClusterClientPackagePath: g.SingleClusterClientPackagePath,
+				}, outputFile); err != nil {
+					return err
+				}
+
+				outputFile = filepath.Join(fakeGroupDir, strings.ToLower(kind.String())+".go")
+				logger = logger.WithValues(
+					"kind", kind.String(),
+				)
+				logger.WithValues("path", outputFile).Info("generating fake client for kind")
+
+				if err := util.WriteGeneratedCode(ctx, headerText, &clientgen.FakeTypedClient{
+					Group:                          groupInfo,
+					Kind:                           kind,
+					APIPackagePath:                 g.APIPackagePath,
+					PackagePath:                    filepath.Join(g.OutputPackagePath, clientsetDir),
+					SingleClusterClientPackagePath: g.SingleClusterClientPackagePath,
+					SingleClusterApplyConfigurationsPackagePath: g.SingleClusterApplyConfigurationsPackagePath,
 				}, outputFile); err != nil {
 					return err
 				}

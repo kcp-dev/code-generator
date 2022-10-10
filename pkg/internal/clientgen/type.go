@@ -28,7 +28,7 @@ type TypedClient struct {
 }
 
 func (c *TypedClient) WriteContent(w io.Writer) error {
-	templ, err := template.New("typedClient").Funcs(template.FuncMap{
+	templ, err := template.New("fakeTypedClient").Funcs(template.FuncMap{
 		"upperFirst": util.UpperFirst,
 		"lowerFirst": util.LowerFirst,
 		"toLower":    strings.ToLower,

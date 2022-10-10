@@ -20,6 +20,9 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // +genclient
 // +genclient:noStatus
+// +genclient:method=CreateField,verb=create,subresource=field,input=acme.corp/pkg/apis/example/v1.Field,result=acme.corp/pkg/apis/example/v1.Field
+// +genclient:method=UpdateField,verb=update,subresource=field,input=acme.corp/pkg/apis/example/v1.Field,result=acme.corp/pkg/apis/example/v1.Field
+// +genclient:method=GetField,verb=get,subresource=field,result=acme.corp/pkg/apis/example/v1.Field
 // TestType is a top-level type. A client is created for it.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TestType struct {
@@ -46,10 +49,10 @@ type ClusterTestType struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Kind is the type of resource being referenced
-	Kind string `json:"kind"`
-	// Name is the name of resource being referenced
-	Name string `json:"name"`
+	// ObjectKind is the type of resource being referenced
+	ObjectKind string `json:"kind"`
+	// ObjectName is the name of resource being referenced
+	ObjectName string `json:"name"`
 	// +optional
 	Status ClusterTestTypeStatus `json:"status,omitempty"`
 }

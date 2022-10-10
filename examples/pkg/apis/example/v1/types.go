@@ -20,6 +20,9 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // +genclient
 // +genclient:noStatus
+// +genclient:method=CreateField,verb=create,subresource=field,input=Field,result=Field
+// +genclient:method=UpdateField,verb=update,subresource=field,input=Field,result=Field
+// +genclient:method=GetField,verb=get,subresource=field,result=Field
 // TestType is a top-level type. A client is created for it.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TestType struct {
@@ -39,6 +42,22 @@ type TestTypeList struct {
 	Items           []TestType `json:"items"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type Field struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object metadata; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Field             string `json:"field"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type FieldList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Field `json:"items"`
+}
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -46,10 +65,10 @@ type ClusterTestType struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Kind is the type of resource being referenced
-	Kind string `json:"kind"`
-	// Name is the name of resource being referenced
-	Name string `json:"name"`
+	// ObjectKind is the type of resource being referenced
+	ObjectKind string `json:"kind"`
+	// ObjectName is the name of resource being referenced
+	ObjectName string `json:"name"`
 	// +optional
 	Status ClusterTestTypeStatus `json:"status,omitempty"`
 }
@@ -64,4 +83,13 @@ type ClusterTestTypeList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ClusterTestType `json:"items"`
+}
+
+// +genclient
+// +genclient:noVerbs
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type WithoutVerbType struct {
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }

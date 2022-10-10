@@ -22,13 +22,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
 var (
 	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
 	// markers are not a part of genclient, since they do not accept any values.
-	GenclientMarker     = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, GenClient{}))
+	GenclientMarker     = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, extension{}))
 	NonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
 
 	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
@@ -46,12 +47,40 @@ var (
 	ReadOnlyMarker = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
 )
 
-type GenClient struct {
+type extension struct {
 	Method      *string
 	Verb        *string
 	Subresource *string
 	Input       *string
 	Result      *string
+}
+
+type Extension struct {
+	Method      string
+	Verb        string
+	Subresource string
+	InputPath   string
+	InputType   string
+	ResultPath  string
+	ResultType  string
+}
+
+// InputType returns the input override package path and the type.
+func (e *extension) InputType() (string, string) {
+	if e.Input == nil {
+		return "", ""
+	}
+	parts := strings.Split(*e.Input, ".")
+	return parts[len(parts)-1], strings.Join(parts[0:len(parts)-1], ".")
+}
+
+// ResultType returns the result override package path and the type.
+func (e *extension) ResultType() (string, string) {
+	if e.Result == nil {
+		return "", ""
+	}
+	parts := strings.Split(*e.Result, ".")
+	return parts[len(parts)-1], strings.Join(parts[0:len(parts)-1], ".")
 }
 
 // ClientsGeneratedForType verifies if the genclient marker is enabled for
@@ -78,10 +107,6 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
 		return sets.NewString(), nil
 	}
 
-	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
-		return sets.NewString(genutil.ReadonlyVerbs...), nil
-	}
-
 	extractVerbs := func(info *markers.TypeInfo, name string) ([]string, error) {
 		if items := info.Markers.Get(name); items != nil {
 			val, ok := items.(markers.RawArguments)
@@ -101,11 +126,54 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
 		return sets.NewString(onlyVerbs...), nil
 	}
 
+	baseVerbs := sets.NewString(genutil.SupportedVerbs...)
+	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
+		baseVerbs = sets.NewString(genutil.ReadonlyVerbs...)
+	}
+
+	if info.Markers.Get(NoStatusMarker.Name) != nil {
+		baseVerbs = baseVerbs.Difference(sets.NewString("updateStatus", "applyStatus"))
+	}
+
 	skipVerbs, err := extractVerbs(info, SkipVerbsMarker.Name)
 	if err != nil {
 		return sets.NewString(), err
 	}
-	return sets.NewString(genutil.SupportedVerbs...).Difference(sets.NewString(skipVerbs...)), nil
+	return baseVerbs.Difference(sets.NewString(skipVerbs...)), nil
+}
+
+func ClientExtensions(info *markers.TypeInfo) []Extension {
+	values, ok := info.Markers[GenclientMarker.Name]
+	if !ok || values == nil {
+		return nil
+	}
+	var extensions []Extension
+	for _, item := range values {
+		extension, ok := item.(extension)
+		if !ok {
+			continue // should not occur
+		}
+		if extension.Method == nil || *extension.Method == "" {
+			continue
+		}
+		transformed := Extension{
+			Method:      deref(extension.Method),
+			Verb:        deref(extension.Verb),
+			Subresource: deref(extension.Subresource),
+		}
+		transformed.InputType, transformed.InputPath = extension.InputType()
+		transformed.ResultType, transformed.ResultPath = extension.ResultType()
+		klog.Infof("=========== %#v", transformed)
+		extensions = append(extensions, transformed)
+	}
+	return extensions
+}
+
+func deref(in *string) string {
+	if in == nil {
+		return ""
+	}
+	return *in
 }
 
 // SupportsVerbs determines if the type supports all the verbs.

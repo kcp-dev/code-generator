@@ -36,6 +36,7 @@ type ExampleV1ClusterInterface interface {
 	ExampleV1ClusterScoper
 	TestTypesClusterGetter
 	ClusterTestTypesClusterGetter
+	WithoutVerbTypesClusterGetter
 }
 
 type ExampleV1ClusterScoper interface {
@@ -59,6 +60,10 @@ func (c *ExampleV1ClusterClient) TestTypes() TestTypeClusterInterface {
 
 func (c *ExampleV1ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
 	return &clusterTestTypesClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *ExampleV1ClusterClient) WithoutVerbTypes() WithoutVerbTypeClusterInterface {
+	return &withoutVerbTypesClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new ExampleV1ClusterClient for the given config.

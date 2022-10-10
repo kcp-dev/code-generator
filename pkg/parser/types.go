@@ -27,7 +27,8 @@ import (
 type Kind struct {
 	kind           string
 	namespaced     bool
-	supportedVerbs sets.String
+	SupportedVerbs sets.String
+	Extensions     []Extension
 	namer          namer.Namer
 }
 
@@ -49,14 +50,20 @@ func (k *Kind) IsNamespaced() bool {
 }
 
 func (k *Kind) SupportsListWatch() bool {
-	return k.supportedVerbs.HasAll("list", "watch")
+	return k.SupportedVerbs.HasAll("list", "watch")
 }
 
-func NewKind(kind string, namespaced bool, supportedVerbs sets.String) Kind {
+// TODO(skuznets):
+// add an e2e for a kind that has no verbs, but uses an extension for something
+// then ensure we add in fake_type.go entries for the extension
+// changes we've already made should enable clients to exist for it
+
+func NewKind(kind string, namespaced bool, supportedVerbs sets.String, extensions []Extension) Kind {
 	return Kind{
 		kind:           kind,
 		namespaced:     namespaced,
-		supportedVerbs: supportedVerbs,
+		SupportedVerbs: supportedVerbs,
+		Extensions:     extensions,
 		namer: namer.Namer{
 			Finalize: util.UpperFirst,
 			Exceptions: map[string]string{
