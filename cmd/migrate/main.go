@@ -87,7 +87,7 @@ func main() {
 }
 
 func rewrite(packageNames []string) error {
-	pkgs, err := decorator.Load(&packages.Config{Mode: packages.LoadSyntax}, packageNames...)
+	pkgs, err := decorator.Load(&packages.Config{Mode: packages.LoadSyntax, Tests: true}, packageNames...)
 	if err != nil {
 		return fmt.Errorf("failed to load source: %w", err)
 	}
@@ -108,6 +108,7 @@ func rewrite(packageNames []string) error {
 					break
 				}
 			}
+			logrus.WithFields(logrus.Fields{"file": relPath}).Info("Considering file.")
 			if shouldSkip {
 				logrus.WithFields(logrus.Fields{"file": relPath}).Info("Skipping file.")
 				continue
@@ -163,6 +164,9 @@ var kcpClientTypeRules = []rewriteRule{
 			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
 				return "kcpkubernetesclientset"
 			}
+			if len(suffix) == 1 {
+				return "kcp" + suffix[0] + "client"
+			}
 			return "kcp" + suffix[1] + suffix[2] + "client"
 		},
 	},
@@ -202,6 +206,14 @@ var kcpClientTypeRules = []rewriteRule{
 		},
 	},
 	{
+		from:        "k8s.io/client-go/dynamic/fake",
+		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/dynamic/fake",
+		nameMatcher: regexp.MustCompile(`.*`),
+		formatAlias: func(suffix []string) string {
+			return "kcpfakedynamic"
+		},
+	},
+	{
 		from:        "k8s.io/client-go/metadata",
 		to:          "github.com/kcp-dev/client-go/clients/metadata",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Informer|Clientset|Config)`),
@@ -215,6 +227,14 @@ var kcpClientTypeRules = []rewriteRule{
 		},
 	},
 	{
+		from:        "k8s.io/client-go/metadata/fake",
+		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/metadata/fake",
+		nameMatcher: regexp.MustCompile(`.*`),
+		formatAlias: func(suffix []string) string {
+			return "kcpfakemetadata"
+		},
+	},
+	{
 		from:        "k8s.io/client-go/discovery",
 		to:          "github.com/kcp-dev/client-go/clients/discovery",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Clientset)`),
@@ -225,6 +245,22 @@ var kcpClientTypeRules = []rewriteRule{
 				return "kcpdiscovery"
 			}
 			return "kcp" + suffix[0]
+		},
+	},
+	{
+		from:        "k8s.io/client-go/discovery/fake",
+		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake",
+		nameMatcher: regexp.MustCompile(`.*`),
+		formatAlias: func(suffix []string) string {
+			return "kcpfakediscovery"
+		},
+	},
+	{
+		from:        "k8s.io/client-go/testing",
+		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing",
+		nameMatcher: regexp.MustCompile(`.*(Action|Reactor|Reaction|Fake|ObjectTracker|Client)`),
+		formatAlias: func(suffix []string) string {
+			return "kcptesting"
 		},
 	},
 }
@@ -255,9 +291,15 @@ func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRest
 	case *dst.Ident:
 		for _, rule := range kcpClientTypeRules {
 			if !strings.HasPrefix(node.Path, rule.from) || strings.HasSuffix(node.Path, "scheme") {
+				if rule.from == "k8s.io/client-go/metadata/fake" {
+					//logrus.Infof("no prefix %s", node.Path)
+				}
 				continue
 			}
 			if !rule.nameMatcher.MatchString(node.Name) {
+				if rule.from == "k8s.io/client-go/metadata/fake" {
+					//logrus.Infof("no match %s", node.Name)
+				}
 				continue
 			}
 			alias := rule.formatAlias(strings.Split(strings.TrimPrefix(strings.TrimPrefix(node.Path, rule.from), "/"), "/"))
