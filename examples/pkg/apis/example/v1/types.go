@@ -65,10 +65,10 @@ type ClusterTestType struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Kind is the type of resource being referenced
-	Kind string `json:"kind"`
-	// Name is the name of resource being referenced
-	Name string `json:"name"`
+	// ObjectKind is the type of resource being referenced
+	ObjectKind string `json:"kind"`
+	// ObjectName is the name of resource being referenced
+	ObjectName string `json:"name"`
 	// +optional
 	Status ClusterTestTypeStatus `json:"status,omitempty"`
 }

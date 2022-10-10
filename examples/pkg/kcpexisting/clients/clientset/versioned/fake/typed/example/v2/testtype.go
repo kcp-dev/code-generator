@@ -30,9 +30,11 @@ import (
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
 
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	applyconfigurationsexamplev2 "acme.corp/pkg/generated/applyconfigurations/example/v2"
