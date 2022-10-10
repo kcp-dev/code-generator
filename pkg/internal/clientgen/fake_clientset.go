@@ -91,7 +91,7 @@ func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
 		}
 	}
 
-	cs := &ClusterClientset{tracker: o}
+	cs := &ClusterClientset{Fake: &kcptesting.Fake{}, tracker: o}
 	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.Wildcard}
 	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
 	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
