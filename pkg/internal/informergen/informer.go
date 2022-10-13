@@ -99,7 +99,7 @@ import (
 // {{.kind}}ClusterInformer provides access to a shared informer and lister for
 // {{.kind.Plural}}.
 type {{.kind}}ClusterInformer interface {
-	Informer() cache.SharedIndexInformer
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() {{.group.PackageAlias}}listers.{{.kind}}ClusterLister
 }
 
@@ -111,14 +111,14 @@ type {{.kind.String | lowerFirst}}ClusterInformer struct {
 // New{{.kind}}ClusterInformer constructs a new informer for {{.kind.String}} type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func New{{.kind}}ClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+func New{{.kind}}ClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers) kcpcache.ScopeableSharedIndexInformer {
 	return NewFiltered{{.kind}}ClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFiltered{{.kind}}ClusterInformer constructs a new informer for {{.kind.String}} type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFiltered{{.kind}}ClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFiltered{{.kind}}ClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) kcpcache.ScopeableSharedIndexInformer {
 	return kcpinformers.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -140,7 +140,7 @@ func NewFiltered{{.kind}}ClusterInformer(client clientset.ClusterInterface, resy
 	)
 }
 
-func (f *{{.kind.String|lowerFirst}}ClusterInformer) defaultInformer(client clientset.ClusterInterface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) defaultInformer(client clientset.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
 	return NewFiltered{{.kind}}ClusterInformer(client, resyncPeriod, cache.Indexers{
 			kcpcache.ClusterIndexName: kcpcache.ClusterIndexFunc,
 			{{if .kind.IsNamespaced}}kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,{{end -}}
@@ -149,7 +149,7 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) defaultInformer(client clie
 	)
 }
 
-func (f *{{.kind.String|lowerFirst}}ClusterInformer) Informer() cache.SharedIndexInformer {
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
 	return f.factory.InformerFor(&{{.group.PackageAlias}}.{{.kind}}{}, f.defaultInformer)
 }
 
