@@ -33,12 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
-	exampleinformers "acme.corp/pkg/kcp/clients/informers/example"
-	example3informers "acme.corp/pkg/kcp/clients/informers/example3"
-	existinginterfacesinformers "acme.corp/pkg/kcp/clients/informers/existinginterfaces"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
-	secondexampleinformers "acme.corp/pkg/kcp/clients/informers/secondexample"
+	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
+	exampleinformers "acme.corp/pkg/kcpexisting/clients/informers/example"
+	example3informers "acme.corp/pkg/kcpexisting/clients/informers/example3"
+	existinginterfacesinformers "acme.corp/pkg/kcpexisting/clients/informers/existinginterfaces"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
+	secondexampleinformers "acme.corp/pkg/kcpexisting/clients/informers/secondexample"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.

@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
-	kcpexistinginterfacesv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/existinginterfaces/v1"
+	kcpexistinginterfacesv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/existinginterfaces/v1"
 )
 
 var _ kcpexistinginterfacesv1.ExistinginterfacesV1ClusterInterface = (*ExistinginterfacesV1ClusterClient)(nil)

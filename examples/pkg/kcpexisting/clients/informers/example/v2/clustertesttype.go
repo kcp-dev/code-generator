@@ -27,6 +27,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,14 +35,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	examplev2 "acme.corp/pkg/apis/example/v2"
-	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
-	examplev2listers "acme.corp/pkg/kcp/clients/listers/example/v2"
+	upstreamexamplev2informers "acme.corp/pkg/generated/informers/externalversions/example/v2"
+	upstreamexamplev2listers "acme.corp/pkg/generated/listers/example/v2"
+	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
+	examplev2listers "acme.corp/pkg/kcpexisting/clients/listers/example/v2"
 )
 
 // ClusterTestTypeClusterInformer provides access to a shared informer and lister for
 // ClusterTestTypes.
 type ClusterTestTypeClusterInformer interface {
+	Cluster(logicalcluster.Name) upstreamexamplev2informers.ClusterTestTypeInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() examplev2listers.ClusterTestTypeClusterLister
 }
@@ -97,4 +101,24 @@ func (f *clusterTestTypeClusterInformer) Informer() kcpcache.ScopeableSharedInde
 
 func (f *clusterTestTypeClusterInformer) Lister() examplev2listers.ClusterTestTypeClusterLister {
 	return examplev2listers.NewClusterTestTypeClusterLister(f.Informer().GetIndexer())
+}
+
+func (f *clusterTestTypeClusterInformer) Cluster(cluster logicalcluster.Name) upstreamexamplev2informers.ClusterTestTypeInformer {
+	return &clusterTestTypeInformer{
+		informer: f.Informer().Cluster(cluster),
+		lister:   f.Lister().Cluster(cluster),
+	}
+}
+
+type clusterTestTypeInformer struct {
+	informer cache.SharedIndexInformer
+	lister   upstreamexamplev2listers.ClusterTestTypeLister
+}
+
+func (f *clusterTestTypeInformer) Informer() cache.SharedIndexInformer {
+	return f.informer
+}
+
+func (f *clusterTestTypeInformer) Lister() upstreamexamplev2listers.ClusterTestTypeLister {
+	return f.lister
 }

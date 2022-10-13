@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	examplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
-	kcpexamplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1"
+	kcpexamplev1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1"
 )
 
 var _ kcpexamplev1.ExampleV1ClusterInterface = (*ExampleV1ClusterClient)(nil)

@@ -27,6 +27,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,14 +35,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
-	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
-	existinginterfacesv1listers "acme.corp/pkg/kcp/clients/listers/existinginterfaces/v1"
+	upstreamexistinginterfacesv1informers "acme.corp/pkg/generated/informers/externalversions/existinginterfaces/v1"
+	upstreamexistinginterfacesv1listers "acme.corp/pkg/generated/listers/existinginterfaces/v1"
+	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
+	existinginterfacesv1listers "acme.corp/pkg/kcpexisting/clients/listers/existinginterfaces/v1"
 )
 
 // TestTypeClusterInformer provides access to a shared informer and lister for
 // TestTypes.
 type TestTypeClusterInformer interface {
+	Cluster(logicalcluster.Name) upstreamexistinginterfacesv1informers.TestTypeInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() existinginterfacesv1listers.TestTypeClusterLister
 }
@@ -97,4 +101,24 @@ func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInform
 
 func (f *testTypeClusterInformer) Lister() existinginterfacesv1listers.TestTypeClusterLister {
 	return existinginterfacesv1listers.NewTestTypeClusterLister(f.Informer().GetIndexer())
+}
+
+func (f *testTypeClusterInformer) Cluster(cluster logicalcluster.Name) upstreamexistinginterfacesv1informers.TestTypeInformer {
+	return &testTypeInformer{
+		informer: f.Informer().Cluster(cluster),
+		lister:   f.Lister().Cluster(cluster),
+	}
+}
+
+type testTypeInformer struct {
+	informer cache.SharedIndexInformer
+	lister   upstreamexistinginterfacesv1listers.TestTypeLister
+}
+
+func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
+	return f.informer
+}
+
+func (f *testTypeInformer) Lister() upstreamexistinginterfacesv1listers.TestTypeLister {
+	return f.lister
 }

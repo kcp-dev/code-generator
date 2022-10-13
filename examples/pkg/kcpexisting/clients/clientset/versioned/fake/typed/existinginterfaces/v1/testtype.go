@@ -39,7 +39,7 @@ import (
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	applyconfigurationsexistinginterfacesv1 "acme.corp/pkg/generated/applyconfigurations/existinginterfaces/v1"
 	existinginterfacesv1client "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
-	kcpexistinginterfacesv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/existinginterfaces/v1"
+	kcpexistinginterfacesv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/existinginterfaces/v1"
 )
 
 var testTypesResource = schema.GroupVersionResource{Group: "existinginterfaces.acme.corp", Version: "v1", Resource: "testtypes"}

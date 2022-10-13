@@ -22,8 +22,8 @@ limitations under the License.
 package secondexample
 
 import (
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
-	"acme.corp/pkg/kcp/clients/informers/secondexample/v1"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
+	"acme.corp/pkg/kcpexisting/clients/informers/secondexample/v1"
 )
 
 type ClusterInterface interface {
