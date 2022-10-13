@@ -54,8 +54,6 @@ var fakeClientset = `
 package fake
 
 import (
-	"fmt"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	kcpfakediscovery "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake"
 	"github.com/kcp-dev/logicalcluster/v2"
@@ -81,15 +79,7 @@ import (
 // for a real clientset and is mostly useful in simple unit tests.
 func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
 	o := kcptesting.NewObjectTracker(clientscheme.Scheme, clientscheme.Codecs.UniversalDecoder())
-	for _, obj := range objects {
-		metaObj, ok := obj.(logicalcluster.Object)
-		if !ok {
-			panic(fmt.Sprintf("cannot extract logical cluster from %T", obj))
-		}
-		if err := o.Cluster(logicalcluster.From(metaObj)).Add(obj); err != nil {
-			panic(err)
-		}
-	}
+	o.AddAll(objects...)
 
 	cs := &ClusterClientset{Fake: &kcptesting.Fake{}, tracker: o}
 	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.Wildcard}

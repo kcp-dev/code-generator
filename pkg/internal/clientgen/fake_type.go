@@ -103,8 +103,14 @@ func (c *FakeTypedClient) WriteContent(w io.Writer) error {
 	}
 	allVerbs := c.Kind.SupportedVerbs.Union(extensionVerbs)
 
+	groupName := c.Group.Group.String()
+	if groupName == "core" {
+		groupName = ""
+	}
+
 	m := map[string]interface{}{
 		"group":                          c.Group,
+		"groupName":                      groupName,
 		"kind":                           &c.Kind,
 		"extraImports":                   extraImports,
 		"importAliases":                  importAliases,
@@ -167,8 +173,8 @@ import (
 	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
-var {{.kind.Plural | lowerFirst}}Resource = schema.GroupVersionResource{Group: "{{.group.Group}}", Version: "{{.group.Version}}", Resource: "{{.kind.Plural | toLower}}"}
-var {{.kind.Plural | lowerFirst}}Kind = schema.GroupVersionKind{Group: "{{.group.Group}}", Version: "{{.group.Version}}", Kind: "{{.kind.String}}"}
+var {{.kind.Plural | lowerFirst}}Resource = schema.GroupVersionResource{Group: "{{.groupName}}", Version: "{{.group.Version.String | toLower}}", Resource: "{{.kind.Plural | toLower}}"}
+var {{.kind.Plural | lowerFirst}}Kind = schema.GroupVersionKind{Group: "{{.groupName}}", Version: "{{.group.Version.String | toLower}}", Kind: "{{.kind.String}}"}
 
 type {{.kind.Plural | lowerFirst}}ClusterClient struct {
 	*kcptesting.Fake
