@@ -27,6 +27,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,14 +35,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	examplev2 "acme.corp/pkg/apis/example/v2"
-	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
-	examplev2listers "acme.corp/pkg/kcp/clients/listers/example/v2"
+	upstreamexamplev2informers "acme.corp/pkg/generated/informers/externalversions/example/v2"
+	upstreamexamplev2listers "acme.corp/pkg/generated/listers/example/v2"
+	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
+	examplev2listers "acme.corp/pkg/kcpexisting/clients/listers/example/v2"
 )
 
 // TestTypeClusterInformer provides access to a shared informer and lister for
 // TestTypes.
 type TestTypeClusterInformer interface {
+	Cluster(logicalcluster.Name) upstreamexamplev2informers.TestTypeInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() examplev2listers.TestTypeClusterLister
 }
@@ -97,4 +101,24 @@ func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInform
 
 func (f *testTypeClusterInformer) Lister() examplev2listers.TestTypeClusterLister {
 	return examplev2listers.NewTestTypeClusterLister(f.Informer().GetIndexer())
+}
+
+func (f *testTypeClusterInformer) Cluster(cluster logicalcluster.Name) upstreamexamplev2informers.TestTypeInformer {
+	return &testTypeInformer{
+		informer: f.Informer().Cluster(cluster),
+		lister:   f.Lister().Cluster(cluster),
+	}
+}
+
+type testTypeInformer struct {
+	informer cache.SharedIndexInformer
+	lister   upstreamexamplev2listers.TestTypeLister
+}
+
+func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
+	return f.informer
+}
+
+func (f *testTypeInformer) Lister() upstreamexamplev2listers.TestTypeLister {
+	return f.lister
 }

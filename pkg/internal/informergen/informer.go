@@ -50,6 +50,14 @@ type Informer struct {
 	// e.g. "github.com/kcp-dev/client-go/clients/listers"
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	ListerPackagePath string
+
+	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
+	// e.g. "k8s.io/client-go/informers"
+	SingleClusterInformerPackagePath string
+
+	// SingleClusterListerPackagePath is the fully qualified Go package name under which the (pre-existing)
+	// listers for single-cluster contexts are defined. Option. e.g. "k8s.io/client-go/listers"
+	SingleClusterListerPackagePath string
 }
 
 func (i *Informer) WriteContent(w io.Writer) error {
@@ -58,12 +66,15 @@ func (i *Informer) WriteContent(w io.Writer) error {
 		return err
 	}
 	m := map[string]interface{}{
-		"group":                i.Group,
-		"kind":                 &i.Kind,
-		"packagePath":          i.PackagePath,
-		"clientsetPackagePath": i.ClientsetPackagePath,
-		"apiPackagePath":       i.APIPackagePath,
-		"listerPackagePath":    i.ListerPackagePath,
+		"group":                            i.Group,
+		"kind":                             &i.Kind,
+		"packagePath":                      i.PackagePath,
+		"clientsetPackagePath":             i.ClientsetPackagePath,
+		"apiPackagePath":                   i.APIPackagePath,
+		"listerPackagePath":                i.ListerPackagePath,
+		"singleClusterInformerPackagePath": i.SingleClusterInformerPackagePath,
+		"singleClusterListerPackagePath":   i.SingleClusterListerPackagePath,
+		"useUpstreamInterfaces":            i.SingleClusterListerPackagePath != "" && i.SingleClusterInformerPackagePath != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -87,9 +98,14 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 	{{.group.PackageAlias}}listers "{{.listerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{if .useUpstreamInterfaces -}}
+	upstream{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	upstream{{.group.PackageAlias}}informers "{{.singleClusterInformerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{end -}}
 
 	clientset "{{.clientsetPackagePath}}"
 
@@ -99,6 +115,7 @@ import (
 // {{.kind}}ClusterInformer provides access to a shared informer and lister for
 // {{.kind.Plural}}.
 type {{.kind}}ClusterInformer interface {
+	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() {{.group.PackageAlias}}listers.{{.kind}}ClusterLister
 }
@@ -155,5 +172,34 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) Informer() kcpcache.Scopeab
 
 func (f *{{.kind.String|lowerFirst}}ClusterInformer) Lister() {{.group.PackageAlias}}listers.{{.kind.String}}ClusterLister {
 	return {{.group.PackageAlias}}listers.New{{.kind}}ClusterLister(f.Informer().GetIndexer())
+}
+
+{{ if not .useUpstreamInterfaces }}
+// {{.kind}}Informer provides access to a shared informer and lister for
+// {{.kind.Plural}}.
+type {{.kind}}Informer interface {
+	Informer() cache.SharedIndexInformer
+	Lister() {{.group.PackageAlias}}listers.{{.kind}}Lister
+}
+{{end -}}
+
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(cluster logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer {
+	return &{{.kind.String|lowerFirst}}Informer{
+		informer: f.Informer().Cluster(cluster),
+		lister:   f.Lister().Cluster(cluster),
+	}
+}
+
+type {{.kind.String|lowerFirst}}Informer struct {
+	informer cache.SharedIndexInformer
+	lister {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.PackageAlias}}listers.{{.kind.String}}Lister
+}
+
+func (f *{{.kind.String|lowerFirst}}Informer) Informer() cache.SharedIndexInformer {
+	return f.informer
+}
+
+func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.PackageAlias}}listers.{{.kind.String}}Lister {
+	return f.lister
 }
 `

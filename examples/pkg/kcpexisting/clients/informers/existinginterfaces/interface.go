@@ -22,8 +22,8 @@ limitations under the License.
 package existinginterfaces
 
 import (
-	"acme.corp/pkg/kcp/clients/informers/existinginterfaces/v1"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
+	"acme.corp/pkg/kcpexisting/clients/informers/existinginterfaces/v1"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
 )
 
 type ClusterInterface interface {

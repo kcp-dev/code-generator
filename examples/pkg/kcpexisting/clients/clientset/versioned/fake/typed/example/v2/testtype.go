@@ -39,7 +39,7 @@ import (
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	applyconfigurationsexamplev2 "acme.corp/pkg/generated/applyconfigurations/example/v2"
 	examplev2client "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
-	kcpexamplev2 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v2"
+	kcpexamplev2 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v2"
 )
 
 var testTypesResource = schema.GroupVersionResource{Group: "example", Version: "v2", Resource: "testtypes"}

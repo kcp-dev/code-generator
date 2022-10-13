@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
 )
 
 type ClusterInterface interface {

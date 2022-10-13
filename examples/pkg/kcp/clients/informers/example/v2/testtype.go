@@ -27,6 +27,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,6 +43,7 @@ import (
 // TestTypeClusterInformer provides access to a shared informer and lister for
 // TestTypes.
 type TestTypeClusterInformer interface {
+	Cluster(logicalcluster.Name) TestTypeInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() examplev2listers.TestTypeClusterLister
 }
@@ -97,4 +99,31 @@ func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInform
 
 func (f *testTypeClusterInformer) Lister() examplev2listers.TestTypeClusterLister {
 	return examplev2listers.NewTestTypeClusterLister(f.Informer().GetIndexer())
+}
+
+// TestTypeInformer provides access to a shared informer and lister for
+// TestTypes.
+type TestTypeInformer interface {
+	Informer() cache.SharedIndexInformer
+	Lister() examplev2listers.TestTypeLister
+}
+
+func (f *testTypeClusterInformer) Cluster(cluster logicalcluster.Name) TestTypeInformer {
+	return &testTypeInformer{
+		informer: f.Informer().Cluster(cluster),
+		lister:   f.Lister().Cluster(cluster),
+	}
+}
+
+type testTypeInformer struct {
+	informer cache.SharedIndexInformer
+	lister   examplev2listers.TestTypeLister
+}
+
+func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
+	return f.informer
+}
+
+func (f *testTypeInformer) Lister() examplev2listers.TestTypeLister {
+	return f.lister
 }

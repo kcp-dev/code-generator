@@ -22,11 +22,11 @@ limitations under the License.
 package example
 
 import (
-	"acme.corp/pkg/kcp/clients/informers/example/v1"
-	"acme.corp/pkg/kcp/clients/informers/example/v1alpha1"
-	"acme.corp/pkg/kcp/clients/informers/example/v1beta1"
-	"acme.corp/pkg/kcp/clients/informers/example/v2"
-	"acme.corp/pkg/kcp/clients/informers/internalinterfaces"
+	"acme.corp/pkg/kcpexisting/clients/informers/example/v1"
+	"acme.corp/pkg/kcpexisting/clients/informers/example/v1alpha1"
+	"acme.corp/pkg/kcpexisting/clients/informers/example/v1beta1"
+	"acme.corp/pkg/kcpexisting/clients/informers/example/v2"
+	"acme.corp/pkg/kcpexisting/clients/informers/internalinterfaces"
 )
 
 type ClusterInterface interface {

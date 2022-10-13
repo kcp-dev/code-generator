@@ -33,13 +33,13 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 
 	client "acme.corp/pkg/generated/clientset/versioned"
-	examplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1"
-	examplev1alpha1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1alpha1"
-	examplev1beta1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1beta1"
-	examplev2 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v2"
-	example3v1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example3/v1"
-	existinginterfacesv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/existinginterfaces/v1"
-	secondexamplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/secondexample/v1"
+	examplev1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1"
+	examplev1alpha1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1alpha1"
+	examplev1beta1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1beta1"
+	examplev2 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v2"
+	example3v1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example3/v1"
+	existinginterfacesv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/existinginterfaces/v1"
+	secondexamplev1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/secondexample/v1"
 )
 
 type ClusterInterface interface {
