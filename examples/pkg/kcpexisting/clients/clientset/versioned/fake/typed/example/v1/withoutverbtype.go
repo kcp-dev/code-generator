@@ -31,8 +31,8 @@ import (
 	kcpexamplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1"
 )
 
-var withoutVerbTypesResource = schema.GroupVersionResource{Group: "example", Version: "V1", Resource: "withoutverbtypes"}
-var withoutVerbTypesKind = schema.GroupVersionKind{Group: "example", Version: "V1", Kind: "WithoutVerbType"}
+var withoutVerbTypesResource = schema.GroupVersionResource{Group: "example", Version: "v1", Resource: "withoutverbtypes"}
+var withoutVerbTypesKind = schema.GroupVersionKind{Group: "example", Version: "v1", Kind: "WithoutVerbType"}
 
 type withoutVerbTypesClusterClient struct {
 	*kcptesting.Fake

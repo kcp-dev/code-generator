@@ -27,7 +27,6 @@ import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/cache"
 
 	examplev1 "acme.corp/pkg/apis/example/v1"
 	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
@@ -39,17 +38,17 @@ import (
 )
 
 type GenericClusterInformer interface {
-	Informer() cache.SharedIndexInformer
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() kcpcache.GenericClusterLister
 }
 
 type genericClusterInformer struct {
-	informer cache.SharedIndexInformer
+	informer kcpcache.ScopeableSharedIndexInformer
 	resource schema.GroupResource
 }
 
 // Informer returns the SharedIndexInformer.
-func (f *genericClusterInformer) Informer() cache.SharedIndexInformer {
+func (f *genericClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
 	return f.informer
 }
 

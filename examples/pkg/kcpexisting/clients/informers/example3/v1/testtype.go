@@ -42,7 +42,7 @@ import (
 // TestTypeClusterInformer provides access to a shared informer and lister for
 // TestTypes.
 type TestTypeClusterInformer interface {
-	Informer() cache.SharedIndexInformer
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() example3v1listers.TestTypeClusterLister
 }
 
@@ -54,14 +54,14 @@ type testTypeClusterInformer struct {
 // NewTestTypeClusterInformer constructs a new informer for TestType type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewTestTypeClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+func NewTestTypeClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers) kcpcache.ScopeableSharedIndexInformer {
 	return NewFilteredTestTypeClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredTestTypeClusterInformer constructs a new informer for TestType type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredTestTypeClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredTestTypeClusterInformer(client clientset.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) kcpcache.ScopeableSharedIndexInformer {
 	return kcpinformers.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -83,7 +83,7 @@ func NewFilteredTestTypeClusterInformer(client clientset.ClusterInterface, resyn
 	)
 }
 
-func (f *testTypeClusterInformer) defaultInformer(client clientset.ClusterInterface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *testTypeClusterInformer) defaultInformer(client clientset.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
 	return NewFilteredTestTypeClusterInformer(client, resyncPeriod, cache.Indexers{
 		kcpcache.ClusterIndexName:             kcpcache.ClusterIndexFunc,
 		kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc},
@@ -91,7 +91,7 @@ func (f *testTypeClusterInformer) defaultInformer(client clientset.ClusterInterf
 	)
 }
 
-func (f *testTypeClusterInformer) Informer() cache.SharedIndexInformer {
+func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
 	return f.factory.InformerFor(&example3v1.TestType{}, f.defaultInformer)
 }
 
