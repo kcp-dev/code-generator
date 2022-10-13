@@ -46,6 +46,15 @@ type Generator struct {
 	// APIPackagePath is the root directory under which API types exist.
 	// e.g. "k8s.io/api"
 	APIPackagePath string `marker:"apiPackagePath"`
+
+	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
+	// e.g. "k8s.io/client-go/informers"
+	SingleClusterInformerPackagePath string `marker:",optional"`
+
+	// SingleClusterListerPackagePath is the root directory under which single-cluster-aware listers exist,
+	// for the case where we're only generating new code "on top" to enable multi-cluster use-cases.
+	// e.g. "k8s.io/client-go/listers"
+	SingleClusterListerPackagePath string `marker:",optional"`
 }
 
 func (g Generator) RegisterMarkers(into *markers.Registry) error {
@@ -182,12 +191,14 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 				logger.WithValues("path", outputFile).Info("generating informer for kind")
 
 				if err := util.WriteGeneratedCode(ctx, headerText, &informergen.Informer{
-					Group:                toGroupVersionInfo(group, version),
-					Kind:                 kind,
-					APIPackagePath:       g.APIPackagePath,
-					PackagePath:          filepath.Join(g.OutputPackagePath, informersDir),
-					ClientsetPackagePath: filepath.Join(g.OutputPackagePath, clientsetDir),
-					ListerPackagePath:    filepath.Join(g.OutputPackagePath, listersDir),
+					Group:                            toGroupVersionInfo(group, version),
+					Kind:                             kind,
+					APIPackagePath:                   g.APIPackagePath,
+					PackagePath:                      filepath.Join(g.OutputPackagePath, informersDir),
+					ClientsetPackagePath:             filepath.Join(g.OutputPackagePath, clientsetDir),
+					ListerPackagePath:                filepath.Join(g.OutputPackagePath, listersDir),
+					SingleClusterInformerPackagePath: g.SingleClusterInformerPackagePath,
+					SingleClusterListerPackagePath:   g.SingleClusterListerPackagePath,
 				}, outputFile); err != nil {
 					return err
 				}
