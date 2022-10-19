@@ -5,7 +5,7 @@ go 1.18
 replace acme.corp/pkg => ./pkg
 
 require (
-	github.com/kcp-dev/apimachinery v0.0.0-20221013124826-6a50a2d1c182
+	github.com/kcp-dev/apimachinery v0.0.0-20221019133255-9e1e13940519
 	github.com/kcp-dev/client-go v0.0.0-20221013125607-cac9fbfe7455
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.3
 	k8s.io/apimachinery v0.25.2

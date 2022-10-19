@@ -139,12 +139,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
-github.com/kcp-dev/apimachinery v0.0.0-20221003220612-a61d757411af h1:NSBpjZ2+830TvwE6AvYOOf0yk5Yq9PLqK8akRtKLF6s=
-github.com/kcp-dev/apimachinery v0.0.0-20221003220612-a61d757411af/go.mod h1:qnvUHkdxOrNzX17yX+z8r81CZEBuFdveNzWqFlwZ55w=
-github.com/kcp-dev/apimachinery v0.0.0-20221013124826-6a50a2d1c182 h1:tnYt/uVOcIZdrWvRR4OpC+0tbJWfhRhknN2xjuC5OE8=
-github.com/kcp-dev/apimachinery v0.0.0-20221013124826-6a50a2d1c182/go.mod h1:qnvUHkdxOrNzX17yX+z8r81CZEBuFdveNzWqFlwZ55w=
-github.com/kcp-dev/client-go v0.0.0-20221010124000-dcb42f748279 h1:3s06opNG4YtGRcivsfPFJ1V44g1wtJU+M+5g3Tur+Pc=
-github.com/kcp-dev/client-go v0.0.0-20221010124000-dcb42f748279/go.mod h1:E/pWNs9gXdW4QbDJhDl6yVWv22AHU+EhSv54EagP96I=
+github.com/kcp-dev/apimachinery v0.0.0-20221019133255-9e1e13940519 h1:eU1HvmmP8TbzS2pB9IX2Spky20n6V79/KgX4ssiG/A8=
+github.com/kcp-dev/apimachinery v0.0.0-20221019133255-9e1e13940519/go.mod h1:qnvUHkdxOrNzX17yX+z8r81CZEBuFdveNzWqFlwZ55w=
 github.com/kcp-dev/client-go v0.0.0-20221013125607-cac9fbfe7455 h1:4tYJ1Pkjwsv9x+TKRyFizyUTJL4SfbNahPckRyIMD4A=
 github.com/kcp-dev/client-go v0.0.0-20221013125607-cac9fbfe7455/go.mod h1:E/pWNs9gXdW4QbDJhDl6yVWv22AHU+EhSv54EagP96I=
 github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.3 h1:+DwIG/loh2nDB9c/FqNvLzFFq/YtBliLxAfw/uWNzyE=
