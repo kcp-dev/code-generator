@@ -37,17 +37,13 @@ import (
 	example3v1 "acme.corp/pkg/apis/example3/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
+	upstreaminformers "acme.corp/pkg/generated/informers/externalversions"
 )
 
 type GenericClusterInformer interface {
-	Cluster(logicalcluster.Name) GenericInformer
+	Cluster(logicalcluster.Name) upstreaminformers.GenericInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() kcpcache.GenericClusterLister
-}
-
-type GenericInformer interface {
-	Informer() cache.SharedIndexInformer
-	Lister() cache.GenericLister
 }
 
 type genericClusterInformer struct {
@@ -66,7 +62,7 @@ func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
 }
 
 // Cluster scopes to a GenericInformer.
-func (f *genericClusterInformer) Cluster(cluster logicalcluster.Name) GenericInformer {
+func (f *genericClusterInformer) Cluster(cluster logicalcluster.Name) upstreaminformers.GenericInformer {
 	return &genericInformer{
 		informer: f.Informer().Cluster(cluster),
 		lister:   f.Lister().ByCluster(cluster),
