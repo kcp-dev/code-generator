@@ -36,6 +36,10 @@ type Factory struct {
 	// e.g. "github.com/kcp-dev/client-go/clients/clientset/versioned"
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	ClientsetPackagePath string
+
+	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
+	// e.g. "k8s.io/client-go/informers"
+	SingleClusterInformerPackagePath string
 }
 
 func (f *Factory) WriteContent(w io.Writer) error {
@@ -45,9 +49,11 @@ func (f *Factory) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"groups":               f.Groups,
-		"packagePath":          f.PackagePath,
-		"clientsetPackagePath": f.ClientsetPackagePath,
+		"groups":                           f.Groups,
+		"packagePath":                      f.PackagePath,
+		"clientsetPackagePath":             f.ClientsetPackagePath,
+		"singleClusterInformerPackagePath": f.SingleClusterInformerPackagePath,
+		"useUpstreamInterfaces":            f.SingleClusterInformerPackagePath != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -66,6 +72,7 @@ import (
 	"time"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,6 +80,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	clientset "{{.clientsetPackagePath}}"
+	{{if .useUpstreamInterfaces -}}
+	upstreaminformers "{{.singleClusterInformerPackagePath}}"
+	{{end -}}
 
 {{range .groups}}	{{.Group.PackageName}}informers "{{$.packagePath}}/{{.Group.PackageName}}"
 {{end -}}
@@ -195,10 +205,16 @@ func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internal
   return informer
 }
 
+type ScopedDynamicSharedInformerFactory interface {
+	ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error)
+	Start(stopCh <-chan struct{})
+}
+
 // SharedInformerFactory provides shared informers for resources in all known
 // API group versions.
 type SharedInformerFactory interface {
 	internalinterfaces.SharedInformerFactory
+	Cluster(logicalcluster.Name) ScopedDynamicSharedInformerFactory
 	ForResource(resource schema.GroupVersionResource) (GenericClusterInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
@@ -211,4 +227,28 @@ func (f *sharedInformerFactory) {{.GoName}}() {{.Group.PackageName}}informers.Cl
   return {{.Group.PackageName}}informers.New(f, f.tweakListOptions)
 }
 {{end}}
+
+func (f *sharedInformerFactory) Cluster(cluster logicalcluster.Name) ScopedDynamicSharedInformerFactory {
+	return &scopedDynamicSharedInformerFactory{
+		sharedInformerFactory: f,
+		cluster: cluster,
+	}
+}
+
+type scopedDynamicSharedInformerFactory struct {
+	*sharedInformerFactory
+	cluster logicalcluster.Name
+}
+
+func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error) {
+	clusterInformer, err := f.sharedInformerFactory.ForResource(resource)
+	if err != nil {
+		return nil, err
+	}
+	return clusterInformer.Cluster(f.cluster), nil 
+}
+
+func (f *scopedDynamicSharedInformerFactory) Start(stopCh <-chan struct{}) {
+	f.sharedInformerFactory.Start(stopCh)
+}
 `
