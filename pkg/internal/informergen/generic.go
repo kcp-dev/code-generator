@@ -35,6 +35,10 @@ type Generic struct {
 	// APIPackagePath is the root directory under which API types exist.
 	// e.g. "k8s.io/api"
 	APIPackagePath string
+
+	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
+	// e.g. "k8s.io/client-go/informers"
+	SingleClusterInformerPackagePath string
 }
 
 func (g *Generic) WriteContent(w io.Writer) error {
@@ -44,9 +48,11 @@ func (g *Generic) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"groups":            g.Groups,
-		"groupVersionKinds": g.GroupVersionKinds,
-		"apiPackagePath":    g.APIPackagePath,
+		"groups":                           g.Groups,
+		"groupVersionKinds":                g.GroupVersionKinds,
+		"apiPackagePath":                   g.APIPackagePath,
+		"singleClusterInformerPackagePath": g.SingleClusterInformerPackagePath,
+		"useUpstreamInterfaces":            g.SingleClusterInformerPackagePath != "",
 	}
 	return templ.Execute(w, m)
 }
@@ -68,20 +74,26 @@ import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	"github.com/kcp-dev/logicalcluster/v2"
 
+	{{if .useUpstreamInterfaces -}}
+	upstreaminformers "{{.singleClusterInformerPackagePath}}"
+	{{end -}}
+
 {{range .groups}}	{{.PackageAlias}} "{{$.apiPackagePath}}/{{.Group.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 
 type GenericClusterInformer interface {
-	Cluster(logicalcluster.Name) GenericInformer
+	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() kcpcache.GenericClusterLister
 }
 
+{{ if not .useUpstreamInterfaces }}
 type GenericInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() cache.GenericLister
 }
+{{end }}
 
 type genericClusterInformer struct {
 	informer kcpcache.ScopeableSharedIndexInformer
@@ -99,7 +111,7 @@ func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
 }
 
 // Cluster scopes to a GenericInformer.
-func (f *genericClusterInformer) Cluster(cluster logicalcluster.Name) GenericInformer {
+func (f *genericClusterInformer) Cluster(cluster logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer {
 	return &genericInformer{
 		informer: f.Informer().Cluster(cluster),
 		lister:   f.Lister().ByCluster(cluster),

@@ -109,9 +109,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	factoryPath := filepath.Join(informersDir, "factory.go")
 	logger.WithValues("path", factoryPath).Info("generating informer factory")
 	if err := util.WriteGeneratedCode(ctx, headerText, &informergen.Factory{
-		Groups:               onlyGroups,
-		PackagePath:          filepath.Join(g.OutputPackagePath, informersDir),
-		ClientsetPackagePath: filepath.Join(g.OutputPackagePath, clientsetDir),
+		Groups:                           onlyGroups,
+		PackagePath:                      filepath.Join(g.OutputPackagePath, informersDir),
+		ClientsetPackagePath:             filepath.Join(g.OutputPackagePath, clientsetDir),
+		SingleClusterInformerPackagePath: g.SingleClusterInformerPackagePath,
 	}, factoryPath); err != nil {
 		return err
 	}
@@ -129,9 +130,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	genericPath := filepath.Join(informersDir, "generic.go")
 	logger.WithValues("path", factoryPath).Info("generating generic informers")
 	if err := util.WriteGeneratedCode(ctx, headerText, &informergen.Generic{
-		Groups:            groupInfo,
-		GroupVersionKinds: gvks,
-		APIPackagePath:    g.APIPackagePath,
+		Groups:                           groupInfo,
+		GroupVersionKinds:                gvks,
+		APIPackagePath:                   g.APIPackagePath,
+		SingleClusterInformerPackagePath: g.SingleClusterInformerPackagePath,
 	}, genericPath); err != nil {
 		return err
 	}

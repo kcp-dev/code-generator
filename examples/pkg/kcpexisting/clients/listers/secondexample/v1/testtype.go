@@ -26,6 +26,7 @@ import (
 	"github.com/kcp-dev/logicalcluster/v2"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
@@ -106,7 +107,12 @@ type testTypeNamespaceLister struct {
 func (s *testTypeNamespaceLister) List(selector labels.Selector) (ret []*secondexamplev1.TestType, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	list, err := s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
+	var list []interface{}
+	if s.namespace == metav1.NamespaceAll {
+		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
+	} else {
+		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -156,10 +157,16 @@ func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internal
 	return informer
 }
 
+type ScopedDynamicSharedInformerFactory interface {
+	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
+	Start(stopCh <-chan struct{})
+}
+
 // SharedInformerFactory provides shared informers for resources in all known
 // API group versions.
 type SharedInformerFactory interface {
 	internalinterfaces.SharedInformerFactory
+	Cluster(logicalcluster.Name) ScopedDynamicSharedInformerFactory
 	ForResource(resource schema.GroupVersionResource) (GenericClusterInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
@@ -183,4 +190,28 @@ func (f *sharedInformerFactory) Existinginterfaces() existinginterfacesinformers
 
 func (f *sharedInformerFactory) Secondexample() secondexampleinformers.ClusterInterface {
 	return secondexampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Cluster(cluster logicalcluster.Name) ScopedDynamicSharedInformerFactory {
+	return &scopedDynamicSharedInformerFactory{
+		sharedInformerFactory: f,
+		cluster:               cluster,
+	}
+}
+
+type scopedDynamicSharedInformerFactory struct {
+	*sharedInformerFactory
+	cluster logicalcluster.Name
+}
+
+func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
+	clusterInformer, err := f.sharedInformerFactory.ForResource(resource)
+	if err != nil {
+		return nil, err
+	}
+	return clusterInformer.Cluster(f.cluster), nil
+}
+
+func (f *scopedDynamicSharedInformerFactory) Start(stopCh <-chan struct{}) {
+	f.sharedInformerFactory.Start(stopCh)
 }
