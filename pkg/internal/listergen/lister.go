@@ -57,6 +57,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"
+	{{if .kind.IsNamespaced }}
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	{{end -}}
 
 	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 	{{if .useUpstreamInterfaces -}}
@@ -191,7 +194,12 @@ type {{.kind.String | lowerFirst}}NamespaceLister struct {
 func (s *{{.kind.String | lowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
 	selectAll := selector == nil || selector.Empty()
 
-	list, err := s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
+	var list []interface{}
+	if s.namespace == metav1.NamespaceAll {
+		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
+	} else {
+		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
+	}
 	if err != nil {
 		return nil, err
 	}
