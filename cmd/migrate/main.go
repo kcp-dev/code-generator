@@ -155,14 +155,14 @@ type rewriteRule struct {
 
 var kcpClientTypeRules = []rewriteRule{
 	{
-		from:        "k8s.io/client-go/kubernetes",
-		to:          "github.com/kcp-dev/client-go/clients/clientset/versioned",
+		from:        "k8s.io/apiextensions-apiserver/pkg/clients/clientset/clientset",
+		to:          "github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
 		formatAlias: func(suffix []string) string {
 			// [] -> "kcpclientset"
 			// ["typed", "<group>", "<version>"] -> "<group><version>"
 			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpkubernetesclientset"
+				return "kcpapiextensionsclientset"
 			}
 			if len(suffix) == 1 {
 				return "kcp" + suffix[0] + "client"
@@ -171,98 +171,136 @@ var kcpClientTypeRules = []rewriteRule{
 		},
 	},
 	{
-		from:        "k8s.io/client-go/informers",
-		to:          "github.com/kcp-dev/client-go/clients/informers",
+		from:        "k8s.io/apiextensions-apiserver/pkg/clients/informers",
+		to:          "github.com/kcp-dev/client-go/apiextensions/clients/informers",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Informer|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
-			// [] -> "kcpkubernetesinformers"
+			// [] -> "kcpapiextensionsinformers"
 			// ["<group>", "<version>"] -> "<group><version>"informers
 			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpkubernetesinformers"
+				return "kcpapiextensionsinformers"
 			}
 			return "kcp" + suffix[0] + suffix[1] + "informers"
 		},
 	},
 	{
-		from:        "k8s.io/client-go/listers",
-		to:          "github.com/kcp-dev/client-go/clients/listers",
+		from:        "k8s.io/apiextensions-apiserver/pkg/clients/listers",
+		to:          "github.com/kcp-dev/client-go/apiextensions/clients/listers",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
 			// ["<group>", "<version>"] -> "kcp<group><version>"listers
 			return "kcp" + suffix[0] + suffix[1] + "listers"
 		},
 	},
-	{
-		from:        "k8s.io/client-go/dynamic",
-		to:          "github.com/kcp-dev/client-go/clients/dynamic",
-		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Informer|Clientset|Config)`),
-		formatAlias: func(suffix []string) string {
-			// [] -> "kcpdynamic"
-			// ["dynamiclister"] -> "kcpdynamiclister"
-			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpdynamic"
-			}
-			return "kcp" + suffix[0]
-		},
-	},
-	{
-		from:        "k8s.io/client-go/dynamic/fake",
-		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/dynamic/fake",
-		nameMatcher: regexp.MustCompile(`.*`),
-		formatAlias: func(suffix []string) string {
-			return "kcpfakedynamic"
-		},
-	},
-	{
-		from:        "k8s.io/client-go/metadata",
-		to:          "github.com/kcp-dev/client-go/clients/metadata",
-		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Informer|Clientset|Config)`),
-		formatAlias: func(suffix []string) string {
-			// [] -> "kcpmetadata"
-			// ["metadatalister"] -> "kcpmetadatalister"
-			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpmetadata"
-			}
-			return "kcp" + suffix[0]
-		},
-	},
-	{
-		from:        "k8s.io/client-go/metadata/fake",
-		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/metadata/fake",
-		nameMatcher: regexp.MustCompile(`.*`),
-		formatAlias: func(suffix []string) string {
-			return "kcpfakemetadata"
-		},
-	},
-	{
-		from:        "k8s.io/client-go/discovery",
-		to:          "github.com/kcp-dev/client-go/clients/discovery",
-		nameMatcher: regexp.MustCompile(`.*(Interface|Clientset)`),
-		formatAlias: func(suffix []string) string {
-			// [] -> "kcpdiscovery"
-			// ["discoverylister"] -> "kcpdiscoverylister"
-			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpdiscovery"
-			}
-			return "kcp" + suffix[0]
-		},
-	},
-	{
-		from:        "k8s.io/client-go/discovery/fake",
-		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake",
-		nameMatcher: regexp.MustCompile(`.*`),
-		formatAlias: func(suffix []string) string {
-			return "kcpfakediscovery"
-		},
-	},
-	{
-		from:        "k8s.io/client-go/testing",
-		to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing",
-		nameMatcher: regexp.MustCompile(`.*(Action|Reactor|Reaction|Fake|ObjectTracker|Client)`),
-		formatAlias: func(suffix []string) string {
-			return "kcptesting"
-		},
-	},
+	//{
+	//	from:        "k8s.io/client-go/kubernetes",
+	//	to:          "github.com/kcp-dev/client-go/clients/clientset/versioned",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpclientset"
+	//		// ["typed", "<group>", "<version>"] -> "<group><version>"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpkubernetesclientset"
+	//		}
+	//		if len(suffix) == 1 {
+	//			return "kcp" + suffix[0] + "client"
+	//		}
+	//		return "kcp" + suffix[1] + suffix[2] + "client"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/informers",
+	//	to:          "github.com/kcp-dev/client-go/clients/informers",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Informer|Getter|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpkubernetesinformers"
+	//		// ["<group>", "<version>"] -> "<group><version>"informers
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpkubernetesinformers"
+	//		}
+	//		return "kcp" + suffix[0] + suffix[1] + "informers"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/listers",
+	//	to:          "github.com/kcp-dev/client-go/clients/listers",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Getter|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// ["<group>", "<version>"] -> "kcp<group><version>"listers
+	//		return "kcp" + suffix[0] + suffix[1] + "listers"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/dynamic",
+	//	to:          "github.com/kcp-dev/client-go/clients/dynamic",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Informer|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpdynamic"
+	//		// ["dynamiclister"] -> "kcpdynamiclister"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpdynamic"
+	//		}
+	//		return "kcp" + suffix[0]
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/dynamic/fake",
+	//	to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/dynamic/fake",
+	//	nameMatcher: regexp.MustCompile(`.*`),
+	//	formatAlias: func(suffix []string) string {
+	//		return "kcpfakedynamic"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/metadata",
+	//	to:          "github.com/kcp-dev/client-go/clients/metadata",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Informer|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpmetadata"
+	//		// ["metadatalister"] -> "kcpmetadatalister"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpmetadata"
+	//		}
+	//		return "kcp" + suffix[0]
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/metadata/fake",
+	//	to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/metadata/fake",
+	//	nameMatcher: regexp.MustCompile(`.*`),
+	//	formatAlias: func(suffix []string) string {
+	//		return "kcpfakemetadata"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/discovery",
+	//	to:          "github.com/kcp-dev/client-go/clients/discovery",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Clientset)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpdiscovery"
+	//		// ["discoverylister"] -> "kcpdiscoverylister"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpdiscovery"
+	//		}
+	//		return "kcp" + suffix[0]
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/discovery/fake",
+	//	to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake",
+	//	nameMatcher: regexp.MustCompile(`.*`),
+	//	formatAlias: func(suffix []string) string {
+	//		return "kcpfakediscovery"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/client-go/testing",
+	//	to:          "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing",
+	//	nameMatcher: regexp.MustCompile(`.*(Action|Reactor|Reaction|Fake|ObjectTracker|Client)`),
+	//	formatAlias: func(suffix []string) string {
+	//		return "kcptesting"
+	//	},
+	//},
 }
 
 // k8s.io/client-go/kubernetes.Interface -> github.com/kcp-dev/client-go/clients/clientset/versioned.ClusterInterface
