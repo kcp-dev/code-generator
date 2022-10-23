@@ -22,7 +22,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
@@ -163,7 +162,6 @@ func ClientExtensions(info *markers.TypeInfo) []Extension {
 		}
 		transformed.InputType, transformed.InputPath = extension.InputType()
 		transformed.ResultType, transformed.ResultPath = extension.ResultType()
-		klog.Infof("=========== %#v", transformed)
 		extensions = append(extensions, transformed)
 	}
 	return extensions

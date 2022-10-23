@@ -17,7 +17,10 @@ limitations under the License.
 package parser
 
 import (
+	"go/ast"
 	"strings"
+
+	"golang.org/x/tools/go/ast/astutil"
 
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -50,7 +53,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 	groupVersionKinds := map[Group]map[types.PackageVersion][]Kind{}
 	for _, root := range ctx.Roots {
 		logger := klog.Background()
-		logger.Info("processing " + root.PkgPath)
+		logger.V(4).Info("processing " + root.PkgPath)
 		parts := strings.Split(root.PkgPath, "/")
 		groupName := types.Group(parts[len(parts)-2])
 		version := types.PackageVersion{
@@ -63,13 +66,36 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			return nil, err
 		}
 
+		// look for a reference to runtime.APIVersionInternal to skip internal APIs
+		var isInternalAPI bool
+		for _, file := range root.Syntax {
+			astutil.Apply(file, nil, func(cursor *astutil.Cursor) bool {
+				switch node := cursor.Node().(type) {
+				case *ast.SelectorExpr:
+					pkg, ok := node.X.(*ast.Ident)
+					if !ok {
+						break
+					}
+					if pkg.Name == "runtime" && node.Sel.Name == "APIVersionInternal" {
+						isInternalAPI = true
+						return false
+					}
+				}
+				return true
+			})
+		}
+		if isInternalAPI {
+			logger.WithValues("path", root.PkgPath).V(4).Info("skipping package for internal API")
+			continue
+		}
+
 		groupNameRaw, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
 		if ok {
 			// If there's a comment of the form "// +groupName=somegroup" or
 			// "// +groupName=somegroup.foo.bar.io", use the first field (somegroup) as the name of the
 			// group when generating. [N.B.](skuznets): even though the generators do the indexing here, the group
 			// type does it for you, and handles the special case for "internal"
-			logger.WithValues("original", groupName, "override", string(groupNameRaw)).Info("found a group name override")
+			logger.WithValues("original", groupName, "override", string(groupNameRaw)).V(4).Info("found a group name override")
 			groupName = types.Group(groupNameRaw)
 		}
 		groupGoName := namer.IC(groupName.PackageName())
@@ -88,10 +114,10 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 
 		logger = logger.WithValues("group", group, "version", version, "goName", groupGoName)
 		if isForbiddenGroupVersion(group.Group, version.Version) {
-			logger.WithValues("package", root.PkgPath).Info("skipping forbidden package")
+			logger.WithValues("package", root.PkgPath).V(4).Info("skipping forbidden package")
 			continue
 		}
-		logger.WithValues("package", root.PkgPath).Info("collecting kinds in package")
+		logger.WithValues("package", root.PkgPath).V(4).Info("collecting kinds in package")
 
 		// find types which have generated clients and support LIST + WATCH
 		var kinds []Kind
@@ -99,7 +125,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 		if err := markers.EachType(ctx.Collector, root, func(info *markers.TypeInfo) {
 			logger = logger.WithValues("kind", info.Name)
 			if !ClientsGeneratedForType(info) {
-				logger.V(3).Info("skipping kind as it has no generated clients")
+				logger.V(3).V(4).Info("skipping kind as it has no generated clients")
 				return
 			}
 
@@ -110,11 +136,11 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			}
 			extensions := ClientExtensions(info)
 			if len(verbs) > 0 && !supported.HasAll(verbs...) {
-				logger.Info("skipping kind as it does not support the necessary verbs")
+				logger.V(4).Info("skipping kind as it does not support the necessary verbs")
 				return
 			}
 
-			logger.Info("will generate for kind")
+			logger.V(4).Info("will generate for kind")
 			kinds = append(kinds, NewKind(info.Name, IsNamespaced(info), supported, extensions))
 		}); err != nil {
 			return nil, err
@@ -123,7 +149,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			return nil, errors.NewAggregate(typeErrors)
 		}
 		if len(kinds) == 0 {
-			logger.Info("skipping group/version as it has no kinds that have generated clients")
+			logger.V(4).Info("skipping group/version as it has no kinds that have generated clients")
 			continue
 		}
 		if _, recorded := groupVersionKinds[group]; !recorded {
