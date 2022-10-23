@@ -48,7 +48,7 @@ type Generator struct {
 
 	// SingleClusterApplyConfigurationsPackagePath is the root directory under which single-cluster-aware apply configurations exist.
 	// e.g. "k8s.io/client-go/applyconfigurations"
-	SingleClusterApplyConfigurationsPackagePath string `marker:""`
+	SingleClusterApplyConfigurationsPackagePath string `marker:",optional"`
 
 	// OutputPackagePath is the root directory under which this tool will output files.
 	// e.g. "github.com/kcp-dev/client-go/clients"
