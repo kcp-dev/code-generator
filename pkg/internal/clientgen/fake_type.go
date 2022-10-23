@@ -117,10 +117,12 @@ func (c *FakeTypedClient) WriteContent(w io.Writer) error {
 		"hasMethods":                     c.Kind.SupportedVerbs.Len() > 0 || len(c.Kind.Extensions) > 0,
 		"needsApply":                     allVerbs.Has("apply"),
 		"needsList":                      allVerbs.Has("list"),
+		"needsPatch":                     allVerbs.Has("patch"),
 		"apiPackagePath":                 c.APIPackagePath,
 		"packagePath":                    c.PackagePath,
 		"singleClusterClientPackagePath": c.SingleClusterClientPackagePath,
 		"singleClusterApplyConfigurationsPackagePath": c.SingleClusterApplyConfigurationsPackagePath,
+		"generateApplyVerbs":                          len(c.SingleClusterApplyConfigurationsPackagePath) > 0,
 	}
 	return templ.Execute(w, m)
 }
@@ -158,12 +160,14 @@ import (
 	"k8s.io/client-go/testing"
 {{end}}
 
-{{- if .needsApply }}
+{{- if and .generateApplyVerbs .needsApply }}
 	"fmt"
 	"encoding/json"
+{{end}}
+{{- if or (and .generateApplyVerbs .needsApply) .needsPatch }}
 	"k8s.io/apimachinery/pkg/types"
 {{end}}
-{{- if "apply" | .kind.SupportedVerbs.Has }}
+{{- if and .generateApplyVerbs ("apply" | .kind.SupportedVerbs.Has) }}
 	applyconfigurations{{.group.PackageAlias}} "{{.singleClusterApplyConfigurationsPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
@@ -330,7 +334,7 @@ func (c *{{.kind.Plural | lowerFirst}}Client) Patch(ctx context.Context, name st
 }
 {{end -}}
 
-{{if "apply" | .kind.SupportedVerbs.Has}}
+{{if and .generateApplyVerbs ("apply" | .kind.SupportedVerbs.Has) }}
 func (c *{{.kind.Plural | lowerFirst}}Client) Apply(ctx context.Context, applyConfiguration *applyconfigurations{{.group.PackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
@@ -351,7 +355,7 @@ func (c *{{.kind.Plural | lowerFirst}}Client) Apply(ctx context.Context, applyCo
 }
 {{end -}}
 
-{{if "applyStatus" | .kind.SupportedVerbs.Has}}
+{{if and .generateApplyVerbs ("applyStatus" | .kind.SupportedVerbs.Has) }}
 func (c *{{.kind.Plural | lowerFirst}}Client) ApplyStatus(ctx context.Context, applyConfiguration *applyconfigurations{{.group.PackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
@@ -435,7 +439,7 @@ func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, 
 }
 {{end -}}
 
-{{if eq .Verb "apply"}}
+{{if and $.generateApplyVerbs (eq .Verb "apply") }}
 func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, {{$.kind.String | lowerFirst}}Name string, applyConfiguration {{if .InputType}}*{{index $.extraImports .InputPath}}.{{.InputType}}{{else}}*applyconfigurations{{$.group.PackageAlias}}.{{$.kind.String}}ApplyConfiguration,{{end}}, opts metav1.ApplyOptions) (*{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
