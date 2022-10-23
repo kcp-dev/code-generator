@@ -17,7 +17,10 @@ limitations under the License.
 package parser
 
 import (
+	"go/ast"
 	"strings"
+
+	"golang.org/x/tools/go/ast/astutil"
 
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -61,6 +64,29 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 		packageMarkers, err := markers.PackageMarkers(ctx.Collector, root)
 		if err != nil {
 			return nil, err
+		}
+
+		// look for a reference to runtime.APIVersionInternal to skip internal APIs
+		var isInternalAPI bool
+		for _, file := range root.Syntax {
+			astutil.Apply(file, nil, func(cursor *astutil.Cursor) bool {
+				switch node := cursor.Node().(type) {
+				case *ast.SelectorExpr:
+					pkg, ok := node.X.(*ast.Ident)
+					if !ok {
+						break
+					}
+					if pkg.Name == "runtime" && node.Sel.Name == "APIVersionInternal" {
+						isInternalAPI = true
+						return false
+					}
+				}
+				return true
+			})
+		}
+		if isInternalAPI {
+			logger.WithValues("path", root.PkgPath).V(4).Info("skipping package for internal API")
+			continue
 		}
 
 		groupNameRaw, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
