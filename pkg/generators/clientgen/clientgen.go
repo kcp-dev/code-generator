@@ -34,7 +34,10 @@ import (
 
 type Generator struct {
 	// Name is the name of this client-set, e.g. "kubernetes"
-	Name string `marker:""`
+	Name string `marker:",optional"`
+
+	// ExternalOnly toggles the creation of a "versioned" sub-directory.
+	ExternalOnly bool `marker:",optional"`
 
 	// HeaderFile specifies the header text (e.g. license) to prepend to generated files.
 	HeaderFile string `marker:",optional"`
@@ -88,6 +91,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	}
 	headerText = strings.ReplaceAll(headerText, " YEAR", replacement)
 
+	if g.Name == "" {
+		g.Name = "clientset"
+	}
+
 	groupVersionKinds, err := parser.CollectKinds(ctx)
 	if err != nil {
 		return err
@@ -95,7 +102,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 	groupInfo := toGroupVersionInfos(groupVersionKinds)
 
-	clientsetDir := filepath.Join("clientset", "versioned")
+	clientsetDir := g.Name
+	if !g.ExternalOnly {
+		clientsetDir = filepath.Join(clientsetDir, "versioned")
+	}
 	clientsetFile := filepath.Join(clientsetDir, "clientset.go")
 	logger := klog.Background().WithValues("clientset", g.Name)
 	logger.WithValues("path", clientsetFile).Info("generating clientset")
