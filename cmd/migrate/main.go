@@ -433,7 +433,7 @@ func rewriteClusterInterfaceCall(pkg *decorator.Package, cursor *dstutil.Cursor,
 		}
 
 		types := sets.NewString(
-			"github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned.ClusterInterface",
+			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned.ClusterInterface",
 			"github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned.ClusterClientset",
 			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterInterface",
 			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterClientset",
@@ -732,9 +732,6 @@ func rewriteListerGet(pkg *decorator.Package, cursor *dstutil.Cursor, _ *decorat
 		}
 		nodeType := pkg.TypesInfo.TypeOf(astExpr)
 		if nodeType == nil {
-			break
-		}
-		if !strings.Contains(nodeType.String(), "apiextensions") {
 			break
 		}
 		// with one argument
