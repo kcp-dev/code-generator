@@ -40,7 +40,7 @@ type Generator struct {
 	Year string `marker:",optional"`
 
 	// OutputPackagePath is the root directory under which this tool will output files.
-	// e.g. "github.com/kcp-dev/client-go"
+	// e.g. "github.com/kcp-dev/client-go/clients"
 	OutputPackagePath string `marker:""`
 
 	// APIPackagePath is the root directory under which API types exist.
@@ -102,10 +102,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		return onlyGroups[i].Group.PackageName() < onlyGroups[j].Group.PackageName()
 	})
 
-	clientsetDir := filepath.Join("clients", "clientset", "versioned")
-	listersDir := filepath.Join("clients", "listers")
+	clientsetDir := filepath.Join("clientset", "versioned")
+	listersDir := "listers"
 
-	informersDir := filepath.Join("clients", "informers")
+	informersDir := "informers"
 	factoryPath := filepath.Join(informersDir, "factory.go")
 	logger.WithValues("path", factoryPath).Info("generating informer factory")
 	if err := util.WriteGeneratedCode(ctx, headerText, &informergen.Factory{
