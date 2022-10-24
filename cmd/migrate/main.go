@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,7 +33,6 @@ import (
 	"github.com/dave/dst/dstutil"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/packages"
-
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -87,7 +87,12 @@ func main() {
 }
 
 func rewrite(packageNames []string) error {
-	pkgs, err := decorator.Load(&packages.Config{Mode: packages.LoadSyntax, Tests: true}, packageNames...)
+	pkgs, err := decorator.Load(&packages.Config{
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+			packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes |
+			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule,
+		Tests: true,
+	}, packageNames...)
 	if err != nil {
 		return fmt.Errorf("failed to load source: %w", err)
 	}
@@ -96,7 +101,11 @@ func rewrite(packageNames []string) error {
 		fileRestorer := restorer.FileRestorer()
 		for i, file := range pkg.Syntax {
 			filePath := pkg.CompiledGoFiles[i]
-			relPath, err := filepath.Rel(pkg.Dir, filePath)
+			dir := pkg.Dir
+			if pkg.Module != nil { // even though we ask for modules, if we run on a single file we don't get them
+				dir = pkg.Module.Dir
+			}
+			relPath, err := filepath.Rel(dir, filePath)
 			if err != nil {
 				return fmt.Errorf("should not happen: could not find relative path to %s from %s", filePath, pkg.Dir)
 			}
@@ -129,11 +138,18 @@ func rewrite(packageNames []string) error {
 			})
 			if updates > 0 {
 				logrus.WithFields(logrus.Fields{"file": relPath, "updates": updates}).Info("Updating file.")
+				previous, err := ioutil.ReadFile(filePath)
+				if err != nil {
+					return fmt.Errorf("failed to read contents of %s: %w", filePath, err)
+				}
 				f, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC, 0666)
 				if err != nil {
 					return fmt.Errorf("failed to open %s for writing: %w", relPath, err)
 				}
 				if err := fileRestorer.Fprint(f, mutatedNode.(*dst.File)); err != nil {
+					if err := ioutil.WriteFile(filePath, previous, 0666); err != nil {
+						logrus.WithFields(logrus.Fields{"file": relPath}).WithError(err).Error("Failed to restore contents of file.")
+					}
 					return fmt.Errorf("failed to write %s: %w", relPath, err)
 				}
 			}
@@ -155,7 +171,7 @@ type rewriteRule struct {
 
 var kcpClientTypeRules = []rewriteRule{
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/clients/clientset/clientset",
+		from:        "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
 		to:          "github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
 		formatAlias: func(suffix []string) string {
@@ -171,7 +187,7 @@ var kcpClientTypeRules = []rewriteRule{
 		},
 	},
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/clients/informers",
+		from:        "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
 		to:          "github.com/kcp-dev/client-go/apiextensions/clients/informers",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Informer|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
@@ -184,7 +200,7 @@ var kcpClientTypeRules = []rewriteRule{
 		},
 	},
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/clients/listers",
+		from:        "k8s.io/apiextensions-apiserver/pkg/client/listers",
 		to:          "github.com/kcp-dev/client-go/apiextensions/clients/listers",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
@@ -329,15 +345,9 @@ func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRest
 	case *dst.Ident:
 		for _, rule := range kcpClientTypeRules {
 			if !strings.HasPrefix(node.Path, rule.from) || strings.HasSuffix(node.Path, "scheme") {
-				if rule.from == "k8s.io/client-go/metadata/fake" {
-					//logrus.Infof("no prefix %s", node.Path)
-				}
 				continue
 			}
 			if !rule.nameMatcher.MatchString(node.Name) {
-				if rule.from == "k8s.io/client-go/metadata/fake" {
-					//logrus.Infof("no match %s", node.Name)
-				}
 				continue
 			}
 			alias := rule.formatAlias(strings.Split(strings.TrimPrefix(strings.TrimPrefix(node.Path, rule.from), "/"), "/"))
@@ -422,80 +432,16 @@ func rewriteClusterInterfaceCall(pkg *decorator.Package, cursor *dstutil.Cursor,
 			break
 		}
 
-		//logrus.Infof("%#v", pkg.TypesInfo.TypeOf(pkg.Decorator.Ast.Nodes[groupVersionFunction.X].(ast.Expr)).String())
-
-		isClusterClient := func(clusterClient *dst.Ident) bool {
-
-			return (clusterClient.Path == "github.com/kcp-dev/client-go/clients/clientset/versioned" &&
-				sets.NewString("ClusterInterface", "ClusterClientset").Has(clusterClient.Name)) ||
-				(clusterClient.Path == "k8s.io/client-go/kubernetes" &&
-					sets.NewString("ClusterInterface", "Interface", "Clientset").Has(clusterClient.Name))
-		}
-
-		var correctType bool
-		switch clusterClient := groupVersionFunction.X.(type) {
-		case *dst.Ident:
-			// when we have an identifier for the client
-			if clusterClient.Obj == nil || clusterClient.Obj.Decl == nil {
-				break
-			}
-
-			clusterClientTypeName, ok := clusterClient.Obj.Decl.(*dst.Field)
-			if !ok {
-				break
-			}
-			clusterClientType, ok := clusterClientTypeName.Type.(*dst.Ident)
-			if !ok {
-				break
-			}
-			correctType = isClusterClient(clusterClientType)
-		case *dst.SelectorExpr:
-			// when the client is some field of something
-			ownerObjIdent, ok := clusterClient.X.(*dst.Ident)
-			if !ok {
-				break
-			}
-			if ownerObjIdent.Obj == nil || ownerObjIdent.Obj.Decl == nil {
-				break
-			}
-
-			ownerIdentTypeName, ok := ownerObjIdent.Obj.Decl.(*dst.Field)
-			if !ok {
-				break
-			}
-			ownerType, ok := ownerIdentTypeName.Type.(*dst.StarExpr)
-			if !ok {
-				break
-			}
-			ownerIdent, ok := ownerType.X.(*dst.Ident)
-			if !ok {
-				break
-			}
-			if ownerIdent.Obj == nil || ownerIdent.Obj.Decl == nil {
-				break
-			}
-			ownerTypeSpec, ok := ownerIdent.Obj.Decl.(*dst.TypeSpec)
-			if !ok {
-				break
-			}
-			ownerTypeDef, ok := ownerTypeSpec.Type.(*dst.StructType)
-			if !ok {
-				break
-			}
-			if ownerTypeDef.Fields == nil {
-				break
-			}
-			for i := range ownerTypeDef.Fields.List {
-				if ownerTypeDef.Fields.List[i].Names[0].Name == clusterClient.Sel.Name {
-					typeIdent, ok := ownerTypeDef.Fields.List[i].Type.(*dst.Ident)
-					if !ok {
-						break
-					}
-					correctType = isClusterClient(typeIdent)
-				}
-			}
-		}
-		if !correctType {
+		types := sets.NewString(
+			"github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned.ClusterInterface",
+			"github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned.ClusterClientset",
+			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterInterface",
+			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterClientset",
+			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.Interface",
+			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.Clientset",
+		)
+		if objType := pkg.TypesInfo.TypeOf(pkg.Decorator.Ast.Nodes[groupVersionFunction.X].(ast.Expr)).String(); !types.Has(objType) {
+			logrus.Infof("wrong type %s", objType)
 			break
 		}
 
@@ -788,7 +734,7 @@ func rewriteListerGet(pkg *decorator.Package, cursor *dstutil.Cursor, _ *decorat
 		if nodeType == nil {
 			break
 		}
-		if !strings.HasPrefix(nodeType.String(), "github.com/kcp-dev/client-go/clients/listers") || !strings.HasPrefix(nodeType.String(), "k8s.io/client-go/listers") {
+		if !strings.Contains(nodeType.String(), "apiextensions") {
 			break
 		}
 		// with one argument
