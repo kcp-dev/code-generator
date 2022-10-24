@@ -95,7 +95,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 	groupInfo := toGroupVersionInfos(groupVersionKinds)
 
-	clientsetDir := filepath.Join("clients", "clientset", "versioned")
+	clientsetDir := filepath.Join("clientset", "versioned")
 	clientsetFile := filepath.Join(clientsetDir, "clientset.go")
 	logger := klog.Background().WithValues("clientset", g.Name)
 	logger.WithValues("path", clientsetFile).Info("generating clientset")
