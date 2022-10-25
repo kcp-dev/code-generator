@@ -170,7 +170,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 				return err
 			}
 
-			fakeGroupDir := filepath.Join(fakeClientsetDir, "typed", group.PackageName(), version.PackageName())
+			fakeGroupDir := filepath.Join(groupDir, "fake")
 			outputFile = filepath.Join(fakeGroupDir, group.PackageName()+"_client.go")
 			logger = logger.WithValues(
 				"group", group.String(),
