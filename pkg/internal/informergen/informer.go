@@ -42,7 +42,7 @@ type Informer struct {
 	PackagePath string
 
 	// ClientsetPackagePath is the package under which the cluster-aware client-set will be exposed.
-	// e.g. "github.com/kcp-dev/client-go/clients/clientset/versioned"
+	// e.g. "github.com/kcp-dev/client-go/kubernetes"
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	ClientsetPackagePath string
 

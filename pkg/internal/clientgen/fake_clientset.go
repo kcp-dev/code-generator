@@ -69,7 +69,7 @@ import (
 {{end -}}
 {{range .groups}}	kcp{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
-{{range .groups}}	fake{{.PackageAlias}} "{{$.packagePath}}/fake/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	fake{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}/fake"
 {{end -}}
 )
 
