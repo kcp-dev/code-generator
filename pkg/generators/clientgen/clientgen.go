@@ -34,7 +34,15 @@ import (
 
 type Generator struct {
 	// Name is the name of this client-set, e.g. "kubernetes"
-	Name string `marker:""`
+	Name string `marker:",optional"`
+
+	// ExternalOnly toggles the creation of a "versioned" sub-directory. Set to true if you are generating
+	// custom code for a project that's not using k8s.io/code-generator/generate-groups.sh for their types.
+	ExternalOnly bool `marker:",optional"`
+
+	// Standalone toggles the creation of a "cluster" sub-directory. Set to true if you are placing cluster-
+	// aware code somewhere outside of the normal client tree.
+	Standalone bool `marker:",optional"`
 
 	// HeaderFile specifies the header text (e.g. license) to prepend to generated files.
 	HeaderFile string `marker:",optional"`
@@ -88,6 +96,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	}
 	headerText = strings.ReplaceAll(headerText, " YEAR", replacement)
 
+	if g.Name == "" {
+		g.Name = "clientset"
+	}
+
 	groupVersionKinds, err := parser.CollectKinds(ctx)
 	if err != nil {
 		return err
@@ -95,7 +107,13 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 	groupInfo := toGroupVersionInfos(groupVersionKinds)
 
-	clientsetDir := filepath.Join("clientset", "versioned")
+	clientsetDir := g.Name
+	if !g.ExternalOnly {
+		clientsetDir = filepath.Join(clientsetDir, "versioned")
+	}
+	if !g.Standalone {
+		clientsetDir = filepath.Join(clientsetDir, "cluster")
+	}
 	clientsetFile := filepath.Join(clientsetDir, "clientset.go")
 	logger := klog.Background().WithValues("clientset", g.Name)
 	logger.WithValues("path", clientsetFile).Info("generating clientset")
