@@ -171,43 +171,81 @@ type rewriteRule struct {
 
 var kcpClientTypeRules = []rewriteRule{
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
-		to:          "github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned",
+		from:        "github.com/kcp-dev/kcp/pkg/client/clientset/versioned",
+		to:          "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
 		formatAlias: func(suffix []string) string {
 			// [] -> "kcpclientset"
 			// ["typed", "<group>", "<version>"] -> "<group><version>"
 			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpapiextensionsclientset"
+				return "kcpclientset"
 			}
 			if len(suffix) == 1 {
 				return "kcp" + suffix[0] + "client"
 			}
-			return "kcp" + suffix[1] + suffix[2] + "client"
+			return suffix[1] + suffix[2] + "client"
 		},
 	},
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
-		to:          "github.com/kcp-dev/client-go/apiextensions/clients/informers",
+		from:        "github.com/kcp-dev/kcp/pkg/client/informers/externalversions",
+		to:          "github.com/kcp-dev/kcp/pkg/client/informers/externalversions",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Informer|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
-			// [] -> "kcpapiextensionsinformers"
+			// [] -> "kcpinformers"
 			// ["<group>", "<version>"] -> "<group><version>"informers
 			if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
-				return "kcpapiextensionsinformers"
+				return "kcpinformers"
 			}
-			return "kcp" + suffix[0] + suffix[1] + "informers"
+			return suffix[0] + suffix[1] + "informers"
 		},
 	},
 	{
-		from:        "k8s.io/apiextensions-apiserver/pkg/client/listers",
-		to:          "github.com/kcp-dev/client-go/apiextensions/clients/listers",
+		from:        "github.com/kcp-dev/kcp/pkg/client/listers",
+		to:          "github.com/kcp-dev/kcp/pkg/client/listers",
 		nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Getter|Clientset|Config)`),
 		formatAlias: func(suffix []string) string {
 			// ["<group>", "<version>"] -> "kcp<group><version>"listers
-			return "kcp" + suffix[0] + suffix[1] + "listers"
+			return suffix[0] + suffix[1] + "listers"
 		},
 	},
+	//{
+	//	from:        "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
+	//	to:          "github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpclientset"
+	//		// ["typed", "<group>", "<version>"] -> "<group><version>"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpapiextensionsclientset"
+	//		}
+	//		if len(suffix) == 1 {
+	//			return "kcp" + suffix[0] + "client"
+	//		}
+	//		return "kcp" + suffix[1] + suffix[2] + "client"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
+	//	to:          "github.com/kcp-dev/client-go/apiextensions/clients/informers",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Informer|Getter|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "kcpapiextensionsinformers"
+	//		// ["<group>", "<version>"] -> "<group><version>"informers
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "kcpapiextensionsinformers"
+	//		}
+	//		return "kcp" + suffix[0] + suffix[1] + "informers"
+	//	},
+	//},
+	//{
+	//	from:        "k8s.io/apiextensions-apiserver/pkg/client/listers",
+	//	to:          "github.com/kcp-dev/client-go/apiextensions/clients/listers",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Lister|Getter|Clientset|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// ["<group>", "<version>"] -> "kcp<group><version>"listers
+	//		return "kcp" + suffix[0] + suffix[1] + "listers"
+	//	},
+	//},
 	//{
 	//	from:        "k8s.io/client-go/kubernetes",
 	//	to:          "github.com/kcp-dev/client-go/clients/clientset/versioned",
@@ -347,6 +385,9 @@ func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRest
 			if !strings.HasPrefix(node.Path, rule.from) || strings.HasSuffix(node.Path, "scheme") {
 				continue
 			}
+			if strings.Contains(node.Path, "cluster") {
+				continue
+			}
 			if !rule.nameMatcher.MatchString(node.Name) {
 				continue
 			}
@@ -359,9 +400,12 @@ func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRest
 					"Getter", "ClusterGetter"),
 					"Interface", "ClusterInterface"),
 					"Clientset", "ClusterClientset"),
-					"NewCluster", "New"),
+					"NewClusterFor", "NewFor"),
 					"SharedCluster", "Shared"),
 				"ClusterCluster", "Cluster") // lol
+			if node.Path == kcpPath && node.Name == kcpName {
+				continue
+			}
 			logrus.WithFields(logrus.Fields{
 				"before": fmt.Sprintf("%s.%s", node.Path, node.Name),
 				"after":  fmt.Sprintf("%s.%s", kcpPath, kcpName),
@@ -434,11 +478,11 @@ func rewriteClusterInterfaceCall(pkg *decorator.Package, cursor *dstutil.Cursor,
 
 		types := sets.NewString(
 			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned.ClusterInterface",
-			"github.com/kcp-dev/client-go/apiextensions/clients/clientset/versioned.ClusterClientset",
-			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterInterface",
-			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.ClusterClientset",
-			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.Interface",
-			"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset.Clientset",
+			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned.Interface",
+			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned.ClusterClientset",
+			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned.Clientset",
+			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster.ClusterInterface",
+			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster.ClusterClientset",
 		)
 		if objType := pkg.TypesInfo.TypeOf(pkg.Decorator.Ast.Nodes[groupVersionFunction.X].(ast.Expr)).String(); !types.Has(objType) {
 			logrus.Infof("wrong type %s", objType)
