@@ -75,7 +75,8 @@ type {{.kind.String}}ClusterLister interface {
 	Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister
 {{else -}}
 	Cluster(cluster logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister
-{{end -}}	
+{{end -}}
+	{{.kind.String}}ClusterListerExpansion
 }
 
 type {{.kind.String | lowerFirst }}ClusterLister struct {
@@ -123,6 +124,7 @@ type {{.kind.String}}Lister interface {
 	// {{.kind.Plural}} returns a lister that can list and get {{.kind.Plural}} in one workspace and namespace.
 	{{.kind.Plural}}(namespace string) {{.kind.String}}NamespaceLister
 {{end -}}
+	{{.kind.String}}ListerExpansion
 }
 {{end -}}
 
@@ -177,7 +179,8 @@ type {{.kind.String}}NamespaceLister interface {
 	// Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error)
-	}
+	{{.kind.String}}NamespaceListerExpansion
+}
 {{end -}}
 
 {{ if not .useUpstreamInterfaces -}}

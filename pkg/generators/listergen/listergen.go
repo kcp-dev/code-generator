@@ -104,6 +104,20 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 				}, outputFile); err != nil {
 					return err
 				}
+
+				outputFile = filepath.Join(listerDir, strings.ToLower(kind.String())+"_expansion.go")
+				logger = logger.WithValues(
+					"path", outputFile,
+				)
+				logger.Info("generating lister expansion")
+
+				if err := util.InitializeGeneratedCode(ctx, headerText, &listergen.Expansions{
+					Group:                 groupInfo,
+					Kind:                  kind,
+					UseUpstreamInterfaces: g.SingleClusterListerPackagePath != "",
+				}, outputFile); err != nil {
+					return err
+				}
 			}
 		}
 	}

@@ -18,6 +18,7 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -42,7 +43,17 @@ type Generator interface {
 	WriteContent(w io.Writer) error
 }
 
+// InitializeGeneratedCode ensures that intoPath exists; if the file is not yet present it is initialized with the output of the generator.
+func InitializeGeneratedCode(ctx *genall.GenerationContext, header string, generator Generator, intoPath string) error {
+	return writeGeneratedCode(ctx, header, generator, intoPath, false)
+}
+
+// WriteGeneratedCode ensures that intoPath contains only the output of the generator.
 func WriteGeneratedCode(ctx *genall.GenerationContext, header string, generator Generator, intoPath string) error {
+	return writeGeneratedCode(ctx, header, generator, intoPath, true)
+}
+
+func writeGeneratedCode(ctx *genall.GenerationContext, header string, generator Generator, intoPath string, overwrite bool) error {
 	data := &bytes.Buffer{}
 	if n, err := data.WriteString(header); err != nil {
 		return err
@@ -58,8 +69,18 @@ func WriteGeneratedCode(ctx *genall.GenerationContext, header string, generator 
 	if !ok {
 		return fmt.Errorf("+output:dir is required, not %T", ctx.OutputRule)
 	}
-	if err := os.MkdirAll(filepath.Dir(filepath.Join(string(output), intoPath)), os.ModePerm); err != nil {
+	fullPath := filepath.Join(string(output), intoPath)
+	if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
 		return fmt.Errorf("couldn't create directory: %w", err)
+	}
+
+	if _, err := os.Stat(fullPath); err == nil {
+		if !overwrite {
+			klog.Background().WithValues("path", intoPath).Info("not overwriting file")
+			return nil
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
 
 	outputFile, err := ctx.Open(nil, intoPath)
