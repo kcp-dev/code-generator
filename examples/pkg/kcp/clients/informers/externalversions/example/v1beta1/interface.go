@@ -44,3 +44,24 @@ func New(f internalinterfaces.SharedInformerFactory, tweakListOptions internalin
 func (v *version) ClusterTestTypes() ClusterTestTypeClusterInformer {
 	return &clusterTestTypeClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
+
+type Interface interface {
+	// ClusterTestTypes returns a ClusterTestTypeInformer
+	ClusterTestTypes() ClusterTestTypeInformer
+}
+
+type scopedVersion struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
+}
+
+// New returns a new ClusterInterface.
+func NewScoped(f internalinterfaces.SharedScopedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &scopedVersion{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ClusterTestTypes returns a ClusterTestTypeInformer
+func (v *scopedVersion) ClusterTestTypes() ClusterTestTypeInformer {
+	return &clusterTestTypeScopedInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}

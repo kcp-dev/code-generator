@@ -58,6 +58,10 @@ type Generator struct {
 	// e.g. "k8s.io/api"
 	APIPackagePath string `marker:"apiPackagePath"`
 
+	// SingleClusterClientPackagePath is the root directory under which single-cluster-aware clients exist.
+	// e.g. "k8s.io/client-go/kubernetes"
+	SingleClusterClientPackagePath string `marker:""`
+
 	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
 	// e.g. "k8s.io/client-go/informers"
 	SingleClusterInformerPackagePath string `marker:",optional"`
@@ -136,6 +140,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		Groups:                           onlyGroups,
 		PackagePath:                      filepath.Join(g.OutputPackagePath, informersDir),
 		ClientsetPackagePath:             filepath.Join(g.OutputPackagePath, clientsetDir),
+		SingleClusterClientPackagePath:   g.SingleClusterClientPackagePath,
 		SingleClusterInformerPackagePath: g.SingleClusterInformerPackagePath,
 	}, factoryPath); err != nil {
 		return err
@@ -165,7 +170,9 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	interfacesPath := filepath.Join(informersDir, "internalinterfaces", "factory_interfaces.go")
 	logger.WithValues("path", factoryPath).Info("generating internal informer interfaces")
 	if err := util.WriteGeneratedCode(ctx, headerText, &informergen.FactoryInterface{
-		ClientsetPackagePath: filepath.Join(g.OutputPackagePath, clientsetDir),
+		ClientsetPackagePath:           filepath.Join(g.OutputPackagePath, clientsetDir),
+		SingleClusterClientPackagePath: g.SingleClusterClientPackagePath,
+		UseUpstreamInterfaces:          g.SingleClusterInformerPackagePath != "",
 	}, interfacesPath); err != nil {
 		return err
 	}
@@ -187,9 +194,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 		logger.WithValues("path", outputFile).Info("generating group interface")
 		if err := util.WriteGeneratedCode(ctx, headerText, &informergen.GroupInterface{
-			Group:       group,
-			Versions:    onlyVersions,
-			PackagePath: filepath.Join(g.OutputPackagePath, informersDir),
+			Group:                 group,
+			Versions:              onlyVersions,
+			PackagePath:           filepath.Join(g.OutputPackagePath, informersDir),
+			UseUpstreamInterfaces: g.SingleClusterInformerPackagePath != "",
 		}, outputFile); err != nil {
 			return err
 		}
@@ -202,9 +210,10 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 			logger.WithValues("path", outputFile).Info("generating version interface")
 			if err := util.WriteGeneratedCode(ctx, headerText, &informergen.VersionInterface{
-				Version:     types.Version(namer.IC(version.Version.String())),
-				Kinds:       kinds,
-				PackagePath: filepath.Join(g.OutputPackagePath, informersDir),
+				Version:               types.Version(namer.IC(version.Version.String())),
+				Kinds:                 kinds,
+				PackagePath:           filepath.Join(g.OutputPackagePath, informersDir),
+				UseUpstreamInterfaces: g.SingleClusterInformerPackagePath != "",
 			}, outputFile); err != nil {
 				return err
 			}
@@ -223,6 +232,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 					PackagePath:                      filepath.Join(g.OutputPackagePath, informersDir),
 					ClientsetPackagePath:             filepath.Join(g.OutputPackagePath, clientsetDir),
 					ListerPackagePath:                filepath.Join(g.OutputPackagePath, listersDir),
+					SingleClusterClientPackagePath:   g.SingleClusterClientPackagePath,
 					SingleClusterInformerPackagePath: g.SingleClusterInformerPackagePath,
 					SingleClusterListerPackagePath:   g.SingleClusterListerPackagePath,
 				}, outputFile); err != nil {

@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
+	scopedclientset "acme.corp/pkg/generated/clientset/versioned"
 	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
 	"acme.corp/pkg/kcp/clients/informers/externalversions/internalinterfaces"
 	secondexamplev1listers "acme.corp/pkg/kcp/clients/listers/secondexample/v1"
@@ -126,4 +127,56 @@ func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
 
 func (f *testTypeInformer) Lister() secondexamplev1listers.TestTypeLister {
 	return f.lister
+}
+
+type testTypeScopedInformer struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
+}
+
+func (f *testTypeScopedInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&secondexamplev1.TestType{}, f.defaultInformer)
+}
+
+func (f *testTypeScopedInformer) Lister() secondexamplev1listers.TestTypeLister {
+	return secondexamplev1listers.NewTestTypeLister(f.Informer().GetIndexer())
+}
+
+// NewTestTypeInformer constructs a new informer for TestType type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTestTypeInformer(client scopedclientset.Interface, resyncPeriod time.Duration, namespace string, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredTestTypeInformer(client, resyncPeriod, namespace, indexers, nil)
+}
+
+// NewFilteredTestTypeInformer constructs a new informer for TestType type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFilteredTestTypeInformer(client scopedclientset.Interface, resyncPeriod time.Duration, namespace string, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SecondexampleV1().TestTypes(namespace).List(context.TODO(), options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SecondexampleV1().TestTypes(namespace).Watch(context.TODO(), options)
+			},
+		},
+		&secondexamplev1.TestType{},
+		resyncPeriod,
+		indexers,
+	)
+}
+
+func (f *testTypeScopedInformer) defaultInformer(client scopedclientset.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredTestTypeInformer(client, resyncPeriod, f.namespace, cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+	}, f.tweakListOptions)
 }

@@ -33,9 +33,14 @@ import (
 )
 
 // TestTypeClusterLister can list TestTypes across all workspaces, or scope down to a TestTypeLister for one workspace.
+// All objects returned here must be treated as read-only.
 type TestTypeClusterLister interface {
+	// List lists all TestTypes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example3v1.TestType, err error)
+	// Cluster returns a lister that can list and get TestTypes in one workspace.
 	Cluster(cluster logicalcluster.Name) TestTypeLister
+	TestTypeClusterListerExpansion
 }
 
 type testTypeClusterLister struct {
@@ -43,6 +48,11 @@ type testTypeClusterLister struct {
 }
 
 // NewTestTypeClusterLister returns a new TestTypeClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewTestTypeClusterLister(indexer cache.Indexer) *testTypeClusterLister {
 	return &testTypeClusterLister{indexer: indexer}
 }
@@ -60,9 +70,15 @@ func (s *testTypeClusterLister) Cluster(cluster logicalcluster.Name) TestTypeLis
 	return &testTypeLister{indexer: s.indexer, cluster: cluster}
 }
 
+// TestTypeLister can list TestTypes across all namespaces, or scope down to a TestTypeNamespaceLister for one namespace.
+// All objects returned here must be treated as read-only.
 type TestTypeLister interface {
+	// List lists all TestTypes in the workspace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example3v1.TestType, err error)
+	// TestTypes returns a lister that can list and get TestTypes in one workspace and namespace.
 	TestTypes(namespace string) TestTypeNamespaceLister
+	TestTypeListerExpansion
 }
 
 // testTypeLister can list all TestTypes inside a workspace or scope down to a TestTypeLister for one namespace.
@@ -84,9 +100,16 @@ func (s *testTypeLister) TestTypes(namespace string) TestTypeNamespaceLister {
 	return &testTypeNamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
 }
 
+// testTypeNamespaceLister helps list and get TestTypes.
+// All objects returned here must be treated as read-only.
 type TestTypeNamespaceLister interface {
+	// List lists all TestTypes in the workspace and namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example3v1.TestType, err error)
+	// Get retrieves the TestType from the indexer for a given workspace, namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*example3v1.TestType, error)
+	TestTypeNamespaceListerExpansion
 }
 
 // testTypeNamespaceLister helps list and get TestTypes.
@@ -108,6 +131,60 @@ func (s *testTypeNamespaceLister) List(selector labels.Selector) (ret []*example
 // Get retrieves the TestType from the indexer for a given workspace, namespace and name.
 func (s *testTypeNamespaceLister) Get(name string) (*example3v1.TestType, error) {
 	key := kcpcache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(example3v1.Resource("TestType"), name)
+	}
+	return obj.(*example3v1.TestType), nil
+}
+
+// NewTestTypeLister returns a new TestTypeLister.
+// We assume that the indexer:
+// - is fed by a workspace-scoped LIST+WATCH
+// - uses cache.MetaNamespaceKeyFunc as the key function
+// - has the cache.NamespaceIndex as an index
+func NewTestTypeLister(indexer cache.Indexer) *testTypeScopedLister {
+	return &testTypeScopedLister{indexer: indexer}
+}
+
+// testTypeScopedLister can list all TestTypes inside a workspace or scope down to a TestTypeLister for one namespace.
+type testTypeScopedLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all TestTypes in the indexer for a workspace.
+func (s *testTypeScopedLister) List(selector labels.Selector) (ret []*example3v1.TestType, err error) {
+	err = cache.ListAll(s.indexer, selector, func(i interface{}) {
+		ret = append(ret, i.(*example3v1.TestType))
+	})
+	return ret, err
+}
+
+// TestTypes returns an object that can list and get TestTypes in one namespace.
+func (s *testTypeScopedLister) TestTypes(namespace string) TestTypeNamespaceLister {
+	return &testTypeScopedNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// testTypeScopedNamespaceLister helps list and get TestTypes.
+type testTypeScopedNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all TestTypes in the indexer for a given workspace and namespace.
+func (s *testTypeScopedNamespaceLister) List(selector labels.Selector) (ret []*example3v1.TestType, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*example3v1.TestType))
+	})
+	return ret, err
+}
+
+// Get retrieves the TestType from the indexer for a given workspace, namespace and name.
+func (s *testTypeScopedNamespaceLister) Get(name string) (*example3v1.TestType, error) {
+	key := s.namespace + "/" + name
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err

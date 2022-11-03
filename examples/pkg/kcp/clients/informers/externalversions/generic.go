@@ -129,3 +129,58 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 
 	return nil, fmt.Errorf("no informer found for %v", resource)
 }
+
+// ForResource gives generic access to a shared informer of the matching type
+// TODO extend this to unknown resources with a client pool
+func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
+	switch resource {
+	// Group=example3.some.corp, Version=V1
+	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Example3().V1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case example3v1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Example3().V1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=example, Version=V1
+	case examplev1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Example().V1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case examplev1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Example().V1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=example, Version=V1alpha1
+	case examplev1alpha1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Example().V1alpha1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case examplev1alpha1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Example().V1alpha1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=example, Version=V1beta1
+	case examplev1beta1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Example().V1beta1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=example, Version=V2
+	case examplev2.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Example().V2().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case examplev2.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Example().V2().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=existinginterfaces.acme.corp, Version=V1
+	case existinginterfacesv1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Existinginterfaces().V1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case existinginterfacesv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Existinginterfaces().V1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	// Group=secondexample, Version=V1
+	case secondexamplev1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.Secondexample().V1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case secondexamplev1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.Secondexample().V1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	}
+
+	return nil, fmt.Errorf("no informer found for %v", resource)
+}

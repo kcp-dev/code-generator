@@ -51,6 +51,10 @@ type Informer struct {
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	ListerPackagePath string
 
+	// SingleClusterClientPackagePath is the root directory under which single-cluster-aware clients exist.
+	// e.g. "k8s.io/client-go/kubernetes"
+	SingleClusterClientPackagePath string `marker:""`
+
 	// SingleClusterInformerPackagePath is the package under which the cluster-unaware listers are exposed.
 	// e.g. "k8s.io/client-go/informers"
 	SingleClusterInformerPackagePath string
@@ -72,6 +76,7 @@ func (i *Informer) WriteContent(w io.Writer) error {
 		"clientsetPackagePath":             i.ClientsetPackagePath,
 		"apiPackagePath":                   i.APIPackagePath,
 		"listerPackagePath":                i.ListerPackagePath,
+		"singleClusterClientPackagePath":   i.SingleClusterClientPackagePath,
 		"singleClusterInformerPackagePath": i.SingleClusterInformerPackagePath,
 		"singleClusterListerPackagePath":   i.SingleClusterListerPackagePath,
 		"useUpstreamInterfaces":            i.SingleClusterListerPackagePath != "" && i.SingleClusterInformerPackagePath != "",
@@ -108,6 +113,9 @@ import (
 	{{end -}}
 
 	clientset "{{.clientsetPackagePath}}"
+	{{if not .useUpstreamInterfaces -}}	
+	scopedclientset "{{.singleClusterClientPackagePath}}"
+	{{end -}}
 
 	"{{.packagePath}}/internalinterfaces"
 )
@@ -202,4 +210,58 @@ func (f *{{.kind.String|lowerFirst}}Informer) Informer() cache.SharedIndexInform
 func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.PackageAlias}}listers.{{.kind.String}}Lister {
 	return f.lister
 }
+
+{{if not .useUpstreamInterfaces -}}
+type {{.kind.String | lowerFirst}}ScopedInformer struct {
+	factory internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	{{if .kind.IsNamespaced}}namespace string{{end -}}
+}
+
+func (f *{{.kind.String|lowerFirst}}ScopedInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&{{.group.PackageAlias}}.{{.kind}}{}, f.defaultInformer)
+}
+
+func (f *{{.kind.String|lowerFirst}}ScopedInformer) Lister() {{.group.PackageAlias}}listers.{{.kind.String}}Lister {
+	return {{.group.PackageAlias}}listers.New{{.kind}}Lister(f.Informer().GetIndexer())
+}
+
+// New{{.kind}}Informer constructs a new informer for {{.kind.String}} type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func New{{.kind}}Informer(client scopedclientset.Interface, resyncPeriod time.Duration,{{if .kind.IsNamespaced}} namespace string,{{end -}} indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFiltered{{.kind}}Informer(client, resyncPeriod, {{if .kind.IsNamespaced}} namespace,{{end -}}indexers, nil)
+}
+
+// NewFiltered{{.kind}}Informer constructs a new informer for {{.kind.String}} type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFiltered{{.kind}}Informer(client scopedclientset.Interface, resyncPeriod time.Duration, {{if .kind.IsNamespaced}} namespace string,{{end -}}indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end -}}).List(context.TODO(), options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end -}}).Watch(context.TODO(), options)
+			},
+		},
+		&{{.group.PackageAlias}}.{{.kind.String}}{},
+		resyncPeriod,
+		indexers,
+	)
+}
+
+func (f *{{.kind.String|lowerFirst}}ScopedInformer) defaultInformer(client scopedclientset.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFiltered{{.kind}}Informer(client, resyncPeriod,{{if .kind.IsNamespaced}} f.namespace,{{end -}} cache.Indexers{ {{if .kind.IsNamespaced}}
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+	{{end}}}, f.tweakListOptions)
+}
+{{end}}
 `

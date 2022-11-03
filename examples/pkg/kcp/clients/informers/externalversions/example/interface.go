@@ -69,3 +69,45 @@ func (g *group) V1beta1() v1beta1.ClusterInterface {
 func (g *group) V2() v2.ClusterInterface {
 	return v2.New(g.factory, g.tweakListOptions)
 }
+
+type Interface interface {
+	// V1 provides access to the shared informers in V1.
+	V1() v1.Interface
+	// V1alpha1 provides access to the shared informers in V1alpha1.
+	V1alpha1() v1alpha1.Interface
+	// V1beta1 provides access to the shared informers in V1beta1.
+	V1beta1() v1beta1.Interface
+	// V2 provides access to the shared informers in V2.
+	V2() v2.Interface
+}
+
+type scopedGroup struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
+}
+
+// New returns a new Interface.
+func NewScoped(f internalinterfaces.SharedScopedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &scopedGroup{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// V1 returns a new v1.ClusterInterface.
+func (g *scopedGroup) V1() v1.Interface {
+	return v1.NewScoped(g.factory, g.namespace, g.tweakListOptions)
+}
+
+// V1alpha1 returns a new v1alpha1.ClusterInterface.
+func (g *scopedGroup) V1alpha1() v1alpha1.Interface {
+	return v1alpha1.NewScoped(g.factory, g.namespace, g.tweakListOptions)
+}
+
+// V1beta1 returns a new v1beta1.ClusterInterface.
+func (g *scopedGroup) V1beta1() v1beta1.Interface {
+	return v1beta1.NewScoped(g.factory, g.namespace, g.tweakListOptions)
+}
+
+// V2 returns a new v2.ClusterInterface.
+func (g *scopedGroup) V2() v2.Interface {
+	return v2.NewScoped(g.factory, g.namespace, g.tweakListOptions)
+}
