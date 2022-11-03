@@ -52,7 +52,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	client "{{.clientsetPackagePath}}"
@@ -67,6 +67,6 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 }
 
-// TweakListOptionsFunc is a function that transforms a v1.ListOptions.
-type TweakListOptionsFunc func(*v1.ListOptions)
+// TweakListOptionsFunc is a function that transforms a metav1.ListOptions.
+type TweakListOptionsFunc func(*metav1.ListOptions)
 `
