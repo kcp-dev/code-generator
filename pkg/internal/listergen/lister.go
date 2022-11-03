@@ -65,8 +65,12 @@ import (
 )
 
 // {{.kind.String}}ClusterLister can list {{.kind.Plural}} across all workspaces, or scope down to a {{.kind.String}}Lister for one workspace.
+// All objects returned here must be treated as read-only.
 type {{.kind.String}}ClusterLister interface {
+	// List lists all {{.kind.Plural}} in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
+	// Cluster returns a lister that can list and get {{.kind.Plural}} in one workspace.
 {{if not .useUpstreamInterfaces -}}
 	Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister
 {{else -}}
@@ -101,11 +105,22 @@ func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(cluster logicalclus
 }
 
 {{if not .useUpstreamInterfaces -}}
+{{ if  not .kind.IsNamespaced -}}
+// {{.kind.String}}Lister can list all {{.kind.Plural}}, or get one in particular.
+{{else -}}
+// {{.kind.String}}Lister can list {{.kind.Plural}} across all namespaces, or scope down to a {{.kind.String}}NamespaceLister for one namespace.
+{{end -}}
+// All objects returned here must be treated as read-only.
 type {{.kind.String}}Lister interface {
+	// List lists all {{.kind.Plural}} in the workspace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
 {{ if  not .kind.IsNamespaced -}}
+	// Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error)
 {{else -}}
+	// {{.kind.Plural}} returns a lister that can list and get {{.kind.Plural}} in one workspace and namespace.
 	{{.kind.Plural}}(namespace string) {{.kind.String}}NamespaceLister
 {{end -}}
 }
@@ -153,8 +168,14 @@ func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string)
 }
 
 {{if not .useUpstreamInterfaces -}}
+// {{.kind.String | lowerFirst}}NamespaceLister helps list and get {{.kind.Plural}}.
+// All objects returned here must be treated as read-only.
 type {{.kind.String}}NamespaceLister interface {
+	// List lists all {{.kind.Plural}} in the workspace and namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
+	// Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error)
 	}
 {{end -}}
