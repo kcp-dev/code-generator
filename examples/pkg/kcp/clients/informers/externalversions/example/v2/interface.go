@@ -51,3 +51,31 @@ func (v *version) TestTypes() TestTypeClusterInformer {
 func (v *version) ClusterTestTypes() ClusterTestTypeClusterInformer {
 	return &clusterTestTypeClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
+
+type Interface interface {
+	// TestTypes returns a TestTypeInformer
+	TestTypes() TestTypeInformer
+	// ClusterTestTypes returns a ClusterTestTypeInformer
+	ClusterTestTypes() ClusterTestTypeInformer
+}
+
+type scopedVersion struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
+}
+
+// New returns a new ClusterInterface.
+func NewScoped(f internalinterfaces.SharedScopedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &scopedVersion{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// TestTypes returns a TestTypeInformer
+func (v *scopedVersion) TestTypes() TestTypeInformer {
+	return &testTypeScopedInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterTestTypes returns a ClusterTestTypeInformer
+func (v *scopedVersion) ClusterTestTypes() ClusterTestTypeInformer {
+	return &clusterTestTypeScopedInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}

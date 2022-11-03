@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
+	scopedclientset "acme.corp/pkg/generated/clientset/versioned"
 	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
 	exampleinformers "acme.corp/pkg/kcp/clients/informers/externalversions/example"
 	example3informers "acme.corp/pkg/kcp/clients/informers/externalversions/example3"
@@ -48,6 +49,7 @@ type SharedInformerOption func(*SharedInformerOptions) *SharedInformerOptions
 type SharedInformerOptions struct {
 	customResync     map[reflect.Type]time.Duration
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 type sharedInformerFactory struct {
@@ -227,4 +229,145 @@ func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVe
 
 func (f *scopedDynamicSharedInformerFactory) Start(stopCh <-chan struct{}) {
 	f.sharedInformerFactory.Start(stopCh)
+}
+
+// WithNamespace limits the SharedInformerFactory to the specified namespace.
+func WithNamespace(namespace string) SharedInformerOption {
+	return func(opts *SharedInformerOptions) *SharedInformerOptions {
+		opts.namespace = namespace
+		return opts
+	}
+}
+
+type sharedScopedInformerFactory struct {
+	client           scopedclientset.Interface
+	namespace        string
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	lock             sync.Mutex
+	defaultResync    time.Duration
+	customResync     map[reflect.Type]time.Duration
+
+	informers map[reflect.Type]cache.SharedIndexInformer
+	// startedInformers is used for tracking which informers have been started.
+	// This allows Start() to be called multiple times safely.
+	startedInformers map[reflect.Type]bool
+}
+
+// NewSharedScopedInformerFactory constructs a new instance of SharedInformerFactory for some or all namespaces.
+func NewSharedScopedInformerFactory(client scopedclientset.Interface, defaultResync time.Duration, namespace string) SharedScopedInformerFactory {
+	return NewSharedScopedInformerFactoryWithOptions(client, defaultResync, WithNamespace(namespace))
+}
+
+// NewSharedScopedInformerFactoryWithOptions constructs a new instance of a SharedInformerFactory with additional options.
+func NewSharedScopedInformerFactoryWithOptions(client scopedclientset.Interface, defaultResync time.Duration, options ...SharedInformerOption) SharedScopedInformerFactory {
+	factory := &sharedScopedInformerFactory{
+		client:           client,
+		defaultResync:    defaultResync,
+		informers:        make(map[reflect.Type]cache.SharedIndexInformer),
+		startedInformers: make(map[reflect.Type]bool),
+		customResync:     make(map[reflect.Type]time.Duration),
+	}
+
+	opts := &SharedInformerOptions{
+		customResync: make(map[reflect.Type]time.Duration),
+	}
+
+	// Apply all options
+	for _, opt := range options {
+		opts = opt(opts)
+	}
+
+	// Forward options to the factory
+	factory.customResync = opts.customResync
+	factory.tweakListOptions = opts.tweakListOptions
+	factory.namespace = opts.namespace
+
+	return factory
+}
+
+// Start initializes all requested informers.
+func (f *sharedScopedInformerFactory) Start(stopCh <-chan struct{}) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	for informerType, informer := range f.informers {
+		if !f.startedInformers[informerType] {
+			go informer.Run(stopCh)
+			f.startedInformers[informerType] = true
+		}
+	}
+}
+
+// WaitForCacheSync waits for all started informers' cache were synced.
+func (f *sharedScopedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool {
+	informers := func() map[reflect.Type]cache.SharedIndexInformer {
+		f.lock.Lock()
+		defer f.lock.Unlock()
+
+		informers := map[reflect.Type]cache.SharedIndexInformer{}
+		for informerType, informer := range f.informers {
+			if f.startedInformers[informerType] {
+				informers[informerType] = informer
+			}
+		}
+		return informers
+	}()
+
+	res := map[reflect.Type]bool{}
+	for informType, informer := range informers {
+		res[informType] = cache.WaitForCacheSync(stopCh, informer.HasSynced)
+	}
+	return res
+}
+
+// InformerFor returns the SharedIndexInformer for obj using an internal
+// client.
+func (f *sharedScopedInformerFactory) InformerFor(obj runtime.Object, newFunc internalinterfaces.NewScopedInformerFunc) cache.SharedIndexInformer {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	informerType := reflect.TypeOf(obj)
+	informer, exists := f.informers[informerType]
+	if exists {
+		return informer
+	}
+
+	resyncPeriod, exists := f.customResync[informerType]
+	if !exists {
+		resyncPeriod = f.defaultResync
+	}
+
+	informer = newFunc(f.client, resyncPeriod)
+	f.informers[informerType] = informer
+
+	return informer
+}
+
+// SharedScopedInformerFactory provides shared informers for resources in all known
+// API group versions, scoped to one workspace.
+type SharedScopedInformerFactory interface {
+	internalinterfaces.SharedScopedInformerFactory
+	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
+	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
+
+	Example() exampleinformers.Interface
+	Example3() example3informers.Interface
+	Existinginterfaces() existinginterfacesinformers.Interface
+	Secondexample() secondexampleinformers.Interface
+}
+
+func (f *sharedScopedInformerFactory) Example() exampleinformers.Interface {
+	return exampleinformers.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) Example3() example3informers.Interface {
+	return example3informers.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) Existinginterfaces() existinginterfacesinformers.Interface {
+	return existinginterfacesinformers.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) Secondexample() secondexampleinformers.Interface {
+	return secondexampleinformers.NewScoped(f, f.namespace, f.tweakListOptions)
 }

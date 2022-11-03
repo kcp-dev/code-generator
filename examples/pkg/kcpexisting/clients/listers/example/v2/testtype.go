@@ -34,9 +34,14 @@ import (
 )
 
 // TestTypeClusterLister can list TestTypes across all workspaces, or scope down to a TestTypeLister for one workspace.
+// All objects returned here must be treated as read-only.
 type TestTypeClusterLister interface {
+	// List lists all TestTypes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*examplev2.TestType, err error)
+	// Cluster returns a lister that can list and get TestTypes in one workspace.
 	Cluster(cluster logicalcluster.Name) examplev2listers.TestTypeLister
+	TestTypeClusterListerExpansion
 }
 
 type testTypeClusterLister struct {
@@ -44,6 +49,11 @@ type testTypeClusterLister struct {
 }
 
 // NewTestTypeClusterLister returns a new TestTypeClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewTestTypeClusterLister(indexer cache.Indexer) *testTypeClusterLister {
 	return &testTypeClusterLister{indexer: indexer}
 }

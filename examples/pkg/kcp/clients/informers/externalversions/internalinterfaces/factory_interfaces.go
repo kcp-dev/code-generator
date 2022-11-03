@@ -28,7 +28,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 
+	scopedclientset "acme.corp/pkg/generated/clientset/versioned"
 	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
 )
 
@@ -39,6 +41,15 @@ type NewInformerFunc func(clientset.ClusterInterface, time.Duration) kcpcache.Sc
 type SharedInformerFactory interface {
 	Start(stopCh <-chan struct{})
 	InformerFor(obj runtime.Object, newFunc NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
+}
+
+// NewScopedInformerFunc takes scopedclientset.Interface and time.Duration to return a SharedIndexInformer.
+type NewScopedInformerFunc func(scopedclientset.Interface, time.Duration) cache.SharedIndexInformer
+
+// SharedScopedInformerFactory a small interface to allow for adding an informer without an import cycle
+type SharedScopedInformerFactory interface {
+	Start(stopCh <-chan struct{})
+	InformerFor(obj runtime.Object, newFunc NewScopedInformerFunc) cache.SharedIndexInformer
 }
 
 // TweakListOptionsFunc is a function that transforms a metav1.ListOptions.

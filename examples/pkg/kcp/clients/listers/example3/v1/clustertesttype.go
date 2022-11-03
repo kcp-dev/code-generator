@@ -33,9 +33,14 @@ import (
 )
 
 // ClusterTestTypeClusterLister can list ClusterTestTypes across all workspaces, or scope down to a ClusterTestTypeLister for one workspace.
+// All objects returned here must be treated as read-only.
 type ClusterTestTypeClusterLister interface {
+	// List lists all ClusterTestTypes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example3v1.ClusterTestType, err error)
+	// Cluster returns a lister that can list and get ClusterTestTypes in one workspace.
 	Cluster(cluster logicalcluster.Name) ClusterTestTypeLister
+	ClusterTestTypeClusterListerExpansion
 }
 
 type clusterTestTypeClusterLister struct {
@@ -43,6 +48,10 @@ type clusterTestTypeClusterLister struct {
 }
 
 // NewClusterTestTypeClusterLister returns a new ClusterTestTypeClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewClusterTestTypeClusterLister(indexer cache.Indexer) *clusterTestTypeClusterLister {
 	return &clusterTestTypeClusterLister{indexer: indexer}
 }
@@ -60,9 +69,16 @@ func (s *clusterTestTypeClusterLister) Cluster(cluster logicalcluster.Name) Clus
 	return &clusterTestTypeLister{indexer: s.indexer, cluster: cluster}
 }
 
+// ClusterTestTypeLister can list all ClusterTestTypes, or get one in particular.
+// All objects returned here must be treated as read-only.
 type ClusterTestTypeLister interface {
+	// List lists all ClusterTestTypes in the workspace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example3v1.ClusterTestType, err error)
+	// Get retrieves the ClusterTestType from the indexer for a given workspace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*example3v1.ClusterTestType, error)
+	ClusterTestTypeListerExpansion
 }
 
 // clusterTestTypeLister can list all ClusterTestTypes inside a workspace.
@@ -82,6 +98,40 @@ func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*example3v
 // Get retrieves the ClusterTestType from the indexer for a given workspace and name.
 func (s *clusterTestTypeLister) Get(name string) (*example3v1.ClusterTestType, error) {
 	key := kcpcache.ToClusterAwareKey(s.cluster.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(example3v1.Resource("ClusterTestType"), name)
+	}
+	return obj.(*example3v1.ClusterTestType), nil
+}
+
+// NewClusterTestTypeLister returns a new ClusterTestTypeLister.
+// We assume that the indexer:
+// - is fed by a workspace-scoped LIST+WATCH
+// - uses cache.MetaNamespaceKeyFunc as the key function
+func NewClusterTestTypeLister(indexer cache.Indexer) *clusterTestTypeScopedLister {
+	return &clusterTestTypeScopedLister{indexer: indexer}
+}
+
+// clusterTestTypeScopedLister can list all ClusterTestTypes inside a workspace.
+type clusterTestTypeScopedLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ClusterTestTypes in the indexer for a workspace.
+func (s *clusterTestTypeScopedLister) List(selector labels.Selector) (ret []*example3v1.ClusterTestType, err error) {
+	err = cache.ListAll(s.indexer, selector, func(i interface{}) {
+		ret = append(ret, i.(*example3v1.ClusterTestType))
+	})
+	return ret, err
+}
+
+// Get retrieves the ClusterTestType from the indexer for a given workspace and name.
+func (s *clusterTestTypeScopedLister) Get(name string) (*example3v1.ClusterTestType, error) {
+	key := name
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err

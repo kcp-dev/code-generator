@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	scopedclientset "acme.corp/pkg/generated/clientset/versioned"
 	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
 	"acme.corp/pkg/kcp/clients/informers/externalversions/internalinterfaces"
 	example3v1listers "acme.corp/pkg/kcp/clients/listers/example3/v1"
@@ -126,4 +127,53 @@ func (f *clusterTestTypeInformer) Informer() cache.SharedIndexInformer {
 
 func (f *clusterTestTypeInformer) Lister() example3v1listers.ClusterTestTypeLister {
 	return f.lister
+}
+
+type clusterTestTypeScopedInformer struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+}
+
+func (f *clusterTestTypeScopedInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&example3v1.ClusterTestType{}, f.defaultInformer)
+}
+
+func (f *clusterTestTypeScopedInformer) Lister() example3v1listers.ClusterTestTypeLister {
+	return example3v1listers.NewClusterTestTypeLister(f.Informer().GetIndexer())
+}
+
+// NewClusterTestTypeInformer constructs a new informer for ClusterTestType type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewClusterTestTypeInformer(client scopedclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterTestTypeInformer(client, resyncPeriod, indexers, nil)
+}
+
+// NewFilteredClusterTestTypeInformer constructs a new informer for ClusterTestType type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFilteredClusterTestTypeInformer(client scopedclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.Example3V1().ClusterTestTypes().List(context.TODO(), options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.Example3V1().ClusterTestTypes().Watch(context.TODO(), options)
+			},
+		},
+		&example3v1.ClusterTestType{},
+		resyncPeriod,
+		indexers,
+	)
+}
+
+func (f *clusterTestTypeScopedInformer) defaultInformer(client scopedclientset.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredClusterTestTypeInformer(client, resyncPeriod, cache.Indexers{}, f.tweakListOptions)
 }
