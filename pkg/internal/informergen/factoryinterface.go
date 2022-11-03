@@ -25,6 +25,13 @@ type FactoryInterface struct {
 	// ClientsetPackagePath is the package under which the cluster-aware client-set will be exposed.
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	ClientsetPackagePath string
+
+	// SingleClusterClientPackagePath is the root directory under which single-cluster-aware clients exist.
+	// e.g. "k8s.io/client-go/kubernetes"
+	SingleClusterClientPackagePath string `marker:""`
+
+	// UseUpstreamInterfaces determines if we're generating against existing single-cluster informer interfaces or not.
+	UseUpstreamInterfaces bool
 }
 
 func (f *FactoryInterface) WriteContent(w io.Writer) error {
@@ -34,7 +41,9 @@ func (f *FactoryInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"clientsetPackagePath": f.ClientsetPackagePath,
+		"clientsetPackagePath":           f.ClientsetPackagePath,
+		"singleClusterClientPackagePath": f.SingleClusterClientPackagePath,
+		"useUpstreamInterfaces":          f.UseUpstreamInterfaces,
 	}
 	return templ.Execute(w, m)
 }
@@ -54,8 +63,14 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	{{if not .useUpstreamInterfaces -}}
+	"k8s.io/client-go/tools/cache"
+	{{end}}
 
 	clientset "{{.clientsetPackagePath}}"
+	{{if not .useUpstreamInterfaces -}}
+	scopedclientset "{{.singleClusterClientPackagePath}}"
+	{{end}}
 )
 
 // NewInformerFunc takes clientset.ClusterInterface and time.Duration to return a ScopeableSharedIndexInformer.
@@ -66,6 +81,17 @@ type SharedInformerFactory interface {
 	Start(stopCh <-chan struct{})
 	InformerFor(obj runtime.Object, newFunc NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 }
+
+{{if not .useUpstreamInterfaces -}}
+// NewScopedInformerFunc takes scopedclientset.Interface and time.Duration to return a SharedIndexInformer.
+type NewScopedInformerFunc func(scopedclientset.Interface, time.Duration) cache.SharedIndexInformer
+
+// SharedScopedInformerFactory a small interface to allow for adding an informer without an import cycle
+type SharedScopedInformerFactory interface {
+	Start(stopCh <-chan struct{})
+	InformerFor(obj runtime.Object, newFunc NewScopedInformerFunc) cache.SharedIndexInformer
+}
+{{end}}
 
 // TweakListOptionsFunc is a function that transforms a metav1.ListOptions.
 type TweakListOptionsFunc func(*metav1.ListOptions)

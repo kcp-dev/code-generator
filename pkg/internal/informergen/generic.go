@@ -146,4 +146,21 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 
 	return nil, fmt.Errorf("no informer found for %v", resource)
 }
+
+{{if not .useUpstreamInterfaces -}}
+// ForResource gives generic access to a shared informer of the matching type
+// TODO extend this to unknown resources with a client pool
+func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error) {
+	switch resource {
+{{range $group := .groups}}	// Group={{.Group.NonEmpty}}, Version={{.Version}}
+{{range $kind := index (index $.groupVersionKinds .Group) .Version}}	case {{$group.PackageAlias}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
+		informer := f.{{$group.GroupGoName}}().{{$group.Version}}().{{$kind.Plural}}().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+{{end -}}
+{{end -}}
+	}
+
+	return nil, fmt.Errorf("no informer found for %v", resource)
+}
+{{end}}
 `

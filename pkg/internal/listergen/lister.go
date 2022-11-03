@@ -224,4 +224,77 @@ func (s *{{.kind.String | lowerFirst}}NamespaceLister) Get(name string) (*{{.gro
 	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
 }
 {{ end -}}
+
+{{if not .useUpstreamInterfaces -}}
+// New{{.kind.String}}Lister returns a new {{.kind.String}}Lister.
+// We assume that the indexer:
+// - is fed by a workspace-scoped LIST+WATCH
+// - uses cache.MetaNamespaceKeyFunc as the key function
+{{ if  .kind.IsNamespaced -}}
+// - has the cache.NamespaceIndex as an index
+{{end -}}
+func New{{.kind.String}}Lister(indexer cache.Indexer) *{{.kind.String | lowerFirst}}ScopedLister {
+	return &{{.kind.String | lowerFirst}}ScopedLister{indexer: indexer}
+}
+
+// {{.kind.String | lowerFirst}}ScopedLister can list all {{.kind.Plural}} inside a workspace{{ if .kind.IsNamespaced }} or scope down to a {{.kind.String}}Lister for one namespace{{end}}.
+type {{.kind.String | lowerFirst}}ScopedLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all {{.kind.Plural}} in the indexer for a workspace.
+func (s *{{.kind.String | lowerFirst}}ScopedLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+	err = cache.ListAll(s.indexer, selector, func(i interface{}) {
+		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+	})
+	return ret, err
+}
+
+{{ if  not .kind.IsNamespaced -}}
+// Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
+func (s *{{.kind.String | lowerFirst}}ScopedLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+	key := name
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+	}
+	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+}
+{{ else -}}
+// {{.kind.Plural}} returns an object that can list and get {{.kind.Plural}} in one namespace.
+func (s *{{.kind.String | lowerFirst}}ScopedLister) {{.kind.Plural}}(namespace string) {{.kind.String}}NamespaceLister {
+	return &{{.kind.String | lowerFirst}}ScopedNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// {{.kind.String | lowerFirst}}ScopedNamespaceLister helps list and get {{.kind.Plural}}.
+type {{.kind.String | lowerFirst}}ScopedNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all {{.kind.Plural}} in the indexer for a given workspace and namespace.
+func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+	})
+	return ret, err
+}
+
+// Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
+func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+	key := s.namespace + "/" + name
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+	}
+	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+}
+{{ end -}}
+{{end -}}
 `

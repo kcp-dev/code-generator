@@ -36,6 +36,9 @@ type VersionInterface struct {
 	// e.g. "github.com/kcp-dev/client-go/clients/informers"
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	PackagePath string
+
+	// UseUpstreamInterfaces determines if we're generating against existing single-cluster informer interfaces or not.
+	UseUpstreamInterfaces bool
 }
 
 func (v *VersionInterface) WriteContent(w io.Writer) error {
@@ -45,9 +48,10 @@ func (v *VersionInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"version":     v.Version,
-		"kinds":       v.Kinds,
-		"packagePath": v.PackagePath,
+		"version":               v.Version,
+		"kinds":                 v.Kinds,
+		"packagePath":           v.PackagePath,
+		"useUpstreamInterfaces": v.UseUpstreamInterfaces,
 	}
 	return templ.Execute(w, m)
 }
@@ -85,4 +89,29 @@ func (v *version) {{.Plural}}() {{.String}}ClusterInformer {
 	return &{{.String|lowerFirst}}ClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 {{end -}}
+
+{{if not .useUpstreamInterfaces -}}
+type Interface interface {
+{{range .kinds}}// {{.Plural}} returns a {{.String}}Informer
+	{{.Plural}}() {{.String}}Informer
+{{end -}}
+}
+
+type scopedVersion struct {
+	factory          internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace string
+}
+
+// New returns a new ClusterInterface.
+func NewScoped(f internalinterfaces.SharedScopedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &scopedVersion{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+{{range .kinds}}// {{.Plural}} returns a {{.String}}Informer
+func (v *scopedVersion) {{.Plural}}() {{.String}}Informer {
+	return &{{.String|lowerFirst}}ScopedInformer{factory: v.factory, {{if .IsNamespaced}}namespace: v.namespace, {{end}}tweakListOptions: v.tweakListOptions}
+}
+{{end -}}
+{{end}}
 `

@@ -36,6 +36,9 @@ type GroupInterface struct {
 	// e.g. "github.com/kcp-dev/client-go/clients/informers"
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally
 	PackagePath string
+
+	// UseUpstreamInterfaces determines if we're generating against existing single-cluster informer interfaces or not.
+	UseUpstreamInterfaces bool
 }
 
 func (g GroupInterface) WriteContent(w io.Writer) error {
@@ -45,9 +48,10 @@ func (g GroupInterface) WriteContent(w io.Writer) error {
 	}
 
 	m := map[string]interface{}{
-		"group":       g.Group,
-		"packagePath": g.PackagePath,
-		"versions":    g.Versions,
+		"group":                 g.Group,
+		"packagePath":           g.PackagePath,
+		"versions":              g.Versions,
+		"useUpstreamInterfaces": g.UseUpstreamInterfaces,
 	}
 	return templ.Execute(w, m)
 }
@@ -88,4 +92,29 @@ func (g *group) {{.String}}() {{.PackageName}}.ClusterInterface {
 	return {{.PackageName}}.New(g.factory, g.tweakListOptions)
 }
 {{end -}}
+
+{{if not .useUpstreamInterfaces -}}
+type Interface interface {
+{{range .versions}}	// {{.String}} provides access to the shared informers in {{.String}}.
+	{{.String}}() {{.PackageName}}.Interface
+{{end -}}
+}
+
+type scopedGroup struct {
+	factory internalinterfaces.SharedScopedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace string
+}
+
+// New returns a new Interface.
+func NewScoped(f internalinterfaces.SharedScopedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &scopedGroup{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+{{range .versions}}// {{.String}} returns a new {{.PackageName}}.ClusterInterface.
+func (g *scopedGroup) {{.String}}() {{.PackageName}}.Interface {
+	return {{.PackageName}}.NewScoped(g.factory, g.namespace, g.tweakListOptions)
+}
+{{end -}}
+{{end}}
 `

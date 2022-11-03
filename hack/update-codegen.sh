@@ -72,7 +72,7 @@ ${KUBE_INFORMER_GEN} \
 ./../bin/code-generator \
     "client:standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "lister:apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-    "informer:standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,singleClusterInformerPackagePath=acme.corp/pkg/generated/informers/externalversions,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+    "informer:standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,singleClusterInformerPackagePath=acme.corp/pkg/generated/informers/externalversions,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "paths=./pkg/apis/..." \
     "output:dir=./pkg/kcpexisting/clients"
 
@@ -80,7 +80,7 @@ ${KUBE_INFORMER_GEN} \
 ./../bin/code-generator \
   "client:standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
   "lister:apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-  "informer:standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+  "informer:standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
   "paths=./pkg/apis/..." \
   "output:dir=./pkg/kcp/clients"
 
