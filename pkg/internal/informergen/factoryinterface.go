@@ -55,11 +55,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
-	client "{{.clientsetPackagePath}}"
+	clientset "{{.clientsetPackagePath}}"
 )
 
-// NewInformerFunc takes client.ClusterInterface and time.Duration to return a ScopeableSharedIndexInformer.
-type NewInformerFunc func(client.ClusterInterface, time.Duration) kcpcache.ScopeableSharedIndexInformer
+// NewInformerFunc takes clientset.ClusterInterface and time.Duration to return a ScopeableSharedIndexInformer.
+type NewInformerFunc func(clientset.ClusterInterface, time.Duration) kcpcache.ScopeableSharedIndexInformer
 
 // SharedInformerFactory a small interface to allow for adding an informer without an import cycle
 type SharedInformerFactory interface {
