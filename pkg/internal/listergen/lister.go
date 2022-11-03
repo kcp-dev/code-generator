@@ -84,6 +84,13 @@ type {{.kind.String | lowerFirst }}ClusterLister struct {
 }
 
 // New{{.kind.String}}ClusterLister returns a new {{.kind.String}}ClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+{{ if  .kind.IsNamespaced -}}
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
+{{end -}}
 func New{{.kind.String}}ClusterLister(indexer cache.Indexer) *{{.kind.String | lowerFirst}}ClusterLister {
 	return &{{.kind.String | lowerFirst}}ClusterLister{indexer: indexer}
 }
