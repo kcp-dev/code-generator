@@ -73,24 +73,9 @@ type clusterTestTypeLister struct {
 
 // List lists all ClusterTestTypes in the indexer for a workspace.
 func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*example3v1.ClusterTestType, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*example3v1.ClusterTestType)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*example3v1.ClusterTestType))
+	})
 	return ret, err
 }
 
