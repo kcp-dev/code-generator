@@ -170,6 +170,22 @@ type rewriteRule struct {
 }
 
 var kcpClientTypeRules = []rewriteRule{
+	//{
+	//	from:        "github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned",
+	//	to:          "github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned/cluster",
+	//	nameMatcher: regexp.MustCompile(`.*(Interface|Getter|Clientset|Client|Config)`),
+	//	formatAlias: func(suffix []string) string {
+	//		// [] -> "wildwestclientset"
+	//		// ["typed", "<group>", "<version>"] -> "<group><version>"
+	//		if len(suffix) == 0 || len(suffix) == 1 && suffix[0] == "" {
+	//			return "wildwestclientset"
+	//		}
+	//		if len(suffix) == 1 {
+	//			return "wildwest" + suffix[0] + "client"
+	//		}
+	//		return suffix[1] + suffix[2] + "client"
+	//	},
+	//},
 	{
 		from:        "github.com/kcp-dev/kcp/pkg/client/clientset/versioned",
 		to:          "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster",
@@ -359,24 +375,29 @@ var kcpClientTypeRules = []rewriteRule{
 
 // k8s.io/client-go/kubernetes.Interface -> github.com/kcp-dev/client-go/clients/clientset/versioned.ClusterInterface
 // k8s.io/client-go/kubernetes/typed/<group>/<version> -> github.com/kcp-dev/client-go/clients/clientset/versioned/typed/<group>/<version>
-//  - <group><version>Interface -> <group><version>ClusterInterface
-//  - <kind>Getter -> <kind>ClusterGetter
-//  - <kind>Interface -> <kind>ClusterInterface
+//   - <group><version>Interface -> <group><version>ClusterInterface
+//   - <kind>Getter -> <kind>ClusterGetter
+//   - <kind>Interface -> <kind>ClusterInterface
+//
 // k8s.io/client-go/informers/<group>/<version> -> github.com/kcp-dev/client-go/clients/informers/<group>/<version>
-//  - Interface -> ClusterInterface
-//  - <kind>Informer -> <kind>ClusterInformer
+//   - Interface -> ClusterInterface
+//   - <kind>Informer -> <kind>ClusterInformer
+//
 // k8s.io/client-go/listers/<group>/<version> -> github.com/kcp-dev/client-go/clients/listers/<group>/<version>
-//  - Interface -> ClusterInterface
-//  - <kind>Lister -> <kind>ClusterLister
+//   - Interface -> ClusterInterface
+//   - <kind>Lister -> <kind>ClusterLister
+//
 // k8s.io/client-go/dynamic/dynamic<lister,informer> -> github.com/kcp-dev/client-go/clients/dynamic/dynamic<lister,informer>
-//  - Interface -> ClusterInterface
-//  - <kind>Lister -> <kind>ClusterLister
+//   - Interface -> ClusterInterface
+//   - <kind>Lister -> <kind>ClusterLister
+//
 // k8s.io/client-go/metadata/metadata<lister,informer> -> github.com/kcp-dev/client-go/clients/metadata/metadata<lister,informer>
-//  - Interface -> ClusterInterface
-//  - <kind>Lister -> <kind>ClusterLister
+//   - Interface -> ClusterInterface
+//   - <kind>Lister -> <kind>ClusterLister
+//
 // k8s.io/client-go/discovery -> github.com/kcp-dev/client-go/clients/discovery
-//  - Interface -> ClusterInterface
-//  - Clientset -> ClusterClientset
+//   - Interface -> ClusterInterface
+//   - Clientset -> ClusterClientset
 func rewriteClientTypes(pkg *decorator.Package, cursor *dstutil.Cursor, fileRestorer *decorator.FileRestorer) int {
 	var updated int
 	switch node := cursor.Node().(type) {
@@ -481,11 +502,20 @@ func rewriteClusterInterfaceCall(pkg *decorator.Package, cursor *dstutil.Cursor,
 			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned.Interface",
 			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned.ClusterClientset",
 			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned.Clientset",
+			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned.Clientset",
 			"github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster.ClusterInterface",
 			"*github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster.ClusterClientset",
+			//"github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned.ClusterInterface",
+			//"github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned.Interface",
+			//"*github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned.ClusterClientset",
+			//"*github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned.Clientset",
+			//"*github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned.Clientset",
+			//"github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned/cluster.ClusterInterface",
+			//"*github.com/kcp-dev/kcp/test/e2e/fixtures/wildwest/client/clientset/versioned/cluster.ClusterClientset",
 		)
 		if objType := pkg.TypesInfo.TypeOf(pkg.Decorator.Ast.Nodes[groupVersionFunction.X].(ast.Expr)).String(); !types.Has(objType) {
 			logrus.Infof("wrong type %s", objType)
+			logrus.Info(types)
 			break
 		}
 
@@ -630,18 +660,21 @@ func rewriteKeySplits(pkg *decorator.Package, cursor *dstutil.Cursor, fileRestor
 // }
 
 // namespace, clusterAwareName, err := cache.SplitMetaNamespaceKey(key)
-// if err != nil {
-//     runtime.HandleError(err)
-//     return false
-// }
-// clusterName, name := clusters.SplitClusterAwareKey(clusterAwareName)
 //
-// into
-// clusterName, namespace, name, err := kcpcache.SplitMetaClusterNamespaceKey(key)
-// if err != nil {
-//     runtime.HandleError(err)
-//     return false
-// }
+//	if err != nil {
+//	    runtime.HandleError(err)
+//	    return false
+//	}	
+//	
+// clusterName, name := clusters.SplitClusterAwareKey(clusterAwareName)	
+//	
+// into	
+// clusterName, namespace, name, err := kcpcache.SplitMetaClusterNamespaceKey(key)	
+//	
+//	if err != nil {
+//	    runtime.HandleError(err)
+//	    return false
+//	}
 func rewriteKcpKeySplits(pkg *decorator.Package, cursor *dstutil.Cursor, fileRestorer *decorator.FileRestorer) int {
 	var updated int
 	switch node := cursor.Node().(type) {
