@@ -51,8 +51,8 @@ var lister = `
 package {{.group.Version.PackageName}}
 
 import (
-	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"	
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"	
+	"github.com/kcp-dev/logicalcluster/v3"
 	
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
@@ -72,9 +72,9 @@ type {{.kind.String}}ClusterLister interface {
 	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
 	// Cluster returns a lister that can list and get {{.kind.Plural}} in one workspace.
 {{if not .useUpstreamInterfaces -}}
-	Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister
+	Cluster(clusterName logicalcluster.Name) {{.kind.String}}Lister
 {{else -}}
-	Cluster(cluster logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister
+	Cluster(clusterName logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister
 {{end -}}
 	{{.kind.String}}ClusterListerExpansion
 }
@@ -105,11 +105,11 @@ func (s *{{.kind.String | lowerFirst}}ClusterLister) List(selector labels.Select
 
 // Cluster scopes the lister to one workspace, allowing users to list and get {{.kind.Plural}}.
 {{if not .useUpstreamInterfaces -}}
-func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(cluster logicalcluster.Name) {{.kind.String}}Lister {
+func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logicalcluster.Name) {{.kind.String}}Lister {
 {{else -}}
-func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(cluster logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister {
+func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister {
 {{end -}}
-	return &{{.kind.String | lowerFirst}}Lister{indexer: s.indexer, cluster: cluster}
+	return &{{.kind.String | lowerFirst}}Lister{indexer: s.indexer, clusterName: clusterName}
 }
 
 {{if not .useUpstreamInterfaces -}}
@@ -142,12 +142,12 @@ type {{.kind.String}}Lister interface {
 {{end -}}
 type {{.kind.String | lowerFirst}}Lister struct {
 	indexer cache.Indexer
-	cluster logicalcluster.Name
+	clusterName logicalcluster.Name
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a workspace.
 func (s *{{.kind.String | lowerFirst}}Lister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
-	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
 		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
@@ -156,7 +156,7 @@ func (s *{{.kind.String | lowerFirst}}Lister) List(selector labels.Selector) (re
 {{ if  not .kind.IsNamespaced -}}
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
 func (s *{{.kind.String | lowerFirst}}Lister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	key := kcpcache.ToClusterAwareKey(s.cluster.String(), "", name)
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string)
 {{else -}}
 func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string) {{.group.PackageAlias}}listers.{{.kind.String}}NamespaceLister {
 {{end -}}
-	return &{{.kind.String | lowerFirst}}NamespaceLister{indexer: s.indexer, cluster: s.cluster, namespace: namespace}
+	return &{{.kind.String | lowerFirst}}NamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 {{if not .useUpstreamInterfaces -}}
@@ -199,13 +199,13 @@ type {{.kind.String}}NamespaceLister interface {
 {{ end -}}
 type {{.kind.String | lowerFirst}}NamespaceLister struct {
 	indexer   cache.Indexer
-	cluster   logicalcluster.Name
+	clusterName   logicalcluster.Name
 	namespace string
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a given workspace and namespace.
 func (s *{{.kind.String | lowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
-	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
 		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
@@ -213,7 +213,7 @@ func (s *{{.kind.String | lowerFirst}}NamespaceLister) List(selector labels.Sele
 
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
 func (s *{{.kind.String | lowerFirst}}NamespaceLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	key := kcpcache.ToClusterAwareKey(s.cluster.String(), s.namespace, name)
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err

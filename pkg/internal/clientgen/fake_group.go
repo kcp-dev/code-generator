@@ -56,7 +56,7 @@ package {{.group.Version.PackageName}}
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/rest"
 	kcp{{.group.PackageAlias}} "{{.packagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
@@ -69,11 +69,11 @@ type {{.group.GroupGoName}}{{.group.Version}}ClusterClient struct {
 	*kcptesting.Fake 
 }
 
-func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(cluster logicalcluster.Name) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
-	if cluster == logicalcluster.Wildcard {
+func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return &{{.group.GroupGoName}}{{.group.Version}}Client{Fake: c.Fake, Cluster: cluster}
+	return &{{.group.GroupGoName}}{{.group.Version}}Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 {{ range .kinds}}
@@ -86,7 +86,7 @@ var _ {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface 
 
 type {{.group.GroupGoName}}{{.group.Version}}Client struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	ClusterPath logicalcluster.Path
 }
 
 func (c *{{.group.GroupGoName}}{{.group.Version}}Client) RESTClient() rest.Interface {
@@ -96,7 +96,7 @@ func (c *{{.group.GroupGoName}}{{.group.Version}}Client) RESTClient() rest.Inter
 
 {{ range .kinds}}
 func (c *{{$.group.GroupGoName}}{{$.group.Version}}Client) {{.Plural}}({{if .IsNamespaced}}namespace string{{end}}) {{$.group.PackageAlias}}.{{.String}}Interface {
-	return &{{.Plural | lowerFirst}}Client{Fake: c.Fake, Cluster: c.Cluster{{if .IsNamespaced}}, Namespace: namespace{{end}}}
+	return &{{.Plural | lowerFirst}}Client{Fake: c.Fake, ClusterPath: c.ClusterPath{{if .IsNamespaced}}, Namespace: namespace{{end}}}
 }
 {{end -}}
 `
