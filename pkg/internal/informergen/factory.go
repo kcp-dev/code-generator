@@ -20,7 +20,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/kcp-dev/code-generator/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
 type Factory struct {

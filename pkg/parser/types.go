@@ -20,8 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/code-generator/pkg/util"
-	"github.com/kcp-dev/code-generator/third_party/namer"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/third_party/namer"
 )
 
 type Kind struct {
