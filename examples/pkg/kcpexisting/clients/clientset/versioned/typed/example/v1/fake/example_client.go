@@ -22,7 +22,7 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"k8s.io/client-go/rest"
@@ -37,11 +37,11 @@ type ExampleV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *ExampleV1ClusterClient) Cluster(cluster logicalcluster.Name) examplev1.ExampleV1Interface {
-	if cluster == logicalcluster.Wildcard {
+func (c *ExampleV1ClusterClient) Cluster(clusterPath logicalcluster.Path) examplev1.ExampleV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return &ExampleV1Client{Fake: c.Fake, Cluster: cluster}
+	return &ExampleV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 func (c *ExampleV1ClusterClient) TestTypes() kcpexamplev1.TestTypeClusterInterface {
@@ -60,7 +60,7 @@ var _ examplev1.ExampleV1Interface = (*ExampleV1Client)(nil)
 
 type ExampleV1Client struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	ClusterPath logicalcluster.Path
 }
 
 func (c *ExampleV1Client) RESTClient() rest.Interface {
@@ -69,13 +69,13 @@ func (c *ExampleV1Client) RESTClient() rest.Interface {
 }
 
 func (c *ExampleV1Client) TestTypes(namespace string) examplev1.TestTypeInterface {
-	return &testTypesClient{Fake: c.Fake, Cluster: c.Cluster, Namespace: namespace}
+	return &testTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }
 
 func (c *ExampleV1Client) ClusterTestTypes() examplev1.ClusterTestTypeInterface {
-	return &clusterTestTypesClient{Fake: c.Fake, Cluster: c.Cluster}
+	return &clusterTestTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }
 
 func (c *ExampleV1Client) WithoutVerbTypes(namespace string) examplev1.WithoutVerbTypeInterface {
-	return &withoutVerbTypesClient{Fake: c.Fake, Cluster: c.Cluster, Namespace: namespace}
+	return &withoutVerbTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

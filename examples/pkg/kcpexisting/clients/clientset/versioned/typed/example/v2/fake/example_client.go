@@ -22,7 +22,7 @@ limitations under the License.
 package v2
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"k8s.io/client-go/rest"
@@ -37,11 +37,11 @@ type ExampleV2ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *ExampleV2ClusterClient) Cluster(cluster logicalcluster.Name) examplev2.ExampleV2Interface {
-	if cluster == logicalcluster.Wildcard {
+func (c *ExampleV2ClusterClient) Cluster(clusterPath logicalcluster.Path) examplev2.ExampleV2Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return &ExampleV2Client{Fake: c.Fake, Cluster: cluster}
+	return &ExampleV2Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 func (c *ExampleV2ClusterClient) TestTypes() kcpexamplev2.TestTypeClusterInterface {
@@ -56,7 +56,7 @@ var _ examplev2.ExampleV2Interface = (*ExampleV2Client)(nil)
 
 type ExampleV2Client struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	ClusterPath logicalcluster.Path
 }
 
 func (c *ExampleV2Client) RESTClient() rest.Interface {
@@ -65,9 +65,9 @@ func (c *ExampleV2Client) RESTClient() rest.Interface {
 }
 
 func (c *ExampleV2Client) TestTypes(namespace string) examplev2.TestTypeInterface {
-	return &testTypesClient{Fake: c.Fake, Cluster: c.Cluster, Namespace: namespace}
+	return &testTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }
 
 func (c *ExampleV2Client) ClusterTestTypes() examplev2.ClusterTestTypeInterface {
-	return &clusterTestTypesClient{Fake: c.Fake, Cluster: c.Cluster}
+	return &clusterTestTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

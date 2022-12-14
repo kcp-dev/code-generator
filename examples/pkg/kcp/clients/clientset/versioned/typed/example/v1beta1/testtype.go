@@ -22,8 +22,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	examplev1beta1client "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
 )
@@ -36,7 +36,7 @@ type TestTypesClusterGetter interface {
 
 // TestTypeClusterInterface can scope down to one cluster and return a TestTypesNamespacer.
 type TestTypeClusterInterface interface {
-	Cluster(logicalcluster.Name) TestTypesNamespacer
+	Cluster(logicalcluster.Path) TestTypesNamespacer
 }
 
 type testTypesClusterInterface struct {
@@ -44,12 +44,12 @@ type testTypesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *testTypesClusterInterface) Cluster(name logicalcluster.Name) TestTypesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *testTypesClusterInterface) Cluster(clusterPath logicalcluster.Path) TestTypesNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &testTypesNamespacer{clientCache: c.clientCache, name: name}
+	return &testTypesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
 }
 
 // TestTypesNamespacer can scope to objects within a namespace, returning a examplev1beta1client.TestTypeInterface.
@@ -59,9 +59,9 @@ type TestTypesNamespacer interface {
 
 type testTypesNamespacer struct {
 	clientCache kcpclient.Cache[*examplev1beta1client.ExampleV1beta1Client]
-	name        logicalcluster.Name
+	clusterPath logicalcluster.Path
 }
 
 func (n *testTypesNamespacer) Namespace(namespace string) examplev1beta1client.TestTypeInterface {
-	return n.clientCache.ClusterOrDie(n.name).TestTypes(namespace)
+	return n.clientCache.ClusterOrDie(n.clusterPath).TestTypes(namespace)
 }

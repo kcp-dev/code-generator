@@ -24,8 +24,8 @@ package v2
 import (
 	"context"
 
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -43,7 +43,7 @@ type TestTypesClusterGetter interface {
 // TestTypeClusterInterface can operate on TestTypes across all clusters,
 // or scope down to one cluster and return a TestTypesNamespacer.
 type TestTypeClusterInterface interface {
-	Cluster(logicalcluster.Name) TestTypesNamespacer
+	Cluster(logicalcluster.Path) TestTypesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*examplev2.TestTypeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -53,12 +53,12 @@ type testTypesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *testTypesClusterInterface) Cluster(name logicalcluster.Name) TestTypesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *testTypesClusterInterface) Cluster(clusterPath logicalcluster.Path) TestTypesNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &testTypesNamespacer{clientCache: c.clientCache, name: name}
+	return &testTypesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
 }
 
 // List returns the entire collection of all TestTypes across all clusters.
@@ -78,9 +78,9 @@ type TestTypesNamespacer interface {
 
 type testTypesNamespacer struct {
 	clientCache kcpclient.Cache[*examplev2client.ExampleV2Client]
-	name        logicalcluster.Name
+	clusterPath logicalcluster.Path
 }
 
 func (n *testTypesNamespacer) Namespace(namespace string) examplev2client.TestTypeInterface {
-	return n.clientCache.ClusterOrDie(n.name).TestTypes(namespace)
+	return n.clientCache.ClusterOrDie(n.clusterPath).TestTypes(namespace)
 }

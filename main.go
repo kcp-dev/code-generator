@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/markers"
 	"sigs.k8s.io/controller-tools/pkg/version"
 
-	"github.com/kcp-dev/code-generator/pkg/generators/clientgen"
-	"github.com/kcp-dev/code-generator/pkg/generators/informergen"
-	"github.com/kcp-dev/code-generator/pkg/generators/listergen"
+	"github.com/kcp-dev/code-generator/v2/pkg/generators/clientgen"
+	"github.com/kcp-dev/code-generator/v2/pkg/generators/informergen"
+	"github.com/kcp-dev/code-generator/v2/pkg/generators/listergen"
 )
 
 // Options are specified to controller-gen by turning generators and output rules into

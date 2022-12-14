@@ -22,7 +22,7 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,25 +39,25 @@ type withoutVerbTypesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *withoutVerbTypesClusterClient) Cluster(cluster logicalcluster.Name) kcpexamplev1.WithoutVerbTypesNamespacer {
-	if cluster == logicalcluster.Wildcard {
+func (c *withoutVerbTypesClusterClient) Cluster(clusterPath logicalcluster.Path) kcpexamplev1.WithoutVerbTypesNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &withoutVerbTypesNamespacer{Fake: c.Fake, Cluster: cluster}
+	return &withoutVerbTypesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 type withoutVerbTypesNamespacer struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	ClusterPath logicalcluster.Path
 }
 
 func (n *withoutVerbTypesNamespacer) Namespace(namespace string) examplev1client.WithoutVerbTypeInterface {
-	return &withoutVerbTypesClient{Fake: n.Fake, Cluster: n.Cluster, Namespace: namespace}
+	return &withoutVerbTypesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type withoutVerbTypesClient struct {
 	*kcptesting.Fake
-	Cluster   logicalcluster.Name
-	Namespace string
+	ClusterPath logicalcluster.Path
+	Namespace   string
 }

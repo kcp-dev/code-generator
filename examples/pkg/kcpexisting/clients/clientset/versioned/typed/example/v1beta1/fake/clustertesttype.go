@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,12 +49,12 @@ type clusterTestTypesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *clusterTestTypesClusterClient) Cluster(cluster logicalcluster.Name) examplev1beta1client.ClusterTestTypeInterface {
-	if cluster == logicalcluster.Wildcard {
+func (c *clusterTestTypesClusterClient) Cluster(clusterPath logicalcluster.Path) examplev1beta1client.ClusterTestTypeInterface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &clusterTestTypesClient{Fake: c.Fake, Cluster: cluster}
+	return &clusterTestTypesClient{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ClusterTestTypes that match those selectors across all clusters.
@@ -84,11 +84,11 @@ func (c *clusterTestTypesClusterClient) Watch(ctx context.Context, opts metav1.L
 
 type clusterTestTypesClient struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	ClusterPath logicalcluster.Path
 }
 
 func (c *clusterTestTypesClient) Create(ctx context.Context, clusterTestType *examplev1beta1.ClusterTestType, opts metav1.CreateOptions) (*examplev1beta1.ClusterTestType, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(clusterTestTypesResource, c.Cluster, clusterTestType), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(clusterTestTypesResource, c.ClusterPath, clusterTestType), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (c *clusterTestTypesClient) Create(ctx context.Context, clusterTestType *ex
 }
 
 func (c *clusterTestTypesClient) Update(ctx context.Context, clusterTestType *examplev1beta1.ClusterTestType, opts metav1.UpdateOptions) (*examplev1beta1.ClusterTestType, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(clusterTestTypesResource, c.Cluster, clusterTestType), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(clusterTestTypesResource, c.ClusterPath, clusterTestType), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (c *clusterTestTypesClient) Update(ctx context.Context, clusterTestType *ex
 }
 
 func (c *clusterTestTypesClient) UpdateStatus(ctx context.Context, clusterTestType *examplev1beta1.ClusterTestType, opts metav1.UpdateOptions) (*examplev1beta1.ClusterTestType, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(clusterTestTypesResource, c.Cluster, "status", clusterTestType), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(clusterTestTypesResource, c.ClusterPath, "status", clusterTestType), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -112,19 +112,19 @@ func (c *clusterTestTypesClient) UpdateStatus(ctx context.Context, clusterTestTy
 }
 
 func (c *clusterTestTypesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(clusterTestTypesResource, c.Cluster, name, opts), &examplev1beta1.ClusterTestType{})
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(clusterTestTypesResource, c.ClusterPath, name, opts), &examplev1beta1.ClusterTestType{})
 	return err
 }
 
 func (c *clusterTestTypesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := kcptesting.NewRootDeleteCollectionAction(clusterTestTypesResource, c.Cluster, listOpts)
+	action := kcptesting.NewRootDeleteCollectionAction(clusterTestTypesResource, c.ClusterPath, listOpts)
 
 	_, err := c.Fake.Invokes(action, &examplev1beta1.ClusterTestTypeList{})
 	return err
 }
 
 func (c *clusterTestTypesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*examplev1beta1.ClusterTestType, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(clusterTestTypesResource, c.Cluster, name), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(clusterTestTypesResource, c.ClusterPath, name), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (c *clusterTestTypesClient) Get(ctx context.Context, name string, options m
 
 // List takes label and field selectors, and returns the list of ClusterTestTypes that match those selectors.
 func (c *clusterTestTypesClient) List(ctx context.Context, opts metav1.ListOptions) (*examplev1beta1.ClusterTestTypeList, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(clusterTestTypesResource, clusterTestTypesKind, c.Cluster, opts), &examplev1beta1.ClusterTestTypeList{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(clusterTestTypesResource, clusterTestTypesKind, c.ClusterPath, opts), &examplev1beta1.ClusterTestTypeList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -152,11 +152,11 @@ func (c *clusterTestTypesClient) List(ctx context.Context, opts metav1.ListOptio
 }
 
 func (c *clusterTestTypesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(clusterTestTypesResource, c.Cluster, opts))
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(clusterTestTypesResource, c.ClusterPath, opts))
 }
 
 func (c *clusterTestTypesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*examplev1beta1.ClusterTestType, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.Cluster, name, pt, data, subresources...), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.ClusterPath, name, pt, data, subresources...), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (c *clusterTestTypesClient) Apply(ctx context.Context, applyConfiguration *
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.Cluster, *name, types.ApplyPatchType, data), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (c *clusterTestTypesClient) ApplyStatus(ctx context.Context, applyConfigura
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.Cluster, *name, types.ApplyPatchType, data, "status"), &examplev1beta1.ClusterTestType{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clusterTestTypesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &examplev1beta1.ClusterTestType{})
 	if obj == nil {
 		return nil, err
 	}
