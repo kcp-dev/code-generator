@@ -63,7 +63,7 @@ func (c *FakeTypedClient) WriteContent(w io.Writer) error {
 	}
 
 	importAliases := map[string]string{} // import path -> alias
-	extraImports := map[string]string{ // import path -> alias
+	extraImports := map[string]string{   // import path -> alias
 		"": c.Group.PackageAlias, // unset paths on input/output tags use the default api package
 	}
 	extensionVerbs := sets.NewString()
