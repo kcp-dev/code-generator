@@ -7,8 +7,8 @@ import (
 
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/code-generator/pkg/parser"
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type TypedClient struct {
@@ -55,8 +55,8 @@ var typedClient = `
 package {{.group.Version.PackageName}}
 
 import (
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 {{- if .kind.SupportsListWatch }}
 	"context"
@@ -81,7 +81,7 @@ type {{.kind.Plural}}ClusterGetter interface {
 // {{.kind.String}}ClusterInterface can scope down to one cluster and return a {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}}.
 {{ end -}}
 type {{.kind.String}}ClusterInterface interface {
-	Cluster(logicalcluster.Name) {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} 
+	Cluster(logicalcluster.Path) {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} 
 {{- if .kind.SupportsListWatch }}
 	List(ctx context.Context, opts metav1.ListOptions) (*{{.group.PackageAlias}}.{{.kind.String}}List, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
@@ -93,14 +93,14 @@ type {{.kind.Plural | lowerFirst}}ClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *{{.kind.Plural | lowerFirst}}ClusterInterface) Cluster(name logicalcluster.Name) {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} {
-	if name == logicalcluster.Wildcard {
+func (c *{{.kind.Plural | lowerFirst}}ClusterInterface) Cluster(clusterPath logicalcluster.Path) {{if .kind.IsNamespaced}}{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 {{ if .kind.IsNamespaced }}
-	return &{{.kind.Plural | lowerFirst}}Namespacer{clientCache: c.clientCache, name: name}
+	return &{{.kind.Plural | lowerFirst}}Namespacer{clientCache: c.clientCache, clusterPath: clusterPath}
 {{ else }}
-	return c.clientCache.ClusterOrDie(name).{{.kind.Plural}}()
+	return c.clientCache.ClusterOrDie(clusterPath).{{.kind.Plural}}()
 {{ end -}}
 }
 
@@ -124,11 +124,11 @@ type {{.kind.Plural}}Namespacer interface {
 
 type {{.kind.Plural | lowerFirst}}Namespacer struct {
 	clientCache kcpclient.Cache[*{{.group.PackageAlias}}client.{{.group.GroupGoName}}{{.group.Version}}Client]
-	name logicalcluster.Name
+	clusterPath logicalcluster.Path
 }
 
 func (n *{{.kind.Plural | lowerFirst}}Namespacer) Namespace(namespace string) {{.group.PackageAlias}}client.{{.kind.String}}Interface {
-	return n.clientCache.ClusterOrDie(n.name).{{.kind.Plural}}(namespace)
+	return n.clientCache.ClusterOrDie(n.clusterPath).{{.kind.Plural}}(namespace)
 }
 {{ end -}}
 `

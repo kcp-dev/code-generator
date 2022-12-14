@@ -19,7 +19,7 @@ package namer
 import (
 	"testing"
 
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 func TestNamer(t *testing.T) {

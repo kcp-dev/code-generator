@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type FakeClientset struct {
@@ -56,7 +56,7 @@ package fake
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	kcpfakediscovery "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -82,7 +82,7 @@ func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
 	o.AddAll(objects...)
 
 	cs := &ClusterClientset{Fake: &kcptesting.Fake{}, tracker: o}
-	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.Wildcard}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, ClusterPath: logicalcluster.Wildcard}
 	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
 	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
@@ -115,15 +115,15 @@ func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() kcp{{.PackageAlias}}.{
 {{end -}}
 
 // Cluster scopes this clientset to one cluster.
-func (c *ClusterClientset) Cluster(cluster logicalcluster.Name) client.Interface {
-	if cluster == logicalcluster.Wildcard {
+func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) client.Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return &Clientset{
 		Fake: c.Fake,
-		discovery: &kcpfakediscovery.FakeDiscovery{Fake: c.Fake, Cluster: cluster},
-		tracker: c.tracker.Cluster(cluster),
-		cluster: cluster,
+		discovery: &kcpfakediscovery.FakeDiscovery{Fake: c.Fake, ClusterPath: clusterPath},
+		tracker: c.tracker.Cluster(clusterPath),
+		clusterPath: clusterPath,
 	}
 }
 
@@ -134,7 +134,7 @@ type Clientset struct {
 	*kcptesting.Fake
 	discovery *kcpfakediscovery.FakeDiscovery
 	tracker   kcptesting.ScopedObjectTracker
-	cluster logicalcluster.Name
+	clusterPath logicalcluster.Path
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -149,7 +149,7 @@ func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 {{range .groups}}
 // {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}Client.  
 func (c *Clientset) {{.GroupGoName}}{{.Version}}() {{.PackageAlias}}.{{.GroupGoName}}{{.Version}}Interface {
-	return &fake{{.PackageAlias}}.{{.GroupGoName}}{{.Version}}Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fake{{.PackageAlias}}.{{.GroupGoName}}{{.Version}}Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 {{end -}}
 `

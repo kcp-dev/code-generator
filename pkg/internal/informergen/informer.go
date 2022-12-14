@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/code-generator/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
 type Informer struct {
@@ -101,9 +101,9 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
-	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 	{{.group.PackageAlias}}listers "{{.listerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
@@ -191,10 +191,10 @@ type {{.kind}}Informer interface {
 }
 {{end -}}
 
-func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(cluster logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer {
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer {
 	return &{{.kind.String|lowerFirst}}Informer{
-		informer: f.Informer().Cluster(cluster),
-		lister:   f.Lister().Cluster(cluster),
+		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().Cluster(clusterName),
 	}
 }
 

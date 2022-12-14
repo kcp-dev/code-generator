@@ -20,7 +20,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/kcp-dev/code-generator/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
 type Factory struct {
@@ -76,8 +76,8 @@ import (
 	"sync"
 	"time"
 
-	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -252,16 +252,16 @@ func (f *sharedInformerFactory) {{.GoName}}() {{.Group.PackageName}}informers.Cl
 }
 {{end}}
 
-func (f *sharedInformerFactory) Cluster(cluster logicalcluster.Name) ScopedDynamicSharedInformerFactory {
+func (f *sharedInformerFactory) Cluster(clusterName logicalcluster.Name) ScopedDynamicSharedInformerFactory {
 	return &scopedDynamicSharedInformerFactory{
 		sharedInformerFactory: f,
-		cluster: cluster,
+		clusterName: clusterName,
 	}
 }
 
 type scopedDynamicSharedInformerFactory struct {
 	*sharedInformerFactory
-	cluster logicalcluster.Name
+	clusterName logicalcluster.Name
 }
 
 func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error) {
@@ -269,7 +269,7 @@ func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVe
 	if err != nil {
 		return nil, err
 	}
-	return clusterInformer.Cluster(f.cluster), nil 
+	return clusterInformer.Cluster(f.clusterName), nil 
 }
 
 func (f *scopedDynamicSharedInformerFactory) Start(stopCh <-chan struct{}) {

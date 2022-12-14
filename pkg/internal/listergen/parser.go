@@ -20,7 +20,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 var (

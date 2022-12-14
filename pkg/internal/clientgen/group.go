@@ -7,8 +7,8 @@ import (
 
 	"k8s.io/code-generator/cmd/client-gen/types"
 
-	"github.com/kcp-dev/code-generator/pkg/parser"
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Group struct {
@@ -52,8 +52,8 @@ package {{.group.Version.PackageName}}
 import (
 	"net/http"
 
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/rest"
 
@@ -67,18 +67,18 @@ type {{.group.GroupGoName}}{{.group.Version}}ClusterInterface interface {
 }
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterScoper interface {
-	Cluster(logicalcluster.Name) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface
+	Cluster(logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface
 }
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterClient struct {
 	clientCache kcpclient.Cache[*{{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]
 }
 
-func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(name logicalcluster.Name) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
-	if name == logicalcluster.Wildcard {
+func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
 {{ range .kinds}}
@@ -104,7 +104,7 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*{{.group.GroupGoNam
 	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*{{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]{
 		NewForConfigAndClient: {{.group.PackageAlias}}.NewForConfigAndClient,
 	})
-	if _, err := cache.Cluster(logicalcluster.New("root")); err != nil {
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
 	return &{{.group.GroupGoName}}{{.group.Version}}ClusterClient{clientCache: cache}, nil

@@ -95,7 +95,8 @@ $(GOLANGCI_LINT):
 .PHONY: lint
 lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --timeout=10m ./...
-	cd examples && $(GOLANGCI_LINT) run --timeout=10m ./...
+# temporarily disable the linter in the example directory, see https://github.com/kcp-dev/code-generator/issues/75
+# cd examples && $(GOLANGCI_LINT) run --timeout=10m ./...
 
 .PHONY: test
 test:

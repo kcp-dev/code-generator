@@ -27,9 +27,9 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
-	"github.com/kcp-dev/code-generator/pkg/internal/clientgen"
-	"github.com/kcp-dev/code-generator/pkg/parser"
-	"github.com/kcp-dev/code-generator/pkg/util"
+	"github.com/kcp-dev/code-generator/v2/pkg/internal/clientgen"
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
+	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Generator struct {
