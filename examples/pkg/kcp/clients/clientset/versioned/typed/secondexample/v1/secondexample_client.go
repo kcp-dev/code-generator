@@ -24,8 +24,8 @@ package v1
 import (
 	"net/http"
 
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/rest"
 
@@ -39,18 +39,18 @@ type SecondexampleV1ClusterInterface interface {
 }
 
 type SecondexampleV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) secondexamplev1.SecondexampleV1Interface
+	Cluster(logicalcluster.Path) secondexamplev1.SecondexampleV1Interface
 }
 
 type SecondexampleV1ClusterClient struct {
 	clientCache kcpclient.Cache[*secondexamplev1.SecondexampleV1Client]
 }
 
-func (c *SecondexampleV1ClusterClient) Cluster(name logicalcluster.Name) secondexamplev1.SecondexampleV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *SecondexampleV1ClusterClient) Cluster(clusterPath logicalcluster.Path) secondexamplev1.SecondexampleV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
 func (c *SecondexampleV1ClusterClient) TestTypes() TestTypeClusterInterface {
@@ -78,7 +78,7 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*SecondexampleV1Clus
 	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*secondexamplev1.SecondexampleV1Client]{
 		NewForConfigAndClient: secondexamplev1.NewForConfigAndClient,
 	})
-	if _, err := cache.Cluster(logicalcluster.New("root")); err != nil {
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
 	return &SecondexampleV1ClusterClient{clientCache: cache}, nil

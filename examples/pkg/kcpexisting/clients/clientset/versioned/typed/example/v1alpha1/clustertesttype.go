@@ -24,8 +24,8 @@ package v1alpha1
 import (
 	"context"
 
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -43,7 +43,7 @@ type ClusterTestTypesClusterGetter interface {
 // ClusterTestTypeClusterInterface can operate on ClusterTestTypes across all clusters,
 // or scope down to one cluster and return a examplev1alpha1client.ClusterTestTypeInterface.
 type ClusterTestTypeClusterInterface interface {
-	Cluster(logicalcluster.Name) examplev1alpha1client.ClusterTestTypeInterface
+	Cluster(logicalcluster.Path) examplev1alpha1client.ClusterTestTypeInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*examplev1alpha1.ClusterTestTypeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -53,12 +53,12 @@ type clusterTestTypesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *clusterTestTypesClusterInterface) Cluster(name logicalcluster.Name) examplev1alpha1client.ClusterTestTypeInterface {
-	if name == logicalcluster.Wildcard {
+func (c *clusterTestTypesClusterInterface) Cluster(clusterPath logicalcluster.Path) examplev1alpha1client.ClusterTestTypeInterface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).ClusterTestTypes()
+	return c.clientCache.ClusterOrDie(clusterPath).ClusterTestTypes()
 }
 
 // List returns the entire collection of all ClusterTestTypes across all clusters.

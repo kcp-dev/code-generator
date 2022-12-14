@@ -22,8 +22,8 @@ limitations under the License.
 package v1
 
 import (
-	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	examplev1client "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
 )
@@ -36,7 +36,7 @@ type WithoutVerbTypesClusterGetter interface {
 
 // WithoutVerbTypeClusterInterface can scope down to one cluster and return a WithoutVerbTypesNamespacer.
 type WithoutVerbTypeClusterInterface interface {
-	Cluster(logicalcluster.Name) WithoutVerbTypesNamespacer
+	Cluster(logicalcluster.Path) WithoutVerbTypesNamespacer
 }
 
 type withoutVerbTypesClusterInterface struct {
@@ -44,12 +44,12 @@ type withoutVerbTypesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *withoutVerbTypesClusterInterface) Cluster(name logicalcluster.Name) WithoutVerbTypesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *withoutVerbTypesClusterInterface) Cluster(clusterPath logicalcluster.Path) WithoutVerbTypesNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &withoutVerbTypesNamespacer{clientCache: c.clientCache, name: name}
+	return &withoutVerbTypesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
 }
 
 // WithoutVerbTypesNamespacer can scope to objects within a namespace, returning a examplev1client.WithoutVerbTypeInterface.
@@ -59,9 +59,9 @@ type WithoutVerbTypesNamespacer interface {
 
 type withoutVerbTypesNamespacer struct {
 	clientCache kcpclient.Cache[*examplev1client.ExampleV1Client]
-	name        logicalcluster.Name
+	clusterPath logicalcluster.Path
 }
 
 func (n *withoutVerbTypesNamespacer) Namespace(namespace string) examplev1client.WithoutVerbTypeInterface {
-	return n.clientCache.ClusterOrDie(n.name).WithoutVerbTypes(namespace)
+	return n.clientCache.ClusterOrDie(n.clusterPath).WithoutVerbTypes(namespace)
 }

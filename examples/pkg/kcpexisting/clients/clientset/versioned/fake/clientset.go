@@ -22,7 +22,7 @@ limitations under the License.
 package fake
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcpfakediscovery "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake"
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
@@ -64,7 +64,7 @@ func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
 	o.AddAll(objects...)
 
 	cs := &ClusterClientset{Fake: &kcptesting.Fake{}, tracker: o}
-	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.Wildcard}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, ClusterPath: logicalcluster.Wildcard}
 	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
 	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
@@ -125,15 +125,15 @@ func (c *ClusterClientset) SecondexampleV1() kcpsecondexamplev1.SecondexampleV1C
 }
 
 // Cluster scopes this clientset to one cluster.
-func (c *ClusterClientset) Cluster(cluster logicalcluster.Name) client.Interface {
-	if cluster == logicalcluster.Wildcard {
+func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) client.Interface {
+	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return &Clientset{
-		Fake:      c.Fake,
-		discovery: &kcpfakediscovery.FakeDiscovery{Fake: c.Fake, Cluster: cluster},
-		tracker:   c.tracker.Cluster(cluster),
-		cluster:   cluster,
+		Fake:        c.Fake,
+		discovery:   &kcpfakediscovery.FakeDiscovery{Fake: c.Fake, ClusterPath: clusterPath},
+		tracker:     c.tracker.Cluster(clusterPath),
+		clusterPath: clusterPath,
 	}
 }
 
@@ -142,9 +142,9 @@ var _ client.Interface = (*Clientset)(nil)
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*kcptesting.Fake
-	discovery *kcpfakediscovery.FakeDiscovery
-	tracker   kcptesting.ScopedObjectTracker
-	cluster   logicalcluster.Name
+	discovery   *kcpfakediscovery.FakeDiscovery
+	tracker     kcptesting.ScopedObjectTracker
+	clusterPath logicalcluster.Path
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -158,35 +158,35 @@ func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 
 // Example3V1 retrieves the Example3V1Client.
 func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
-	return &fakeexample3v1.Example3V1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexample3v1.Example3V1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ExampleV1 retrieves the ExampleV1Client.
 func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
-	return &fakeexamplev1.ExampleV1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexamplev1.ExampleV1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ExampleV1alpha1 retrieves the ExampleV1alpha1Client.
 func (c *Clientset) ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface {
-	return &fakeexamplev1alpha1.ExampleV1alpha1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexamplev1alpha1.ExampleV1alpha1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ExampleV1beta1 retrieves the ExampleV1beta1Client.
 func (c *Clientset) ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface {
-	return &fakeexamplev1beta1.ExampleV1beta1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexamplev1beta1.ExampleV1beta1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ExampleV2 retrieves the ExampleV2Client.
 func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
-	return &fakeexamplev2.ExampleV2Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexamplev2.ExampleV2Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client.
 func (c *Clientset) ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface {
-	return &fakeexistinginterfacesv1.ExistinginterfacesV1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakeexistinginterfacesv1.ExistinginterfacesV1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // SecondexampleV1 retrieves the SecondexampleV1Client.
 func (c *Clientset) SecondexampleV1() secondexamplev1.SecondexampleV1Interface {
-	return &fakesecondexamplev1.SecondexampleV1Client{Fake: c.Fake, Cluster: c.cluster}
+	return &fakesecondexamplev1.SecondexampleV1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }

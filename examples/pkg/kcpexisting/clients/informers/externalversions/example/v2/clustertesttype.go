@@ -25,9 +25,9 @@ import (
 	"context"
 	"time"
 
-	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	kcpinformers "github.com/kcp-dev/apimachinery/third_party/informers"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,10 +103,10 @@ func (f *clusterTestTypeClusterInformer) Lister() examplev2listers.ClusterTestTy
 	return examplev2listers.NewClusterTestTypeClusterLister(f.Informer().GetIndexer())
 }
 
-func (f *clusterTestTypeClusterInformer) Cluster(cluster logicalcluster.Name) upstreamexamplev2informers.ClusterTestTypeInformer {
+func (f *clusterTestTypeClusterInformer) Cluster(clusterName logicalcluster.Name) upstreamexamplev2informers.ClusterTestTypeInformer {
 	return &clusterTestTypeInformer{
-		informer: f.Informer().Cluster(cluster),
-		lister:   f.Lister().Cluster(cluster),
+		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().Cluster(clusterName),
 	}
 }
 

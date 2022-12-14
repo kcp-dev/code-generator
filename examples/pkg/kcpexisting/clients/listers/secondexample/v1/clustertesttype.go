@@ -22,8 +22,8 @@ limitations under the License.
 package v1
 
 import (
-	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,7 +40,7 @@ type ClusterTestTypeClusterLister interface {
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*secondexamplev1.ClusterTestType, err error)
 	// Cluster returns a lister that can list and get ClusterTestTypes in one workspace.
-	Cluster(cluster logicalcluster.Name) secondexamplev1listers.ClusterTestTypeLister
+	Cluster(clusterName logicalcluster.Name) secondexamplev1listers.ClusterTestTypeLister
 	ClusterTestTypeClusterListerExpansion
 }
 
@@ -66,19 +66,19 @@ func (s *clusterTestTypeClusterLister) List(selector labels.Selector) (ret []*se
 }
 
 // Cluster scopes the lister to one workspace, allowing users to list and get ClusterTestTypes.
-func (s *clusterTestTypeClusterLister) Cluster(cluster logicalcluster.Name) secondexamplev1listers.ClusterTestTypeLister {
-	return &clusterTestTypeLister{indexer: s.indexer, cluster: cluster}
+func (s *clusterTestTypeClusterLister) Cluster(clusterName logicalcluster.Name) secondexamplev1listers.ClusterTestTypeLister {
+	return &clusterTestTypeLister{indexer: s.indexer, clusterName: clusterName}
 }
 
 // clusterTestTypeLister implements the secondexamplev1listers.ClusterTestTypeLister interface.
 type clusterTestTypeLister struct {
-	indexer cache.Indexer
-	cluster logicalcluster.Name
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
 }
 
 // List lists all ClusterTestTypes in the indexer for a workspace.
 func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*secondexamplev1.ClusterTestType, err error) {
-	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
 		ret = append(ret, i.(*secondexamplev1.ClusterTestType))
 	})
 	return ret, err
@@ -86,7 +86,7 @@ func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*secondexa
 
 // Get retrieves the ClusterTestType from the indexer for a given workspace and name.
 func (s *clusterTestTypeLister) Get(name string) (*secondexamplev1.ClusterTestType, error) {
-	key := kcpcache.ToClusterAwareKey(s.cluster.String(), "", name)
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
