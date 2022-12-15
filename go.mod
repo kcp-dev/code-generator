@@ -3,7 +3,6 @@ module github.com/kcp-dev/code-generator/v2
 go 1.18
 
 require (
-	github.com/kcp-dev/code-generator v0.0.0-20221103165105-2dc1248118a7
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.20.1
 	github.com/spf13/cobra v1.4.0
