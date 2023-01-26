@@ -136,7 +136,7 @@ func (s *testTypeNamespaceLister) Get(name string) (*existinginterfacesv1.TestTy
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(existinginterfacesv1.Resource("TestType"), name)
+		return nil, errors.NewNotFound(existinginterfacesv1.Resource("testtypes"), name)
 	}
 	return obj.(*existinginterfacesv1.TestType), nil
 }
@@ -190,7 +190,7 @@ func (s *testTypeScopedNamespaceLister) Get(name string) (*existinginterfacesv1.
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(existinginterfacesv1.Resource("TestType"), name)
+		return nil, errors.NewNotFound(existinginterfacesv1.Resource("testtypes"), name)
 	}
 	return obj.(*existinginterfacesv1.TestType), nil
 }

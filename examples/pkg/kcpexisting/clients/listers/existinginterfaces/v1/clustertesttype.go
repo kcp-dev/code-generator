@@ -92,7 +92,7 @@ func (s *clusterTestTypeLister) Get(name string) (*existinginterfacesv1.ClusterT
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(existinginterfacesv1.Resource("ClusterTestType"), name)
+		return nil, errors.NewNotFound(existinginterfacesv1.Resource("clustertesttypes"), name)
 	}
 	return obj.(*existinginterfacesv1.ClusterTestType), nil
 }

@@ -113,7 +113,7 @@ func (s *testTypeNamespaceLister) Get(name string) (*secondexamplev1.TestType, e
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(secondexamplev1.Resource("TestType"), name)
+		return nil, errors.NewNotFound(secondexamplev1.Resource("testtypes"), name)
 	}
 	return obj.(*secondexamplev1.TestType), nil
 }

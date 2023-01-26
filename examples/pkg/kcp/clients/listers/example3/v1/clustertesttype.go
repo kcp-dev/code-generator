@@ -103,7 +103,7 @@ func (s *clusterTestTypeLister) Get(name string) (*example3v1.ClusterTestType, e
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(example3v1.Resource("ClusterTestType"), name)
+		return nil, errors.NewNotFound(example3v1.Resource("clustertesttypes"), name)
 	}
 	return obj.(*example3v1.ClusterTestType), nil
 }
@@ -137,7 +137,7 @@ func (s *clusterTestTypeScopedLister) Get(name string) (*example3v1.ClusterTestT
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(example3v1.Resource("ClusterTestType"), name)
+		return nil, errors.NewNotFound(example3v1.Resource("clustertesttypes"), name)
 	}
 	return obj.(*example3v1.ClusterTestType), nil
 }
