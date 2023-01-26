@@ -136,7 +136,7 @@ func (s *testTypeNamespaceLister) Get(name string) (*examplev1alpha1.TestType, e
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(examplev1alpha1.Resource("TestType"), name)
+		return nil, errors.NewNotFound(examplev1alpha1.Resource("testtypes"), name)
 	}
 	return obj.(*examplev1alpha1.TestType), nil
 }
@@ -190,7 +190,7 @@ func (s *testTypeScopedNamespaceLister) Get(name string) (*examplev1alpha1.TestT
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(examplev1alpha1.Resource("TestType"), name)
+		return nil, errors.NewNotFound(examplev1alpha1.Resource("testtypes"), name)
 	}
 	return obj.(*examplev1alpha1.TestType), nil
 }

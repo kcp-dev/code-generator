@@ -162,7 +162,7 @@ func (s *{{.kind.String | lowerFirst}}Lister) Get(name string) (*{{.group.Packag
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
 	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
 }
@@ -219,7 +219,7 @@ func (s *{{.kind.String | lowerFirst}}NamespaceLister) Get(name string) (*{{.gro
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
 	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
 }
@@ -259,7 +259,7 @@ func (s *{{.kind.String | lowerFirst}}ScopedLister) Get(name string) (*{{.group.
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
 	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
 }
@@ -291,7 +291,7 @@ func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) Get(name string) (*
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.String}}"), name)
+		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
 	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
 }
