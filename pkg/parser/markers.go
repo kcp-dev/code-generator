@@ -101,9 +101,9 @@ func IsNamespaced(info *markers.TypeInfo) bool {
 }
 
 // SupportedVerbs determines which verbs the type supports
-func SupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
+func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
 	if info.Markers.Get(NoVerbsMarker.Name) != nil {
-		return sets.NewString(), nil
+		return sets.New[string](), nil
 	}
 
 	extractVerbs := func(info *markers.TypeInfo, name string) ([]string, error) {
@@ -119,26 +119,26 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.String, error) {
 
 	onlyVerbs, err := extractVerbs(info, OnlyVerbsMarker.Name)
 	if err != nil {
-		return sets.NewString(), err
+		return sets.New[string](), err
 	}
 	if len(onlyVerbs) > 0 {
-		return sets.NewString(onlyVerbs...), nil
+		return sets.New[string](onlyVerbs...), nil
 	}
 
-	baseVerbs := sets.NewString(genutil.SupportedVerbs...)
+	baseVerbs := sets.New[string](genutil.SupportedVerbs...)
 	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
-		baseVerbs = sets.NewString(genutil.ReadonlyVerbs...)
+		baseVerbs = sets.New[string](genutil.ReadonlyVerbs...)
 	}
 
 	if info.Markers.Get(NoStatusMarker.Name) != nil {
-		baseVerbs = baseVerbs.Difference(sets.NewString("updateStatus", "applyStatus"))
+		baseVerbs = baseVerbs.Difference(sets.New[string]("updateStatus", "applyStatus"))
 	}
 
 	skipVerbs, err := extractVerbs(info, SkipVerbsMarker.Name)
 	if err != nil {
-		return sets.NewString(), err
+		return sets.New[string](), err
 	}
-	return baseVerbs.Difference(sets.NewString(skipVerbs...)), nil
+	return baseVerbs.Difference(sets.New[string](skipVerbs...)), nil
 }
 
 func ClientExtensions(info *markers.TypeInfo) []Extension {
