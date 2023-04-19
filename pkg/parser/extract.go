@@ -34,11 +34,11 @@ import (
 // isForbiddenGroupVersion hacks around the k8s client-set, where types have +genclient but aren't meant to have
 // generated clients ... ?
 func isForbiddenGroupVersion(group types.Group, version types.Version) bool {
-	forbidden := map[string]sets.String{
-		"abac.authorization.kubernetes.io": sets.NewString("v0", "v1beta1"),
-		"componentconfig":                  sets.NewString("v1alpha1"),
-		"imagepolicy.k8s.io":               sets.NewString("v1alpha1"),
-		"admission.k8s.io":                 sets.NewString("v1", "v1beta1"),
+	forbidden := map[string]sets.Set[string]{
+		"abac.authorization.kubernetes.io": sets.New[string]("v0", "v1beta1"),
+		"componentconfig":                  sets.New[string]("v1alpha1"),
+		"imagepolicy.k8s.io":               sets.New[string]("v1alpha1"),
+		"admission.k8s.io":                 sets.New[string]("v1", "v1beta1"),
 	}
 	versions, ok := forbidden[group.String()]
 	return ok && versions.Has(version.String())

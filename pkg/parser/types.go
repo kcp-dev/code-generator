@@ -27,7 +27,7 @@ import (
 type Kind struct {
 	kind           string
 	namespaced     bool
-	SupportedVerbs sets.String
+	SupportedVerbs sets.Set[string]
 	Extensions     []Extension
 	namer          namer.Namer
 }
@@ -58,7 +58,7 @@ func (k *Kind) SupportsListWatch() bool {
 // then ensure we add in fake_type.go entries for the extension
 // changes we've already made should enable clients to exist for it
 
-func NewKind(kind string, namespaced bool, supportedVerbs sets.String, extensions []Extension) Kind {
+func NewKind(kind string, namespaced bool, supportedVerbs sets.Set[string], extensions []Extension) Kind {
 	return Kind{
 		kind:           kind,
 		namespaced:     namespaced,
