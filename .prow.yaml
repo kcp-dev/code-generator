@@ -1,0 +1,40 @@
+presubmits:
+  - name: pull-codegenerator-verify
+    always_run: true
+    decorate: true
+    clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
+    labels:
+      preset-goproxy: "true"
+    spec:
+      containers:
+        - image: docker.io/library/go:1.19.9-alpine
+          command:
+            - make
+            - verify-codegen
+            - verify-boilerplate
+
+  - name: pull-codegenerator-lint
+    always_run: true
+    decorate: true
+    clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
+    labels:
+      preset-goproxy: "true"
+    spec:
+      containers:
+        - image: docker.io/library/go:1.19.9-alpine
+          command:
+            - make
+            - lint
+
+  - name: pull-codegenerator-test
+    always_run: true
+    decorate: true
+    clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
+    labels:
+      preset-goproxy: "true"
+    spec:
+      containers:
+        - image: docker.io/library/go:1.19.9-alpine
+          command:
+            - make
+            - test
