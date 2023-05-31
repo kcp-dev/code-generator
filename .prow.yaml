@@ -1,5 +1,5 @@
 presubmits:
-  - name: pull-codegenerator-verify
+  - name: pull-code-generator-verify
     always_run: true
     decorate: true
     clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
@@ -13,7 +13,7 @@ presubmits:
             - verify-codegen
             - verify-boilerplate
 
-  - name: pull-codegenerator-lint
+  - name: pull-code-generator-lint
     always_run: true
     decorate: true
     clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
@@ -26,7 +26,7 @@ presubmits:
             - make
             - lint
 
-  - name: pull-codegenerator-test
+  - name: pull-code-generator-test
     always_run: true
     decorate: true
     clone_uri: "ssh://git@github.com/kcp-dev/code-generator.git"
