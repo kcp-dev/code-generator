@@ -7,7 +7,7 @@ presubmits:
       preset-goproxy: "true"
     spec:
       containers:
-        - image: docker.io/library/go:1.19.9-alpine
+        - image: ghcr.io/kcp-dev/infra/build:1.19.9-1
           command:
             - make
             - verify-codegen
@@ -34,7 +34,7 @@ presubmits:
       preset-goproxy: "true"
     spec:
       containers:
-        - image: docker.io/library/go:1.19.9-alpine
+        - image: ghcr.io/kcp-dev/infra/build:1.19.9-1
           command:
             - make
             - test
