@@ -19,7 +19,7 @@ limitations under the License.
 // 1. There is no concept of plublic/private namer here. There is generic namer struct which
 // parses the input and gives us the required plural form.
 // 2. The input argument to function `Name` is customized to accept a string instead of `types.Type`,
-// since we directly modeify the API name in our code-gen.
+// since we directly modify the API name in our code-gen.
 
 package namer
 
