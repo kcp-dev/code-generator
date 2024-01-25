@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Flags - Options accepted by generator
+// Flags are options accepted by the generator.
 type Flags struct {
 	// OutputDir is where the generated code is to be written to.
 	OutputDir string
@@ -65,15 +65,15 @@ func (f *Flags) AddTo(flagset *pflag.FlagSet) {
 // https://github.com/kcp-dev/code-generator/issues/4
 func ValidateFlags(f Flags) error {
 	if f.InputDir == "" {
-		return errors.New("input path to API definition is required.")
+		return errors.New("input path to API definition is required")
 	}
 
 	if f.ClientsetAPIPath == "" {
-		return errors.New("specifying client API path is required currently.")
+		return errors.New("specifying client API path is required currently")
 	}
 
 	if len(f.GroupVersions) == 0 {
-		return errors.New("list of group versions for which the clients are to be generated is required.")
+		return errors.New("list of group versions for which the clients are to be generated is required")
 	}
 
 	return nil
