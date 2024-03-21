@@ -100,7 +100,7 @@ func IsNamespaced(info *markers.TypeInfo) bool {
 	return !IsClusterScoped(info)
 }
 
-// SupportedVerbs determines which verbs the type supports
+// SupportedVerbs determines which verbs the type supports.
 func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
 	if info.Markers.Get(NoVerbsMarker.Name) != nil {
 		return sets.New[string](), nil
@@ -146,7 +146,7 @@ func ClientExtensions(info *markers.TypeInfo) []Extension {
 	if !ok || values == nil {
 		return nil
 	}
-	var extensions []Extension
+	extensions := make([]Extension, 0, len(values))
 	for _, item := range values {
 		extension, ok := item.(extension)
 		if !ok {

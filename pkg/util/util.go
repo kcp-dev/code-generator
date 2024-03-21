@@ -34,7 +34,7 @@ func LowerFirst(s string) string {
 	return strings.ToLower(string(s[0])) + s[1:]
 }
 
-// UpperFirst sets the first alphabet to upperCase/
+// UpperFirst sets the first alphabet to upperCase.
 func UpperFirst(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }

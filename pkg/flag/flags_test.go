@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TODO: Rewrite into generic Go Testing format
+// TODO: Rewrite into generic Go Testing format.
 func TestMetadata(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test flags suite")
@@ -47,19 +47,19 @@ var _ = Describe("Test flag inputs", func() {
 	It("verify input path error", func() {
 		f.InputDir = ""
 		err := ValidateFlags(f)
-		Expect(err.Error()).To(ContainSubstring("input path to API definition is required."))
+		Expect(err.Error()).To(ContainSubstring("input path to API definition is required"))
 	})
 
 	It("verify clientsetAPI path", func() {
 		f.ClientsetAPIPath = ""
 		err := ValidateFlags(f)
-		Expect(err.Error()).To(ContainSubstring("specifying client API path is required currently."))
+		Expect(err.Error()).To(ContainSubstring("specifying client API path is required currently"))
 	})
 
 	It("verify group version list", func() {
 		f.GroupVersions = []string{}
 		err := ValidateFlags(f)
-		Expect(err.Error()).To(ContainSubstring("list of group versions for which the clients are to be generated is required."))
+		Expect(err.Error()).To(ContainSubstring("list of group versions for which the clients are to be generated is required"))
 	})
 
 })

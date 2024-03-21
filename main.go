@@ -55,7 +55,7 @@ var (
 	// them names for use on the command line.
 	// Each output rule turns into two command line options:
 	// - output:<generator>:<form> (per-generator output)
-	// - output:<form> (default output)
+	// - output:<form> (default output).
 	allOutputRules = map[string]genall.OutputRule{
 		"dir":       genall.OutputToDirectory(""),
 		"none":      genall.OutputToNothing,
@@ -63,13 +63,13 @@ var (
 		"artifacts": genall.OutputArtifacts{},
 	}
 
-	// optionsRegistry contains all the marker definitions used to process command line options
+	// optionsRegistry contains all the marker definitions used to process command line options.
 	optionsRegistry = &markers.Registry{}
 )
 
 func init() {
 	for genName, gen := range allGenerators {
-		// make the generator options marker itself
+		// make the generator options marker itself.
 		defn := markers.Must(markers.MakeDefinition(genName, markers.DescribesPackage, gen))
 		if err := optionsRegistry.Register(defn); err != nil {
 			panic(err)
@@ -80,7 +80,7 @@ func init() {
 			}
 		}
 
-		// make per-generation output rule markers
+		// make per-generation output rule markers.
 		for ruleName, rule := range allOutputRules {
 			ruleMarker := markers.Must(markers.MakeDefinition(fmt.Sprintf("output:%s:%s", genName, ruleName), markers.DescribesPackage, rule))
 			if err := optionsRegistry.Register(ruleMarker); err != nil {
@@ -94,7 +94,7 @@ func init() {
 		}
 	}
 
-	// make "default output" output rule markers
+	// make "default output" output rule markers.
 	for ruleName, rule := range allOutputRules {
 		ruleMarker := markers.Must(markers.MakeDefinition("output:"+ruleName, markers.DescribesPackage, rule))
 		if err := optionsRegistry.Register(ruleMarker); err != nil {
@@ -107,7 +107,7 @@ func init() {
 		}
 	}
 
-	// add in the common options markers
+	// add in the common options markers.
 	if err := genall.RegisterOptionsMarkers(optionsRegistry); err != nil {
 		panic(err)
 	}
@@ -143,23 +143,23 @@ func main() {
 	code-generator lister -ww
 `,
 		RunE: func(c *cobra.Command, rawOpts []string) error {
-			// print version if asked for it
+			// print version if asked for it.
 			if showVersion {
 				version.Print()
 				return nil
 			}
 
-			// print the help if we asked for it (since we've got a different help flag :-/), then bail
+			// print the help if we asked for it (since we've got a different help flag :-/), then bail.
 			if helpLevel > 0 {
 				return c.Usage()
 			}
 
-			// print the marker docs if we asked for them, then bail
+			// print the marker docs if we asked for them, then bail.
 			if whichLevel > 0 {
 				return printMarkerDocs(c, rawOpts, whichLevel)
 			}
 
-			// otherwise, set up the runtime for actually running the generators
+			// otherwise, set up the runtime for actually running the generators.
 			rt, err := genall.FromOptions(optionsRegistry, rawOpts)
 			if err != nil {
 				return err
@@ -174,7 +174,7 @@ func main() {
 			}
 			return nil
 		},
-		SilenceUsage: true, // silence the usage, then print it out ourselves if it wasn't suppressed
+		SilenceUsage: true, // silence the usage, then print it out ourselves if it wasn't suppressed.
 	}
 	cmd.Flags().CountVarP(&whichLevel, "which-markers", "w", "print out all markers available with the requested generators\n(up to -www for the most detailed output, or -wwww for json output)")
 	cmd.Flags().CountVarP(&helpLevel, "detailed-help", "h", "print out more detailed help\n(up to -hhh for the most detailed output, or -hhhh for json output)")
@@ -194,7 +194,7 @@ func main() {
 
 	if err := cmd.Execute(); err != nil {
 		if _, noUsage := err.(noUsageError); !noUsage {
-			// print the usage unless we suppressed it
+			// print the usage unless we suppressed it.
 			if err := cmd.Usage(); err != nil {
 				panic(err)
 			}

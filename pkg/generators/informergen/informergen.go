@@ -109,7 +109,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 	logger := klog.Background()
 
-	var onlyGroups []parser.Group
+	onlyGroups := make([]parser.Group, 0, len(groupVersionKinds))
 	for group := range groupVersionKinds {
 		onlyGroups = append(onlyGroups, group)
 	}
