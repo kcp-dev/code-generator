@@ -16,7 +16,7 @@ limitations under the License.
 
 // This code has been taken from https://github.com/kubernetes/gengo/blob/master/namer/plural_namer.go
 // with minor modifications. The changes are:
-// 1. There is no concept of plublic/private namer here. There is generic namer struct which
+// 1. There is no concept of public/private namer here. There is generic namer struct which
 // parses the input and gives us the required plural form.
 // 2. The input argument to function `Name` is customized to accept a string instead of `types.Type`,
 // since we directly modeify the API name in our code-gen.
