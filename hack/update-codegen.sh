@@ -41,32 +41,28 @@ ${KUBE_CLIENT_GEN} \
   --input example3/v1 \
   --input secondexample/v1 \
   --input existinginterfaces/v1 \
-  --output-base . \
-  --output-package acme.corp/pkg/generated/clientset \
-  --trim-path-prefix acme.corp
+  --output-dir ./pkg/generated/clientset \
+  --output-pkg acme.corp/pkg/generated/clientset
 
 ${KUBE_APPLYCONFIGURATION_GEN} \
   --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --input-dirs acme.corp/pkg/apis/example/v1,acme.corp/pkg/apis/example/v1alpha1,acme.corp/pkg/apis/example/v1beta1,acme.corp/pkg/apis/example/v2,acme.corp/pkg/apis/example3/v1,acme.corp/pkg/apis/secondexample/v1,acme.corp/pkg/apis/existinginterfaces/v1 \
-  --output-base . \
-  --output-package acme.corp/pkg/generated/applyconfigurations \
-  --trim-path-prefix acme.corp
+  --output-dir ./pkg/generated/applyconfigurations \
+  --output-pkg acme.corp/pkg/generated/applyconfigurations \
+  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
 
 ${KUBE_LISTER_GEN} \
   --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --input-dirs acme.corp/pkg/apis/example/v1,acme.corp/pkg/apis/example/v1alpha1,acme.corp/pkg/apis/example/v1beta1,acme.corp/pkg/apis/example/v2,acme.corp/pkg/apis/example3/v1,acme.corp/pkg/apis/secondexample/v1,acme.corp/pkg/apis/existinginterfaces/v1 \
-  --output-base . \
-  --output-package acme.corp/pkg/generated/listers \
-  --trim-path-prefix acme.corp
+  --output-dir ./pkg/generated/listers \
+  --output-pkg acme.corp/pkg/generated/listers \
+  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
 
 ${KUBE_INFORMER_GEN} \
   --versioned-clientset-package acme.corp/pkg/generated/clientset/versioned \
   --listers-package acme.corp/pkg/generated/listers \
   --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --input-dirs acme.corp/pkg/apis/example/v1,acme.corp/pkg/apis/example/v1alpha1,acme.corp/pkg/apis/example/v1beta1,acme.corp/pkg/apis/example/v2,acme.corp/pkg/apis/example3/v1,acme.corp/pkg/apis/secondexample/v1,acme.corp/pkg/apis/existinginterfaces/v1 \
-  --output-base . \
-  --output-package acme.corp/pkg/generated/informers \
-  --trim-path-prefix acme.corp
+  --output-dir ./pkg/generated/informers \
+  --output-pkg acme.corp/pkg/generated/informers \
+  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
 
 # Generate cluster-aware clients, informers and listers using generated single-cluster code
 ./../bin/code-generator \

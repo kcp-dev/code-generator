@@ -49,6 +49,7 @@ type SharedInformerOption func(*SharedInformerOptions) *SharedInformerOptions
 type SharedInformerOptions struct {
 	customResync     map[reflect.Type]time.Duration
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	transform        cache.TransformFunc
 }
 
 type sharedInformerFactory struct {
@@ -57,6 +58,7 @@ type sharedInformerFactory struct {
 	lock             sync.Mutex
 	defaultResync    time.Duration
 	customResync     map[reflect.Type]time.Duration
+	transform        cache.TransformFunc
 
 	informers map[reflect.Type]kcpcache.ScopeableSharedIndexInformer
 	// startedInformers is used for tracking which informers have been started.
@@ -83,6 +85,14 @@ func WithCustomResyncConfig(resyncConfig map[metav1.Object]time.Duration) Shared
 func WithTweakListOptions(tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerOption {
 	return func(opts *SharedInformerOptions) *SharedInformerOptions {
 		opts.tweakListOptions = tweakListOptions
+		return opts
+	}
+}
+
+// WithTransform sets a transform on all informers.
+func WithTransform(transform cache.TransformFunc) SharedInformerOption {
+	return func(opts *SharedInformerOptions) *SharedInformerOptions {
+		opts.transform = transform
 		return opts
 	}
 }
@@ -114,6 +124,7 @@ func NewSharedInformerFactoryWithOptions(client clientset.ClusterInterface, defa
 	// Forward options to the factory
 	factory.customResync = opts.customResync
 	factory.tweakListOptions = opts.tweakListOptions
+	factory.transform = opts.transform
 
 	return factory
 }
