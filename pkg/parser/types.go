@@ -67,7 +67,9 @@ func NewKind(kind string, namespaced bool, supportedVerbs sets.Set[string], exte
 		namer: namer.Namer{
 			Finalize: util.UpperFirst,
 			Exceptions: map[string]string{
-				"Endpoints": "Endpoints",
+				"Endpoints":               "Endpoints",
+				"ResourceClaimParameters": "ResourceClaimParameters",
+				"ResourceClassParameters": "ResourceClassParameters",
 			},
 		},
 	}
