@@ -26,6 +26,8 @@ import (
 )
 
 type ClusterInterface interface {
+	// TestTypes returns a TestTypeClusterInformer
+	TestTypes() TestTypeClusterInformer
 	// ClusterTestTypes returns a ClusterTestTypeClusterInformer
 	ClusterTestTypes() ClusterTestTypeClusterInformer
 }
@@ -38,6 +40,11 @@ type version struct {
 // New returns a new ClusterInterface.
 func New(f internalinterfaces.SharedInformerFactory, tweakListOptions internalinterfaces.TweakListOptionsFunc) ClusterInterface {
 	return &version{factory: f, tweakListOptions: tweakListOptions}
+}
+
+// TestTypes returns a TestTypeClusterInformer
+func (v *version) TestTypes() TestTypeClusterInformer {
+	return &testTypeClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterTestTypes returns a ClusterTestTypeClusterInformer

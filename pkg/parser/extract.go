@@ -89,7 +89,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			continue
 		}
 
-		groupNameRaw, ok := packageMarkers.Get(GroupNameMarker.Name).(markers.RawArguments)
+		groupNameRaw, ok := packageMarkers.Get(GroupNameMarker().Name).(markers.RawArguments)
 		if ok {
 			// If there's a comment of the form "// +groupName=somegroup" or
 			// "// +groupName=somegroup.foo.bar.io", use the first field (somegroup) as the name of the
@@ -104,7 +104,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			groupGoName = namer.IC(parts[0])
 		}
 
-		groupGoNameRaw, ok := packageMarkers.Get(GroupGoNameMarker.Name).(markers.RawArguments)
+		groupGoNameRaw, ok := packageMarkers.Get(GroupGoNameMarker().Name).(markers.RawArguments)
 		if ok {
 			// If there's a comment of the form "// +groupGoName=SomeUniqueShortName", use that as
 			// the Go group identifier in CamelCase.
