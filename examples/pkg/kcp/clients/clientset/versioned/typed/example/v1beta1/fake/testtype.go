@@ -30,8 +30,11 @@ import (
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
 
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	applyconfigurationsexamplev1beta1 "acme.corp/pkg/generated/applyconfigurations/example/v1beta1"
@@ -53,6 +56,31 @@ func (c *testTypesClusterClient) Cluster(clusterPath logicalcluster.Path) kcpexa
 	}
 
 	return &testTypesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of TestTypes that match those selectors across all clusters.
+func (c *testTypesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*examplev1beta1.TestTypeList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(testTypesResource, testTypesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &examplev1beta1.TestTypeList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &examplev1beta1.TestTypeList{ListMeta: obj.(*examplev1beta1.TestTypeList).ListMeta}
+	for _, item := range obj.(*examplev1beta1.TestTypeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested TestTypes across all clusters.
+func (c *testTypesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(testTypesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
 type testTypesNamespacer struct {
@@ -112,6 +140,30 @@ func (c *testTypesClient) Get(ctx context.Context, name string, options metav1.G
 		return nil, err
 	}
 	return obj.(*examplev1beta1.TestType), err
+}
+
+// List takes label and field selectors, and returns the list of TestTypes that match those selectors.
+func (c *testTypesClient) List(ctx context.Context, opts metav1.ListOptions) (*examplev1beta1.TestTypeList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(testTypesResource, testTypesKind, c.ClusterPath, c.Namespace, opts), &examplev1beta1.TestTypeList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &examplev1beta1.TestTypeList{ListMeta: obj.(*examplev1beta1.TestTypeList).ListMeta}
+	for _, item := range obj.(*examplev1beta1.TestTypeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *testTypesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(testTypesResource, c.ClusterPath, c.Namespace, opts))
 }
 
 func (c *testTypesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*examplev1beta1.TestType, error) {
