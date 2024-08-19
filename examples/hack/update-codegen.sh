@@ -21,6 +21,7 @@ set -o pipefail
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 SCRIPT_ROOT="${SCRIPT_DIR}/.."
 CODEGEN_PKG="${CODEGEN_PKG:-"${SCRIPT_ROOT}/.."}"
+API_KNOWN_VIOLATIONS_DIR="./hack/api_violations"
 
 source "${CODEGEN_PKG}/kube_codegen.sh"
 
@@ -84,3 +85,11 @@ kube::codegen::gen_client \
     --output-pkg "${THIS_PKG}/HyphenGroup" \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
     "${SCRIPT_ROOT}/HyphenGroup/apis"
+
+kube::codegen::gen_client \
+    --with-watch \
+    --with-applyconfig \
+    --output-dir "${SCRIPT_ROOT}/upstream" \
+    --output-pkg "${THIS_PKG}/upstream" \
+    --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
+    "$(go list -m -json k8s.io/api | jq --raw-output .Dir )"
