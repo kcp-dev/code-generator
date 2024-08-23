@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type IngressClassLister interface {
 	IngressClassListerExpansion
 }
 
-// ingressClassLister implements the IngressClassLister interface.
-type ingressClassLister struct {
-	listers.ResourceIndexer[*v1beta1.IngressClass]
+// IngressClassClusterLister helps list IngressClasses.
+// All objects returned here must be treated as read-only.
+type IngressClassClusterLister interface {
+	// List lists all IngressClasses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.IngressClass, err error)
+	IngressClassClusterListerExpansion
 }
 
-// NewIngressClassLister returns a new IngressClassLister.
-func NewIngressClassLister(indexer cache.Indexer) IngressClassLister {
-	return &ingressClassLister{listers.New[*v1beta1.IngressClass](indexer, v1beta1.Resource("ingressclass"))}
+// ingressClassLister implements the IngressClassLister interface.
+type ingressClassLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// ingressClassLister implements the IngressClassClusterLister interface.
+type ingressClassClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all IngressClasses in the indexer.
+func (s *ingressClassLister) List(selector labels.Selector) (ret []*v1beta1.IngressClass, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.IngressClass))
+	})
+	return ret, err
+}
+
+// Get retrieves the  IngressClass from the indexer for a given workspace, namespace and name.
+func (s ingressClassLister) Get(name string) (*v1beta1.IngressClass, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("ingressclass"), name)
+	}
+	return obj.(*v1beta1.IngressClass), nil
+}
+
+// NewIngressClassClusterLister returns a new IngressClassClusterLister.
+func NewIngressClassClusterLister(indexer cache.Indexer) IngressClassClusterLister {
+	return &ingressClassClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get IngressClass.
+func (s *ingressClassClusterLister) Cluster(clusterName logicalcluster.Name) IngressClassLister {
+	return &ingressClassLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all IngressClasses in the indexer.
+func (s *ingressClassClusterLister) List(selector labels.Selector) (ret []*v1beta1.IngressClass, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.IngressClass))
+	})
+	return ret, err
 }

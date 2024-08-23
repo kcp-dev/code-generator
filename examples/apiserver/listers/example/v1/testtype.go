@@ -19,8 +19,10 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1 "k8s.io/code-generator/examples/apiserver/apis/example/v1"
 )
@@ -36,19 +38,68 @@ type TestTypeLister interface {
 	TestTypeListerExpansion
 }
 
-// testTypeLister implements the TestTypeLister interface.
-type testTypeLister struct {
-	listers.ResourceIndexer[*v1.TestType]
+// TestTypeClusterLister helps list TestTypes.
+// All objects returned here must be treated as read-only.
+type TestTypeClusterLister interface {
+	// List lists all TestTypes in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.TestType, err error)
+	TestTypeClusterListerExpansion
 }
 
-// NewTestTypeLister returns a new TestTypeLister.
-func NewTestTypeLister(indexer cache.Indexer) TestTypeLister {
-	return &testTypeLister{listers.New[*v1.TestType](indexer, v1.Resource("testtype"))}
+// testTypeLister implements the TestTypeLister interface.
+type testTypeLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// testTypeLister implements the TestTypeClusterLister interface.
+type testTypeClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all TestTypes in the indexer.
+func (s *testTypeLister) List(selector labels.Selector) (ret []*v1.TestType, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.TestType))
+	})
+	return ret, err
+}
+
+// Get retrieves the  TestType from the indexer for a given workspace, namespace and name.
+func (s testTypeLister) Get(name string) (*v1.TestType, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("testtype"), name)
+	}
+	return obj.(*v1.TestType), nil
+}
+
+// NewTestTypeClusterLister returns a new TestTypeClusterLister.
+func NewTestTypeClusterLister(indexer cache.Indexer) TestTypeClusterLister {
+	return &testTypeClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get TestType.
+func (s *testTypeClusterLister) Cluster(clusterName logicalcluster.Name) TestTypeLister {
+	return &testTypeLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all TestTypes in the indexer.
+func (s *testTypeClusterLister) List(selector labels.Selector) (ret []*v1.TestType, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.TestType))
+	})
+	return ret, err
 }
 
 // TestTypes returns an object that can list and get TestTypes.
 func (s *testTypeLister) TestTypes(namespace string) TestTypeNamespaceLister {
-	return testTypeNamespaceLister{listers.NewNamespaced[*v1.TestType](s.ResourceIndexer, namespace)}
+	return testTypeNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // TestTypeNamespaceLister helps list and get TestTypes.
@@ -66,5 +117,28 @@ type TestTypeNamespaceLister interface {
 // testTypeNamespaceLister implements the TestTypeNamespaceLister
 // interface.
 type testTypeNamespaceLister struct {
-	listers.ResourceIndexer[*v1.TestType]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  TestType from the indexer for a given workspace, namespace and name.
+func (s testTypeNamespaceLister) Get(name string) (*v1.TestType, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("testtype"), name)
+	}
+	return obj.(*v1.TestType), nil
+}
+
+// List lists all TestTypes in the indexer for a given workspace, namespace and name.
+func (s testTypeNamespaceLister) List(selector labels.Selector) (ret []*v1.TestType, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.TestType))
+	})
+	return ret, err
 }

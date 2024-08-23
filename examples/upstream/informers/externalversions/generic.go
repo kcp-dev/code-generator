@@ -212,8 +212,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().ComponentStatuses().Informer()}, nil
 	case corev1.SchemeGroupVersion.WithResource("configmaps"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().ConfigMaps().Informer()}, nil
-	case corev1.SchemeGroupVersion.WithResource("endpointses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().Endpointses().Informer()}, nil
+	case corev1.SchemeGroupVersion.WithResource("endpoints"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().Endpoints().Informer()}, nil
 	case corev1.SchemeGroupVersion.WithResource("events"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().Events().Informer()}, nil
 	case corev1.SchemeGroupVersion.WithResource("limitranges"):

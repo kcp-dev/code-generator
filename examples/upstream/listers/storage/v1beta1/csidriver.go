@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type CSIDriverLister interface {
 	CSIDriverListerExpansion
 }
 
-// cSIDriverLister implements the CSIDriverLister interface.
-type cSIDriverLister struct {
-	listers.ResourceIndexer[*v1beta1.CSIDriver]
+// CSIDriverClusterLister helps list CSIDrivers.
+// All objects returned here must be treated as read-only.
+type CSIDriverClusterLister interface {
+	// List lists all CSIDrivers in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.CSIDriver, err error)
+	CSIDriverClusterListerExpansion
 }
 
-// NewCSIDriverLister returns a new CSIDriverLister.
-func NewCSIDriverLister(indexer cache.Indexer) CSIDriverLister {
-	return &cSIDriverLister{listers.New[*v1beta1.CSIDriver](indexer, v1beta1.Resource("csidriver"))}
+// cSIDriverLister implements the CSIDriverLister interface.
+type cSIDriverLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// cSIDriverLister implements the CSIDriverClusterLister interface.
+type cSIDriverClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all CSIDrivers in the indexer.
+func (s *cSIDriverLister) List(selector labels.Selector) (ret []*v1beta1.CSIDriver, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.CSIDriver))
+	})
+	return ret, err
+}
+
+// Get retrieves the  CSIDriver from the indexer for a given workspace, namespace and name.
+func (s cSIDriverLister) Get(name string) (*v1beta1.CSIDriver, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("csidriver"), name)
+	}
+	return obj.(*v1beta1.CSIDriver), nil
+}
+
+// NewCSIDriverClusterLister returns a new CSIDriverClusterLister.
+func NewCSIDriverClusterLister(indexer cache.Indexer) CSIDriverClusterLister {
+	return &cSIDriverClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get CSIDriver.
+func (s *cSIDriverClusterLister) Cluster(clusterName logicalcluster.Name) CSIDriverLister {
+	return &cSIDriverLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all CSIDrivers in the indexer.
+func (s *cSIDriverClusterLister) List(selector labels.Selector) (ret []*v1beta1.CSIDriver, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.CSIDriver))
+	})
+	return ret, err
 }

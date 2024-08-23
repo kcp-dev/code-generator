@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/events/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type EventLister interface {
 	EventListerExpansion
 }
 
-// eventLister implements the EventLister interface.
-type eventLister struct {
-	listers.ResourceIndexer[*v1beta1.Event]
+// EventClusterLister helps list Events.
+// All objects returned here must be treated as read-only.
+type EventClusterLister interface {
+	// List lists all Events in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.Event, err error)
+	EventClusterListerExpansion
 }
 
-// NewEventLister returns a new EventLister.
-func NewEventLister(indexer cache.Indexer) EventLister {
-	return &eventLister{listers.New[*v1beta1.Event](indexer, v1beta1.Resource("event"))}
+// eventLister implements the EventLister interface.
+type eventLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// eventLister implements the EventClusterLister interface.
+type eventClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Events in the indexer.
+func (s *eventLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Event))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Event from the indexer for a given workspace, namespace and name.
+func (s eventLister) Get(name string) (*v1beta1.Event, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("event"), name)
+	}
+	return obj.(*v1beta1.Event), nil
+}
+
+// NewEventClusterLister returns a new EventClusterLister.
+func NewEventClusterLister(indexer cache.Indexer) EventClusterLister {
+	return &eventClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Event.
+func (s *eventClusterLister) Cluster(clusterName logicalcluster.Name) EventLister {
+	return &eventLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Events in the indexer.
+func (s *eventClusterLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.Event))
+	})
+	return ret, err
 }
 
 // Events returns an object that can list and get Events.
 func (s *eventLister) Events(namespace string) EventNamespaceLister {
-	return eventNamespaceLister{listers.NewNamespaced[*v1beta1.Event](s.ResourceIndexer, namespace)}
+	return eventNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // EventNamespaceLister helps list and get Events.
@@ -66,5 +117,28 @@ type EventNamespaceLister interface {
 // eventNamespaceLister implements the EventNamespaceLister
 // interface.
 type eventNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Event]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Event from the indexer for a given workspace, namespace and name.
+func (s eventNamespaceLister) Get(name string) (*v1beta1.Event, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("event"), name)
+	}
+	return obj.(*v1beta1.Event), nil
+}
+
+// List lists all Events in the indexer for a given workspace, namespace and name.
+func (s eventNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Event))
+	})
+	return ret, err
 }

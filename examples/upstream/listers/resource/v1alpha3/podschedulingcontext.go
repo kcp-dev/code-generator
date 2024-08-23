@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha3
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type PodSchedulingContextLister interface {
 	PodSchedulingContextListerExpansion
 }
 
-// podSchedulingContextLister implements the PodSchedulingContextLister interface.
-type podSchedulingContextLister struct {
-	listers.ResourceIndexer[*v1alpha3.PodSchedulingContext]
+// PodSchedulingContextClusterLister helps list PodSchedulingContexts.
+// All objects returned here must be treated as read-only.
+type PodSchedulingContextClusterLister interface {
+	// List lists all PodSchedulingContexts in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha3.PodSchedulingContext, err error)
+	PodSchedulingContextClusterListerExpansion
 }
 
-// NewPodSchedulingContextLister returns a new PodSchedulingContextLister.
-func NewPodSchedulingContextLister(indexer cache.Indexer) PodSchedulingContextLister {
-	return &podSchedulingContextLister{listers.New[*v1alpha3.PodSchedulingContext](indexer, v1alpha3.Resource("podschedulingcontext"))}
+// podSchedulingContextLister implements the PodSchedulingContextLister interface.
+type podSchedulingContextLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// podSchedulingContextLister implements the PodSchedulingContextClusterLister interface.
+type podSchedulingContextClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all PodSchedulingContexts in the indexer.
+func (s *podSchedulingContextLister) List(selector labels.Selector) (ret []*v1alpha3.PodSchedulingContext, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha3.PodSchedulingContext))
+	})
+	return ret, err
+}
+
+// Get retrieves the  PodSchedulingContext from the indexer for a given workspace, namespace and name.
+func (s podSchedulingContextLister) Get(name string) (*v1alpha3.PodSchedulingContext, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha3.Resource("podschedulingcontext"), name)
+	}
+	return obj.(*v1alpha3.PodSchedulingContext), nil
+}
+
+// NewPodSchedulingContextClusterLister returns a new PodSchedulingContextClusterLister.
+func NewPodSchedulingContextClusterLister(indexer cache.Indexer) PodSchedulingContextClusterLister {
+	return &podSchedulingContextClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get PodSchedulingContext.
+func (s *podSchedulingContextClusterLister) Cluster(clusterName logicalcluster.Name) PodSchedulingContextLister {
+	return &podSchedulingContextLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all PodSchedulingContexts in the indexer.
+func (s *podSchedulingContextClusterLister) List(selector labels.Selector) (ret []*v1alpha3.PodSchedulingContext, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha3.PodSchedulingContext))
+	})
+	return ret, err
 }
 
 // PodSchedulingContexts returns an object that can list and get PodSchedulingContexts.
 func (s *podSchedulingContextLister) PodSchedulingContexts(namespace string) PodSchedulingContextNamespaceLister {
-	return podSchedulingContextNamespaceLister{listers.NewNamespaced[*v1alpha3.PodSchedulingContext](s.ResourceIndexer, namespace)}
+	return podSchedulingContextNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // PodSchedulingContextNamespaceLister helps list and get PodSchedulingContexts.
@@ -66,5 +117,28 @@ type PodSchedulingContextNamespaceLister interface {
 // podSchedulingContextNamespaceLister implements the PodSchedulingContextNamespaceLister
 // interface.
 type podSchedulingContextNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha3.PodSchedulingContext]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  PodSchedulingContext from the indexer for a given workspace, namespace and name.
+func (s podSchedulingContextNamespaceLister) Get(name string) (*v1alpha3.PodSchedulingContext, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha3.Resource("podschedulingcontext"), name)
+	}
+	return obj.(*v1alpha3.PodSchedulingContext), nil
+}
+
+// List lists all PodSchedulingContexts in the indexer for a given workspace, namespace and name.
+func (s podSchedulingContextNamespaceLister) List(selector labels.Selector) (ret []*v1alpha3.PodSchedulingContext, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha3.PodSchedulingContext))
+	})
+	return ret, err
 }

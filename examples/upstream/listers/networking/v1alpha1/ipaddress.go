@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/networking/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type IPAddressLister interface {
 	IPAddressListerExpansion
 }
 
-// iPAddressLister implements the IPAddressLister interface.
-type iPAddressLister struct {
-	listers.ResourceIndexer[*v1alpha1.IPAddress]
+// IPAddressClusterLister helps list IPAddresses.
+// All objects returned here must be treated as read-only.
+type IPAddressClusterLister interface {
+	// List lists all IPAddresses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.IPAddress, err error)
+	IPAddressClusterListerExpansion
 }
 
-// NewIPAddressLister returns a new IPAddressLister.
-func NewIPAddressLister(indexer cache.Indexer) IPAddressLister {
-	return &iPAddressLister{listers.New[*v1alpha1.IPAddress](indexer, v1alpha1.Resource("ipaddress"))}
+// iPAddressLister implements the IPAddressLister interface.
+type iPAddressLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// iPAddressLister implements the IPAddressClusterLister interface.
+type iPAddressClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all IPAddresses in the indexer.
+func (s *iPAddressLister) List(selector labels.Selector) (ret []*v1alpha1.IPAddress, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.IPAddress))
+	})
+	return ret, err
+}
+
+// Get retrieves the  IPAddress from the indexer for a given workspace, namespace and name.
+func (s iPAddressLister) Get(name string) (*v1alpha1.IPAddress, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("ipaddress"), name)
+	}
+	return obj.(*v1alpha1.IPAddress), nil
+}
+
+// NewIPAddressClusterLister returns a new IPAddressClusterLister.
+func NewIPAddressClusterLister(indexer cache.Indexer) IPAddressClusterLister {
+	return &iPAddressClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get IPAddress.
+func (s *iPAddressClusterLister) Cluster(clusterName logicalcluster.Name) IPAddressLister {
+	return &iPAddressLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all IPAddresses in the indexer.
+func (s *iPAddressClusterLister) List(selector labels.Selector) (ret []*v1alpha1.IPAddress, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.IPAddress))
+	})
+	return ret, err
 }

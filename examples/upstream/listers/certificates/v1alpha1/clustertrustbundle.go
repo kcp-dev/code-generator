@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/certificates/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ClusterTrustBundleLister interface {
 	ClusterTrustBundleListerExpansion
 }
 
-// clusterTrustBundleLister implements the ClusterTrustBundleLister interface.
-type clusterTrustBundleLister struct {
-	listers.ResourceIndexer[*v1alpha1.ClusterTrustBundle]
+// ClusterTrustBundleClusterLister helps list ClusterTrustBundles.
+// All objects returned here must be treated as read-only.
+type ClusterTrustBundleClusterLister interface {
+	// List lists all ClusterTrustBundles in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.ClusterTrustBundle, err error)
+	ClusterTrustBundleClusterListerExpansion
 }
 
-// NewClusterTrustBundleLister returns a new ClusterTrustBundleLister.
-func NewClusterTrustBundleLister(indexer cache.Indexer) ClusterTrustBundleLister {
-	return &clusterTrustBundleLister{listers.New[*v1alpha1.ClusterTrustBundle](indexer, v1alpha1.Resource("clustertrustbundle"))}
+// clusterTrustBundleLister implements the ClusterTrustBundleLister interface.
+type clusterTrustBundleLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// clusterTrustBundleLister implements the ClusterTrustBundleClusterLister interface.
+type clusterTrustBundleClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ClusterTrustBundles in the indexer.
+func (s *clusterTrustBundleLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterTrustBundle, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.ClusterTrustBundle))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ClusterTrustBundle from the indexer for a given workspace, namespace and name.
+func (s clusterTrustBundleLister) Get(name string) (*v1alpha1.ClusterTrustBundle, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("clustertrustbundle"), name)
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), nil
+}
+
+// NewClusterTrustBundleClusterLister returns a new ClusterTrustBundleClusterLister.
+func NewClusterTrustBundleClusterLister(indexer cache.Indexer) ClusterTrustBundleClusterLister {
+	return &clusterTrustBundleClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ClusterTrustBundle.
+func (s *clusterTrustBundleClusterLister) Cluster(clusterName logicalcluster.Name) ClusterTrustBundleLister {
+	return &clusterTrustBundleLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ClusterTrustBundles in the indexer.
+func (s *clusterTrustBundleClusterLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterTrustBundle, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.ClusterTrustBundle))
+	})
+	return ret, err
 }

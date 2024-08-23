@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ValidatingWebhookConfigurationLister interface {
 	ValidatingWebhookConfigurationListerExpansion
 }
 
-// validatingWebhookConfigurationLister implements the ValidatingWebhookConfigurationLister interface.
-type validatingWebhookConfigurationLister struct {
-	listers.ResourceIndexer[*v1beta1.ValidatingWebhookConfiguration]
+// ValidatingWebhookConfigurationClusterLister helps list ValidatingWebhookConfigurations.
+// All objects returned here must be treated as read-only.
+type ValidatingWebhookConfigurationClusterLister interface {
+	// List lists all ValidatingWebhookConfigurations in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error)
+	ValidatingWebhookConfigurationClusterListerExpansion
 }
 
-// NewValidatingWebhookConfigurationLister returns a new ValidatingWebhookConfigurationLister.
-func NewValidatingWebhookConfigurationLister(indexer cache.Indexer) ValidatingWebhookConfigurationLister {
-	return &validatingWebhookConfigurationLister{listers.New[*v1beta1.ValidatingWebhookConfiguration](indexer, v1beta1.Resource("validatingwebhookconfiguration"))}
+// validatingWebhookConfigurationLister implements the ValidatingWebhookConfigurationLister interface.
+type validatingWebhookConfigurationLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// validatingWebhookConfigurationLister implements the ValidatingWebhookConfigurationClusterLister interface.
+type validatingWebhookConfigurationClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ValidatingWebhookConfigurations in the indexer.
+func (s *validatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.ValidatingWebhookConfiguration))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ValidatingWebhookConfiguration from the indexer for a given workspace, namespace and name.
+func (s validatingWebhookConfigurationLister) Get(name string) (*v1beta1.ValidatingWebhookConfiguration, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("validatingwebhookconfiguration"), name)
+	}
+	return obj.(*v1beta1.ValidatingWebhookConfiguration), nil
+}
+
+// NewValidatingWebhookConfigurationClusterLister returns a new ValidatingWebhookConfigurationClusterLister.
+func NewValidatingWebhookConfigurationClusterLister(indexer cache.Indexer) ValidatingWebhookConfigurationClusterLister {
+	return &validatingWebhookConfigurationClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ValidatingWebhookConfiguration.
+func (s *validatingWebhookConfigurationClusterLister) Cluster(clusterName logicalcluster.Name) ValidatingWebhookConfigurationLister {
+	return &validatingWebhookConfigurationLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ValidatingWebhookConfigurations in the indexer.
+func (s *validatingWebhookConfigurationClusterLister) List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.ValidatingWebhookConfiguration))
+	})
+	return ret, err
 }

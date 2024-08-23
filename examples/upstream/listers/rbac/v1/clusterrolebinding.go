@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ClusterRoleBindingLister interface {
 	ClusterRoleBindingListerExpansion
 }
 
-// clusterRoleBindingLister implements the ClusterRoleBindingLister interface.
-type clusterRoleBindingLister struct {
-	listers.ResourceIndexer[*v1.ClusterRoleBinding]
+// ClusterRoleBindingClusterLister helps list ClusterRoleBindings.
+// All objects returned here must be treated as read-only.
+type ClusterRoleBindingClusterLister interface {
+	// List lists all ClusterRoleBindings in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ClusterRoleBinding, err error)
+	ClusterRoleBindingClusterListerExpansion
 }
 
-// NewClusterRoleBindingLister returns a new ClusterRoleBindingLister.
-func NewClusterRoleBindingLister(indexer cache.Indexer) ClusterRoleBindingLister {
-	return &clusterRoleBindingLister{listers.New[*v1.ClusterRoleBinding](indexer, v1.Resource("clusterrolebinding"))}
+// clusterRoleBindingLister implements the ClusterRoleBindingLister interface.
+type clusterRoleBindingLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// clusterRoleBindingLister implements the ClusterRoleBindingClusterLister interface.
+type clusterRoleBindingClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ClusterRoleBindings in the indexer.
+func (s *clusterRoleBindingLister) List(selector labels.Selector) (ret []*v1.ClusterRoleBinding, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ClusterRoleBinding))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ClusterRoleBinding from the indexer for a given workspace, namespace and name.
+func (s clusterRoleBindingLister) Get(name string) (*v1.ClusterRoleBinding, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("clusterrolebinding"), name)
+	}
+	return obj.(*v1.ClusterRoleBinding), nil
+}
+
+// NewClusterRoleBindingClusterLister returns a new ClusterRoleBindingClusterLister.
+func NewClusterRoleBindingClusterLister(indexer cache.Indexer) ClusterRoleBindingClusterLister {
+	return &clusterRoleBindingClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ClusterRoleBinding.
+func (s *clusterRoleBindingClusterLister) Cluster(clusterName logicalcluster.Name) ClusterRoleBindingLister {
+	return &clusterRoleBindingLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ClusterRoleBindings in the indexer.
+func (s *clusterRoleBindingClusterLister) List(selector labels.Selector) (ret []*v1.ClusterRoleBinding, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ClusterRoleBinding))
+	})
+	return ret, err
 }

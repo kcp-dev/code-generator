@@ -433,6 +433,18 @@ function kube::codegen::gen_openapi() {
 #   --plural-exceptions <string = "">
 #     An optional list of comma separated plural exception definitions in Type:PluralizedType form.
 #
+#   --single-cluster-client-package-path <string = "">
+#     SingleClusterClientPackagePath is the root directory under which single-cluster-aware clients exist. e.g. "k8s.io/client-go/kubernetes"
+#
+#   --single-cluster-informers-package-path <string = "">
+#     SingleClusterInformersPackagePath is the root directory under which single-cluster-aware informers exist. e.g. "k8s.io/client-go/informers"
+#
+#   --single-cluster-apply-configuration-package-path <string = "">
+#     SingleClusterApplyConfigurationPackagePath is the root directory under which single-cluster-aware applyconfigurations exist. e.g. "k8s.io/client-go/applyconfigurations"
+#
+#   --static-expansions-listers <string = "">
+#     An optional list of comma separated static expansions for listers in <type-package>.<type-name>:<expansion-package-from-static> form.
+#
 function kube::codegen::gen_client() {
     local in_dir=""
     local one_input_api=""
@@ -450,6 +462,8 @@ function kube::codegen::gen_client() {
     local boilerplate="${KUBE_CODEGEN_ROOT}/hack/boilerplate.go.txt"
     local plural_exceptions=""
     local v="${KUBE_VERBOSE:-0}"
+    local single_cluster_listers_package_path=""
+    local static_expansions_listers=""
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -507,6 +521,14 @@ function kube::codegen::gen_client() {
                 ;;
             "--plural-exceptions")
                 plural_exceptions="$2"
+                shift 2
+                ;;
+            "--single-cluster-listers-package-path")
+                single_cluster_listers_package_path="$2"
+                shift 2
+                ;;
+            "--static-expansions-listers")
+                static_expansions_listers="$2"
                 shift 2
                 ;;
             *)
@@ -643,6 +665,8 @@ function kube::codegen::gen_client() {
             --output-dir "${out_dir}/${listers_subdir}" \
             --output-pkg "${out_pkg}/${listers_subdir}" \
             --plural-exceptions "${plural_exceptions}" \
+            --single-cluster-listers-package-path "${single_cluster_listers_package_path}" \
+            --static-expansions-listers "${static_expansions_listers}" \
             "${input_pkgs[@]}"
 
         echo "Generating informer code for ${#input_pkgs[@]} targets"

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type ControllerRevisionLister interface {
 	ControllerRevisionListerExpansion
 }
 
-// controllerRevisionLister implements the ControllerRevisionLister interface.
-type controllerRevisionLister struct {
-	listers.ResourceIndexer[*v1.ControllerRevision]
+// ControllerRevisionClusterLister helps list ControllerRevisions.
+// All objects returned here must be treated as read-only.
+type ControllerRevisionClusterLister interface {
+	// List lists all ControllerRevisions in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ControllerRevision, err error)
+	ControllerRevisionClusterListerExpansion
 }
 
-// NewControllerRevisionLister returns a new ControllerRevisionLister.
-func NewControllerRevisionLister(indexer cache.Indexer) ControllerRevisionLister {
-	return &controllerRevisionLister{listers.New[*v1.ControllerRevision](indexer, v1.Resource("controllerrevision"))}
+// controllerRevisionLister implements the ControllerRevisionLister interface.
+type controllerRevisionLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// controllerRevisionLister implements the ControllerRevisionClusterLister interface.
+type controllerRevisionClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ControllerRevisions in the indexer.
+func (s *controllerRevisionLister) List(selector labels.Selector) (ret []*v1.ControllerRevision, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ControllerRevision))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ControllerRevision from the indexer for a given workspace, namespace and name.
+func (s controllerRevisionLister) Get(name string) (*v1.ControllerRevision, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("controllerrevision"), name)
+	}
+	return obj.(*v1.ControllerRevision), nil
+}
+
+// NewControllerRevisionClusterLister returns a new ControllerRevisionClusterLister.
+func NewControllerRevisionClusterLister(indexer cache.Indexer) ControllerRevisionClusterLister {
+	return &controllerRevisionClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ControllerRevision.
+func (s *controllerRevisionClusterLister) Cluster(clusterName logicalcluster.Name) ControllerRevisionLister {
+	return &controllerRevisionLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ControllerRevisions in the indexer.
+func (s *controllerRevisionClusterLister) List(selector labels.Selector) (ret []*v1.ControllerRevision, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ControllerRevision))
+	})
+	return ret, err
 }
 
 // ControllerRevisions returns an object that can list and get ControllerRevisions.
 func (s *controllerRevisionLister) ControllerRevisions(namespace string) ControllerRevisionNamespaceLister {
-	return controllerRevisionNamespaceLister{listers.NewNamespaced[*v1.ControllerRevision](s.ResourceIndexer, namespace)}
+	return controllerRevisionNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // ControllerRevisionNamespaceLister helps list and get ControllerRevisions.
@@ -66,5 +117,28 @@ type ControllerRevisionNamespaceLister interface {
 // controllerRevisionNamespaceLister implements the ControllerRevisionNamespaceLister
 // interface.
 type controllerRevisionNamespaceLister struct {
-	listers.ResourceIndexer[*v1.ControllerRevision]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  ControllerRevision from the indexer for a given workspace, namespace and name.
+func (s controllerRevisionNamespaceLister) Get(name string) (*v1.ControllerRevision, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("controllerrevision"), name)
+	}
+	return obj.(*v1.ControllerRevision), nil
+}
+
+// List lists all ControllerRevisions in the indexer for a given workspace, namespace and name.
+func (s controllerRevisionNamespaceLister) List(selector labels.Selector) (ret []*v1.ControllerRevision, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ControllerRevision))
+	})
+	return ret, err
 }

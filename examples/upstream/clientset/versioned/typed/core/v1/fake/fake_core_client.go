@@ -36,8 +36,8 @@ func (c *FakeCoreV1) ConfigMaps(namespace string) v1.ConfigMapInterface {
 	return &FakeConfigMaps{c, namespace}
 }
 
-func (c *FakeCoreV1) Endpointses(namespace string) v1.EndpointsInterface {
-	return &FakeEndpointses{c, namespace}
+func (c *FakeCoreV1) Endpoints(namespace string) v1.EndpointsInterface {
+	return &FakeEndpoints{c, namespace}
 }
 
 func (c *FakeCoreV1) Events(namespace string) v1.EventInterface {

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/node/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type RuntimeClassLister interface {
 	RuntimeClassListerExpansion
 }
 
-// runtimeClassLister implements the RuntimeClassLister interface.
-type runtimeClassLister struct {
-	listers.ResourceIndexer[*v1.RuntimeClass]
+// RuntimeClassClusterLister helps list RuntimeClasses.
+// All objects returned here must be treated as read-only.
+type RuntimeClassClusterLister interface {
+	// List lists all RuntimeClasses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.RuntimeClass, err error)
+	RuntimeClassClusterListerExpansion
 }
 
-// NewRuntimeClassLister returns a new RuntimeClassLister.
-func NewRuntimeClassLister(indexer cache.Indexer) RuntimeClassLister {
-	return &runtimeClassLister{listers.New[*v1.RuntimeClass](indexer, v1.Resource("runtimeclass"))}
+// runtimeClassLister implements the RuntimeClassLister interface.
+type runtimeClassLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// runtimeClassLister implements the RuntimeClassClusterLister interface.
+type runtimeClassClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all RuntimeClasses in the indexer.
+func (s *runtimeClassLister) List(selector labels.Selector) (ret []*v1.RuntimeClass, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.RuntimeClass))
+	})
+	return ret, err
+}
+
+// Get retrieves the  RuntimeClass from the indexer for a given workspace, namespace and name.
+func (s runtimeClassLister) Get(name string) (*v1.RuntimeClass, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("runtimeclass"), name)
+	}
+	return obj.(*v1.RuntimeClass), nil
+}
+
+// NewRuntimeClassClusterLister returns a new RuntimeClassClusterLister.
+func NewRuntimeClassClusterLister(indexer cache.Indexer) RuntimeClassClusterLister {
+	return &runtimeClassClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get RuntimeClass.
+func (s *runtimeClassClusterLister) Cluster(clusterName logicalcluster.Name) RuntimeClassLister {
+	return &runtimeClassLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all RuntimeClasses in the indexer.
+func (s *runtimeClassClusterLister) List(selector labels.Selector) (ret []*v1.RuntimeClass, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.RuntimeClass))
+	})
+	return ret, err
 }

@@ -30,7 +30,7 @@ type CoreV1Interface interface {
 	RESTClient() rest.Interface
 	ComponentStatusesGetter
 	ConfigMapsGetter
-	EndpointsesGetter
+	EndpointsGetter
 	EventsGetter
 	LimitRangesGetter
 	NamespacesGetter
@@ -59,8 +59,8 @@ func (c *CoreV1Client) ConfigMaps(namespace string) ConfigMapInterface {
 	return newConfigMaps(c, namespace)
 }
 
-func (c *CoreV1Client) Endpointses(namespace string) EndpointsInterface {
-	return newEndpointses(c, namespace)
+func (c *CoreV1Client) Endpoints(namespace string) EndpointsInterface {
+	return newEndpoints(c, namespace)
 }
 
 func (c *CoreV1Client) Events(namespace string) EventInterface {

@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/imagepolicy/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ImageReviewLister interface {
 	ImageReviewListerExpansion
 }
 
-// imageReviewLister implements the ImageReviewLister interface.
-type imageReviewLister struct {
-	listers.ResourceIndexer[*v1alpha1.ImageReview]
+// ImageReviewClusterLister helps list ImageReviews.
+// All objects returned here must be treated as read-only.
+type ImageReviewClusterLister interface {
+	// List lists all ImageReviews in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.ImageReview, err error)
+	ImageReviewClusterListerExpansion
 }
 
-// NewImageReviewLister returns a new ImageReviewLister.
-func NewImageReviewLister(indexer cache.Indexer) ImageReviewLister {
-	return &imageReviewLister{listers.New[*v1alpha1.ImageReview](indexer, v1alpha1.Resource("imagereview"))}
+// imageReviewLister implements the ImageReviewLister interface.
+type imageReviewLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// imageReviewLister implements the ImageReviewClusterLister interface.
+type imageReviewClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ImageReviews in the indexer.
+func (s *imageReviewLister) List(selector labels.Selector) (ret []*v1alpha1.ImageReview, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.ImageReview))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ImageReview from the indexer for a given workspace, namespace and name.
+func (s imageReviewLister) Get(name string) (*v1alpha1.ImageReview, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("imagereview"), name)
+	}
+	return obj.(*v1alpha1.ImageReview), nil
+}
+
+// NewImageReviewClusterLister returns a new ImageReviewClusterLister.
+func NewImageReviewClusterLister(indexer cache.Indexer) ImageReviewClusterLister {
+	return &imageReviewClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ImageReview.
+func (s *imageReviewClusterLister) Cluster(clusterName logicalcluster.Name) ImageReviewLister {
+	return &imageReviewLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ImageReviews in the indexer.
+func (s *imageReviewClusterLister) List(selector labels.Selector) (ret []*v1alpha1.ImageReview, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.ImageReview))
+	})
+	return ret, err
 }

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ValidatingAdmissionPolicyLister interface {
 	ValidatingAdmissionPolicyListerExpansion
 }
 
-// validatingAdmissionPolicyLister implements the ValidatingAdmissionPolicyLister interface.
-type validatingAdmissionPolicyLister struct {
-	listers.ResourceIndexer[*v1.ValidatingAdmissionPolicy]
+// ValidatingAdmissionPolicyClusterLister helps list ValidatingAdmissionPolicies.
+// All objects returned here must be treated as read-only.
+type ValidatingAdmissionPolicyClusterLister interface {
+	// List lists all ValidatingAdmissionPolicies in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ValidatingAdmissionPolicy, err error)
+	ValidatingAdmissionPolicyClusterListerExpansion
 }
 
-// NewValidatingAdmissionPolicyLister returns a new ValidatingAdmissionPolicyLister.
-func NewValidatingAdmissionPolicyLister(indexer cache.Indexer) ValidatingAdmissionPolicyLister {
-	return &validatingAdmissionPolicyLister{listers.New[*v1.ValidatingAdmissionPolicy](indexer, v1.Resource("validatingadmissionpolicy"))}
+// validatingAdmissionPolicyLister implements the ValidatingAdmissionPolicyLister interface.
+type validatingAdmissionPolicyLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// validatingAdmissionPolicyLister implements the ValidatingAdmissionPolicyClusterLister interface.
+type validatingAdmissionPolicyClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ValidatingAdmissionPolicies in the indexer.
+func (s *validatingAdmissionPolicyLister) List(selector labels.Selector) (ret []*v1.ValidatingAdmissionPolicy, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ValidatingAdmissionPolicy))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ValidatingAdmissionPolicy from the indexer for a given workspace, namespace and name.
+func (s validatingAdmissionPolicyLister) Get(name string) (*v1.ValidatingAdmissionPolicy, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("validatingadmissionpolicy"), name)
+	}
+	return obj.(*v1.ValidatingAdmissionPolicy), nil
+}
+
+// NewValidatingAdmissionPolicyClusterLister returns a new ValidatingAdmissionPolicyClusterLister.
+func NewValidatingAdmissionPolicyClusterLister(indexer cache.Indexer) ValidatingAdmissionPolicyClusterLister {
+	return &validatingAdmissionPolicyClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ValidatingAdmissionPolicy.
+func (s *validatingAdmissionPolicyClusterLister) Cluster(clusterName logicalcluster.Name) ValidatingAdmissionPolicyLister {
+	return &validatingAdmissionPolicyLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ValidatingAdmissionPolicies in the indexer.
+func (s *validatingAdmissionPolicyClusterLister) List(selector labels.Selector) (ret []*v1.ValidatingAdmissionPolicy, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ValidatingAdmissionPolicy))
+	})
+	return ret, err
 }

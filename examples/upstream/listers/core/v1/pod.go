@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type PodLister interface {
 	PodListerExpansion
 }
 
-// podLister implements the PodLister interface.
-type podLister struct {
-	listers.ResourceIndexer[*v1.Pod]
+// PodClusterLister helps list Pods.
+// All objects returned here must be treated as read-only.
+type PodClusterLister interface {
+	// List lists all Pods in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.Pod, err error)
+	PodClusterListerExpansion
 }
 
-// NewPodLister returns a new PodLister.
-func NewPodLister(indexer cache.Indexer) PodLister {
-	return &podLister{listers.New[*v1.Pod](indexer, v1.Resource("pod"))}
+// podLister implements the PodLister interface.
+type podLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// podLister implements the PodClusterLister interface.
+type podClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Pods in the indexer.
+func (s *podLister) List(selector labels.Selector) (ret []*v1.Pod, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Pod))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Pod from the indexer for a given workspace, namespace and name.
+func (s podLister) Get(name string) (*v1.Pod, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("pod"), name)
+	}
+	return obj.(*v1.Pod), nil
+}
+
+// NewPodClusterLister returns a new PodClusterLister.
+func NewPodClusterLister(indexer cache.Indexer) PodClusterLister {
+	return &podClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Pod.
+func (s *podClusterLister) Cluster(clusterName logicalcluster.Name) PodLister {
+	return &podLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Pods in the indexer.
+func (s *podClusterLister) List(selector labels.Selector) (ret []*v1.Pod, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Pod))
+	})
+	return ret, err
 }
 
 // Pods returns an object that can list and get Pods.
 func (s *podLister) Pods(namespace string) PodNamespaceLister {
-	return podNamespaceLister{listers.NewNamespaced[*v1.Pod](s.ResourceIndexer, namespace)}
+	return podNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // PodNamespaceLister helps list and get Pods.
@@ -66,5 +117,28 @@ type PodNamespaceLister interface {
 // podNamespaceLister implements the PodNamespaceLister
 // interface.
 type podNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Pod]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Pod from the indexer for a given workspace, namespace and name.
+func (s podNamespaceLister) Get(name string) (*v1.Pod, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("pod"), name)
+	}
+	return obj.(*v1.Pod), nil
+}
+
+// List lists all Pods in the indexer for a given workspace, namespace and name.
+func (s podNamespaceLister) List(selector labels.Selector) (ret []*v1.Pod, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Pod))
+	})
+	return ret, err
 }

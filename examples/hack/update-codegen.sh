@@ -91,5 +91,7 @@ kube::codegen::gen_client \
     --with-applyconfig \
     --output-dir "${SCRIPT_ROOT}/upstream" \
     --output-pkg "${THIS_PKG}/upstream" \
+    --plural-exceptions "Endpoints:Endpoints" \
+    --static-expansions-listers "k8s.io/api/core/v1.ReplicationController:ReplicationControllerLister" \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
     "$(go list -m -json k8s.io/api | jq --raw-output .Dir )"

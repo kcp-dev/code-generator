@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/coordination/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type LeaseLister interface {
 	LeaseListerExpansion
 }
 
-// leaseLister implements the LeaseLister interface.
-type leaseLister struct {
-	listers.ResourceIndexer[*v1beta1.Lease]
+// LeaseClusterLister helps list Leases.
+// All objects returned here must be treated as read-only.
+type LeaseClusterLister interface {
+	// List lists all Leases in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.Lease, err error)
+	LeaseClusterListerExpansion
 }
 
-// NewLeaseLister returns a new LeaseLister.
-func NewLeaseLister(indexer cache.Indexer) LeaseLister {
-	return &leaseLister{listers.New[*v1beta1.Lease](indexer, v1beta1.Resource("lease"))}
+// leaseLister implements the LeaseLister interface.
+type leaseLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// leaseLister implements the LeaseClusterLister interface.
+type leaseClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Leases in the indexer.
+func (s *leaseLister) List(selector labels.Selector) (ret []*v1beta1.Lease, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Lease))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Lease from the indexer for a given workspace, namespace and name.
+func (s leaseLister) Get(name string) (*v1beta1.Lease, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("lease"), name)
+	}
+	return obj.(*v1beta1.Lease), nil
+}
+
+// NewLeaseClusterLister returns a new LeaseClusterLister.
+func NewLeaseClusterLister(indexer cache.Indexer) LeaseClusterLister {
+	return &leaseClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Lease.
+func (s *leaseClusterLister) Cluster(clusterName logicalcluster.Name) LeaseLister {
+	return &leaseLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Leases in the indexer.
+func (s *leaseClusterLister) List(selector labels.Selector) (ret []*v1beta1.Lease, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.Lease))
+	})
+	return ret, err
 }
 
 // Leases returns an object that can list and get Leases.
 func (s *leaseLister) Leases(namespace string) LeaseNamespaceLister {
-	return leaseNamespaceLister{listers.NewNamespaced[*v1beta1.Lease](s.ResourceIndexer, namespace)}
+	return leaseNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // LeaseNamespaceLister helps list and get Leases.
@@ -66,5 +117,28 @@ type LeaseNamespaceLister interface {
 // leaseNamespaceLister implements the LeaseNamespaceLister
 // interface.
 type leaseNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Lease]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Lease from the indexer for a given workspace, namespace and name.
+func (s leaseNamespaceLister) Get(name string) (*v1beta1.Lease, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("lease"), name)
+	}
+	return obj.(*v1beta1.Lease), nil
+}
+
+// List lists all Leases in the indexer for a given workspace, namespace and name.
+func (s leaseNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Lease, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Lease))
+	})
+	return ret, err
 }

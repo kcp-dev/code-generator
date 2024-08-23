@@ -31,6 +31,12 @@ type Args struct {
 	// PluralExceptions specify list of exceptions used when pluralizing certain types.
 	// For example 'Endpoints:Endpoints', otherwise the pluralizer will generate 'Endpointes'.
 	PluralExceptions []string
+
+	// +optional
+	SingleClusterListersPackagePath string
+
+	// +optional
+	StaticExpansionsListers []string
 }
 
 // New returns default arguments for the generator.
@@ -48,6 +54,9 @@ func (args *Args) AddFlags(fs *pflag.FlagSet) {
 		"list of comma separated plural exception definitions in Type:PluralizedType format")
 	fs.StringVar(&args.GoHeaderFile, "go-header-file", "",
 		"the path to a file containing boilerplate header text; the string \"YEAR\" will be replaced with the current 4-digit year")
+	fs.StringVar(&args.SingleClusterListersPackagePath, "single-cluster-listers-package-path", "",
+		"the Go import-path for the package containing the single-cluster listers when generating cluster-scoped listers using upstream package")
+	fs.StringSliceVar(&args.StaticExpansionsListers, "static-expansions-listers", []string{}, "")
 }
 
 // Validate checks the given arguments.

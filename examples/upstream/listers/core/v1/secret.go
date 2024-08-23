@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type SecretLister interface {
 	SecretListerExpansion
 }
 
-// secretLister implements the SecretLister interface.
-type secretLister struct {
-	listers.ResourceIndexer[*v1.Secret]
+// SecretClusterLister helps list Secrets.
+// All objects returned here must be treated as read-only.
+type SecretClusterLister interface {
+	// List lists all Secrets in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.Secret, err error)
+	SecretClusterListerExpansion
 }
 
-// NewSecretLister returns a new SecretLister.
-func NewSecretLister(indexer cache.Indexer) SecretLister {
-	return &secretLister{listers.New[*v1.Secret](indexer, v1.Resource("secret"))}
+// secretLister implements the SecretLister interface.
+type secretLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// secretLister implements the SecretClusterLister interface.
+type secretClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Secrets in the indexer.
+func (s *secretLister) List(selector labels.Selector) (ret []*v1.Secret, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Secret))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Secret from the indexer for a given workspace, namespace and name.
+func (s secretLister) Get(name string) (*v1.Secret, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("secret"), name)
+	}
+	return obj.(*v1.Secret), nil
+}
+
+// NewSecretClusterLister returns a new SecretClusterLister.
+func NewSecretClusterLister(indexer cache.Indexer) SecretClusterLister {
+	return &secretClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Secret.
+func (s *secretClusterLister) Cluster(clusterName logicalcluster.Name) SecretLister {
+	return &secretLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Secrets in the indexer.
+func (s *secretClusterLister) List(selector labels.Selector) (ret []*v1.Secret, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Secret))
+	})
+	return ret, err
 }
 
 // Secrets returns an object that can list and get Secrets.
 func (s *secretLister) Secrets(namespace string) SecretNamespaceLister {
-	return secretNamespaceLister{listers.NewNamespaced[*v1.Secret](s.ResourceIndexer, namespace)}
+	return secretNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // SecretNamespaceLister helps list and get Secrets.
@@ -66,5 +117,28 @@ type SecretNamespaceLister interface {
 // secretNamespaceLister implements the SecretNamespaceLister
 // interface.
 type secretNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Secret]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Secret from the indexer for a given workspace, namespace and name.
+func (s secretNamespaceLister) Get(name string) (*v1.Secret, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("secret"), name)
+	}
+	return obj.(*v1.Secret), nil
+}
+
+// List lists all Secrets in the indexer for a given workspace, namespace and name.
+func (s secretNamespaceLister) List(selector labels.Selector) (ret []*v1.Secret, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Secret))
+	})
+	return ret, err
 }

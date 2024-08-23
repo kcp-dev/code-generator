@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/flowcontrol/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type PriorityLevelConfigurationLister interface {
 	PriorityLevelConfigurationListerExpansion
 }
 
-// priorityLevelConfigurationLister implements the PriorityLevelConfigurationLister interface.
-type priorityLevelConfigurationLister struct {
-	listers.ResourceIndexer[*v1beta1.PriorityLevelConfiguration]
+// PriorityLevelConfigurationClusterLister helps list PriorityLevelConfigurations.
+// All objects returned here must be treated as read-only.
+type PriorityLevelConfigurationClusterLister interface {
+	// List lists all PriorityLevelConfigurations in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error)
+	PriorityLevelConfigurationClusterListerExpansion
 }
 
-// NewPriorityLevelConfigurationLister returns a new PriorityLevelConfigurationLister.
-func NewPriorityLevelConfigurationLister(indexer cache.Indexer) PriorityLevelConfigurationLister {
-	return &priorityLevelConfigurationLister{listers.New[*v1beta1.PriorityLevelConfiguration](indexer, v1beta1.Resource("prioritylevelconfiguration"))}
+// priorityLevelConfigurationLister implements the PriorityLevelConfigurationLister interface.
+type priorityLevelConfigurationLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// priorityLevelConfigurationLister implements the PriorityLevelConfigurationClusterLister interface.
+type priorityLevelConfigurationClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all PriorityLevelConfigurations in the indexer.
+func (s *priorityLevelConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.PriorityLevelConfiguration))
+	})
+	return ret, err
+}
+
+// Get retrieves the  PriorityLevelConfiguration from the indexer for a given workspace, namespace and name.
+func (s priorityLevelConfigurationLister) Get(name string) (*v1beta1.PriorityLevelConfiguration, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("prioritylevelconfiguration"), name)
+	}
+	return obj.(*v1beta1.PriorityLevelConfiguration), nil
+}
+
+// NewPriorityLevelConfigurationClusterLister returns a new PriorityLevelConfigurationClusterLister.
+func NewPriorityLevelConfigurationClusterLister(indexer cache.Indexer) PriorityLevelConfigurationClusterLister {
+	return &priorityLevelConfigurationClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get PriorityLevelConfiguration.
+func (s *priorityLevelConfigurationClusterLister) Cluster(clusterName logicalcluster.Name) PriorityLevelConfigurationLister {
+	return &priorityLevelConfigurationLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all PriorityLevelConfigurations in the indexer.
+func (s *priorityLevelConfigurationClusterLister) List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.PriorityLevelConfiguration))
+	})
+	return ret, err
 }

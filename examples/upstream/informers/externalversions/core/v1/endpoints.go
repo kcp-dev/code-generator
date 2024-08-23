@@ -33,7 +33,7 @@ import (
 )
 
 // EndpointsInformer provides access to a shared informer and lister for
-// Endpointses.
+// Endpoints.
 type EndpointsInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.EndpointsLister
@@ -62,13 +62,13 @@ func NewFilteredEndpointsInformer(client versioned.Interface, namespace string, 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1().Endpointses(namespace).List(context.TODO(), options)
+				return client.CoreV1().Endpoints(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1().Endpointses(namespace).Watch(context.TODO(), options)
+				return client.CoreV1().Endpoints(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&corev1.Endpoints{},

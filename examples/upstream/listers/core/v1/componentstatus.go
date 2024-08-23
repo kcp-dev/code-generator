@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ComponentStatusLister interface {
 	ComponentStatusListerExpansion
 }
 
-// componentStatusLister implements the ComponentStatusLister interface.
-type componentStatusLister struct {
-	listers.ResourceIndexer[*v1.ComponentStatus]
+// ComponentStatusClusterLister helps list ComponentStatuses.
+// All objects returned here must be treated as read-only.
+type ComponentStatusClusterLister interface {
+	// List lists all ComponentStatuses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ComponentStatus, err error)
+	ComponentStatusClusterListerExpansion
 }
 
-// NewComponentStatusLister returns a new ComponentStatusLister.
-func NewComponentStatusLister(indexer cache.Indexer) ComponentStatusLister {
-	return &componentStatusLister{listers.New[*v1.ComponentStatus](indexer, v1.Resource("componentstatus"))}
+// componentStatusLister implements the ComponentStatusLister interface.
+type componentStatusLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// componentStatusLister implements the ComponentStatusClusterLister interface.
+type componentStatusClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ComponentStatuses in the indexer.
+func (s *componentStatusLister) List(selector labels.Selector) (ret []*v1.ComponentStatus, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ComponentStatus))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ComponentStatus from the indexer for a given workspace, namespace and name.
+func (s componentStatusLister) Get(name string) (*v1.ComponentStatus, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("componentstatus"), name)
+	}
+	return obj.(*v1.ComponentStatus), nil
+}
+
+// NewComponentStatusClusterLister returns a new ComponentStatusClusterLister.
+func NewComponentStatusClusterLister(indexer cache.Indexer) ComponentStatusClusterLister {
+	return &componentStatusClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ComponentStatus.
+func (s *componentStatusClusterLister) Cluster(clusterName logicalcluster.Name) ComponentStatusLister {
+	return &componentStatusLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ComponentStatuses in the indexer.
+func (s *componentStatusClusterLister) List(selector labels.Selector) (ret []*v1.ComponentStatus, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ComponentStatus))
+	})
+	return ret, err
 }

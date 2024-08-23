@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/rbac/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ClusterRoleLister interface {
 	ClusterRoleListerExpansion
 }
 
-// clusterRoleLister implements the ClusterRoleLister interface.
-type clusterRoleLister struct {
-	listers.ResourceIndexer[*v1alpha1.ClusterRole]
+// ClusterRoleClusterLister helps list ClusterRoles.
+// All objects returned here must be treated as read-only.
+type ClusterRoleClusterLister interface {
+	// List lists all ClusterRoles in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.ClusterRole, err error)
+	ClusterRoleClusterListerExpansion
 }
 
-// NewClusterRoleLister returns a new ClusterRoleLister.
-func NewClusterRoleLister(indexer cache.Indexer) ClusterRoleLister {
-	return &clusterRoleLister{listers.New[*v1alpha1.ClusterRole](indexer, v1alpha1.Resource("clusterrole"))}
+// clusterRoleLister implements the ClusterRoleLister interface.
+type clusterRoleLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// clusterRoleLister implements the ClusterRoleClusterLister interface.
+type clusterRoleClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ClusterRoles in the indexer.
+func (s *clusterRoleLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterRole, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.ClusterRole))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ClusterRole from the indexer for a given workspace, namespace and name.
+func (s clusterRoleLister) Get(name string) (*v1alpha1.ClusterRole, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("clusterrole"), name)
+	}
+	return obj.(*v1alpha1.ClusterRole), nil
+}
+
+// NewClusterRoleClusterLister returns a new ClusterRoleClusterLister.
+func NewClusterRoleClusterLister(indexer cache.Indexer) ClusterRoleClusterLister {
+	return &clusterRoleClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ClusterRole.
+func (s *clusterRoleClusterLister) Cluster(clusterName logicalcluster.Name) ClusterRoleLister {
+	return &clusterRoleLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ClusterRoles in the indexer.
+func (s *clusterRoleClusterLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterRole, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.ClusterRole))
+	})
+	return ret, err
 }

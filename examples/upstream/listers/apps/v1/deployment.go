@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type DeploymentLister interface {
 	DeploymentListerExpansion
 }
 
-// deploymentLister implements the DeploymentLister interface.
-type deploymentLister struct {
-	listers.ResourceIndexer[*v1.Deployment]
+// DeploymentClusterLister helps list Deployments.
+// All objects returned here must be treated as read-only.
+type DeploymentClusterLister interface {
+	// List lists all Deployments in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.Deployment, err error)
+	DeploymentClusterListerExpansion
 }
 
-// NewDeploymentLister returns a new DeploymentLister.
-func NewDeploymentLister(indexer cache.Indexer) DeploymentLister {
-	return &deploymentLister{listers.New[*v1.Deployment](indexer, v1.Resource("deployment"))}
+// deploymentLister implements the DeploymentLister interface.
+type deploymentLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// deploymentLister implements the DeploymentClusterLister interface.
+type deploymentClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Deployments in the indexer.
+func (s *deploymentLister) List(selector labels.Selector) (ret []*v1.Deployment, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Deployment))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Deployment from the indexer for a given workspace, namespace and name.
+func (s deploymentLister) Get(name string) (*v1.Deployment, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("deployment"), name)
+	}
+	return obj.(*v1.Deployment), nil
+}
+
+// NewDeploymentClusterLister returns a new DeploymentClusterLister.
+func NewDeploymentClusterLister(indexer cache.Indexer) DeploymentClusterLister {
+	return &deploymentClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Deployment.
+func (s *deploymentClusterLister) Cluster(clusterName logicalcluster.Name) DeploymentLister {
+	return &deploymentLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Deployments in the indexer.
+func (s *deploymentClusterLister) List(selector labels.Selector) (ret []*v1.Deployment, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Deployment))
+	})
+	return ret, err
 }
 
 // Deployments returns an object that can list and get Deployments.
 func (s *deploymentLister) Deployments(namespace string) DeploymentNamespaceLister {
-	return deploymentNamespaceLister{listers.NewNamespaced[*v1.Deployment](s.ResourceIndexer, namespace)}
+	return deploymentNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // DeploymentNamespaceLister helps list and get Deployments.
@@ -66,5 +117,28 @@ type DeploymentNamespaceLister interface {
 // deploymentNamespaceLister implements the DeploymentNamespaceLister
 // interface.
 type deploymentNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Deployment]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Deployment from the indexer for a given workspace, namespace and name.
+func (s deploymentNamespaceLister) Get(name string) (*v1.Deployment, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("deployment"), name)
+	}
+	return obj.(*v1.Deployment), nil
+}
+
+// List lists all Deployments in the indexer for a given workspace, namespace and name.
+func (s deploymentNamespaceLister) List(selector labels.Selector) (ret []*v1.Deployment, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Deployment))
+	})
+	return ret, err
 }

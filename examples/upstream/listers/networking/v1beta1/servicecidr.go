@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ServiceCIDRLister interface {
 	ServiceCIDRListerExpansion
 }
 
-// serviceCIDRLister implements the ServiceCIDRLister interface.
-type serviceCIDRLister struct {
-	listers.ResourceIndexer[*v1beta1.ServiceCIDR]
+// ServiceCIDRClusterLister helps list ServiceCIDRs.
+// All objects returned here must be treated as read-only.
+type ServiceCIDRClusterLister interface {
+	// List lists all ServiceCIDRs in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.ServiceCIDR, err error)
+	ServiceCIDRClusterListerExpansion
 }
 
-// NewServiceCIDRLister returns a new ServiceCIDRLister.
-func NewServiceCIDRLister(indexer cache.Indexer) ServiceCIDRLister {
-	return &serviceCIDRLister{listers.New[*v1beta1.ServiceCIDR](indexer, v1beta1.Resource("servicecidr"))}
+// serviceCIDRLister implements the ServiceCIDRLister interface.
+type serviceCIDRLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// serviceCIDRLister implements the ServiceCIDRClusterLister interface.
+type serviceCIDRClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ServiceCIDRs in the indexer.
+func (s *serviceCIDRLister) List(selector labels.Selector) (ret []*v1beta1.ServiceCIDR, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.ServiceCIDR))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ServiceCIDR from the indexer for a given workspace, namespace and name.
+func (s serviceCIDRLister) Get(name string) (*v1beta1.ServiceCIDR, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("servicecidr"), name)
+	}
+	return obj.(*v1beta1.ServiceCIDR), nil
+}
+
+// NewServiceCIDRClusterLister returns a new ServiceCIDRClusterLister.
+func NewServiceCIDRClusterLister(indexer cache.Indexer) ServiceCIDRClusterLister {
+	return &serviceCIDRClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ServiceCIDR.
+func (s *serviceCIDRClusterLister) Cluster(clusterName logicalcluster.Name) ServiceCIDRLister {
+	return &serviceCIDRLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ServiceCIDRs in the indexer.
+func (s *serviceCIDRClusterLister) List(selector labels.Selector) (ret []*v1beta1.ServiceCIDR, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.ServiceCIDR))
+	})
+	return ret, err
 }

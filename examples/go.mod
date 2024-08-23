@@ -5,6 +5,8 @@ module k8s.io/code-generator/examples
 go 1.22.0
 
 require (
+	github.com/kcp-dev/apimachinery/v2 v2.0.0
+	github.com/kcp-dev/logicalcluster/v3 v3.0.5
 	k8s.io/api v0.31.0
 	k8s.io/apimachinery v0.31.0
 	k8s.io/client-go v0.31.0

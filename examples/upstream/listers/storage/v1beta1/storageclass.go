@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type StorageClassLister interface {
 	StorageClassListerExpansion
 }
 
-// storageClassLister implements the StorageClassLister interface.
-type storageClassLister struct {
-	listers.ResourceIndexer[*v1beta1.StorageClass]
+// StorageClassClusterLister helps list StorageClasses.
+// All objects returned here must be treated as read-only.
+type StorageClassClusterLister interface {
+	// List lists all StorageClasses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.StorageClass, err error)
+	StorageClassClusterListerExpansion
 }
 
-// NewStorageClassLister returns a new StorageClassLister.
-func NewStorageClassLister(indexer cache.Indexer) StorageClassLister {
-	return &storageClassLister{listers.New[*v1beta1.StorageClass](indexer, v1beta1.Resource("storageclass"))}
+// storageClassLister implements the StorageClassLister interface.
+type storageClassLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// storageClassLister implements the StorageClassClusterLister interface.
+type storageClassClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all StorageClasses in the indexer.
+func (s *storageClassLister) List(selector labels.Selector) (ret []*v1beta1.StorageClass, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.StorageClass))
+	})
+	return ret, err
+}
+
+// Get retrieves the  StorageClass from the indexer for a given workspace, namespace and name.
+func (s storageClassLister) Get(name string) (*v1beta1.StorageClass, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("storageclass"), name)
+	}
+	return obj.(*v1beta1.StorageClass), nil
+}
+
+// NewStorageClassClusterLister returns a new StorageClassClusterLister.
+func NewStorageClassClusterLister(indexer cache.Indexer) StorageClassClusterLister {
+	return &storageClassClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get StorageClass.
+func (s *storageClassClusterLister) Cluster(clusterName logicalcluster.Name) StorageClassLister {
+	return &storageClassLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all StorageClasses in the indexer.
+func (s *storageClassClusterLister) List(selector labels.Selector) (ret []*v1beta1.StorageClass, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.StorageClass))
+	})
+	return ret, err
 }

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type ResourceQuotaLister interface {
 	ResourceQuotaListerExpansion
 }
 
-// resourceQuotaLister implements the ResourceQuotaLister interface.
-type resourceQuotaLister struct {
-	listers.ResourceIndexer[*v1.ResourceQuota]
+// ResourceQuotaClusterLister helps list ResourceQuotas.
+// All objects returned here must be treated as read-only.
+type ResourceQuotaClusterLister interface {
+	// List lists all ResourceQuotas in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ResourceQuota, err error)
+	ResourceQuotaClusterListerExpansion
 }
 
-// NewResourceQuotaLister returns a new ResourceQuotaLister.
-func NewResourceQuotaLister(indexer cache.Indexer) ResourceQuotaLister {
-	return &resourceQuotaLister{listers.New[*v1.ResourceQuota](indexer, v1.Resource("resourcequota"))}
+// resourceQuotaLister implements the ResourceQuotaLister interface.
+type resourceQuotaLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// resourceQuotaLister implements the ResourceQuotaClusterLister interface.
+type resourceQuotaClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ResourceQuotas in the indexer.
+func (s *resourceQuotaLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ResourceQuota))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ResourceQuota from the indexer for a given workspace, namespace and name.
+func (s resourceQuotaLister) Get(name string) (*v1.ResourceQuota, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("resourcequota"), name)
+	}
+	return obj.(*v1.ResourceQuota), nil
+}
+
+// NewResourceQuotaClusterLister returns a new ResourceQuotaClusterLister.
+func NewResourceQuotaClusterLister(indexer cache.Indexer) ResourceQuotaClusterLister {
+	return &resourceQuotaClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ResourceQuota.
+func (s *resourceQuotaClusterLister) Cluster(clusterName logicalcluster.Name) ResourceQuotaLister {
+	return &resourceQuotaLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ResourceQuotas in the indexer.
+func (s *resourceQuotaClusterLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ResourceQuota))
+	})
+	return ret, err
 }
 
 // ResourceQuotas returns an object that can list and get ResourceQuotas.
 func (s *resourceQuotaLister) ResourceQuotas(namespace string) ResourceQuotaNamespaceLister {
-	return resourceQuotaNamespaceLister{listers.NewNamespaced[*v1.ResourceQuota](s.ResourceIndexer, namespace)}
+	return resourceQuotaNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // ResourceQuotaNamespaceLister helps list and get ResourceQuotas.
@@ -66,5 +117,28 @@ type ResourceQuotaNamespaceLister interface {
 // resourceQuotaNamespaceLister implements the ResourceQuotaNamespaceLister
 // interface.
 type resourceQuotaNamespaceLister struct {
-	listers.ResourceIndexer[*v1.ResourceQuota]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  ResourceQuota from the indexer for a given workspace, namespace and name.
+func (s resourceQuotaNamespaceLister) Get(name string) (*v1.ResourceQuota, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("resourcequota"), name)
+	}
+	return obj.(*v1.ResourceQuota), nil
+}
+
+// List lists all ResourceQuotas in the indexer for a given workspace, namespace and name.
+func (s resourceQuotaNamespaceLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ResourceQuota))
+	})
+	return ret, err
 }

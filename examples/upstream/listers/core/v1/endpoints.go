@@ -19,42 +19,93 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
-// EndpointsLister helps list Endpointses.
+// EndpointsLister helps list Endpoints.
 // All objects returned here must be treated as read-only.
 type EndpointsLister interface {
-	// List lists all Endpointses in the indexer.
+	// List lists all Endpoints in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Endpoints, err error)
-	// Endpointses returns an object that can list and get Endpointses.
-	Endpointses(namespace string) EndpointsNamespaceLister
+	// Endpoints returns an object that can list and get Endpoints.
+	Endpoints(namespace string) EndpointsNamespaceLister
 	EndpointsListerExpansion
+}
+
+// EndpointsClusterLister helps list Endpoints.
+// All objects returned here must be treated as read-only.
+type EndpointsClusterLister interface {
+	// List lists all Endpoints in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.Endpoints, err error)
+	EndpointsClusterListerExpansion
 }
 
 // endpointsLister implements the EndpointsLister interface.
 type endpointsLister struct {
-	listers.ResourceIndexer[*v1.Endpoints]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
 }
 
-// NewEndpointsLister returns a new EndpointsLister.
-func NewEndpointsLister(indexer cache.Indexer) EndpointsLister {
-	return &endpointsLister{listers.New[*v1.Endpoints](indexer, v1.Resource("endpoints"))}
+// endpointsLister implements the EndpointsClusterLister interface.
+type endpointsClusterLister struct {
+	indexer cache.Indexer
 }
 
-// Endpointses returns an object that can list and get Endpointses.
-func (s *endpointsLister) Endpointses(namespace string) EndpointsNamespaceLister {
-	return endpointsNamespaceLister{listers.NewNamespaced[*v1.Endpoints](s.ResourceIndexer, namespace)}
+// List lists all Endpoints in the indexer.
+func (s *endpointsLister) List(selector labels.Selector) (ret []*v1.Endpoints, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Endpoints))
+	})
+	return ret, err
 }
 
-// EndpointsNamespaceLister helps list and get Endpointses.
+// Get retrieves the  Endpoints from the indexer for a given workspace, namespace and name.
+func (s endpointsLister) Get(name string) (*v1.Endpoints, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("endpoints"), name)
+	}
+	return obj.(*v1.Endpoints), nil
+}
+
+// NewEndpointsClusterLister returns a new EndpointsClusterLister.
+func NewEndpointsClusterLister(indexer cache.Indexer) EndpointsClusterLister {
+	return &endpointsClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Endpoints.
+func (s *endpointsClusterLister) Cluster(clusterName logicalcluster.Name) EndpointsLister {
+	return &endpointsLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Endpoints in the indexer.
+func (s *endpointsClusterLister) List(selector labels.Selector) (ret []*v1.Endpoints, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Endpoints))
+	})
+	return ret, err
+}
+
+// Endpoints returns an object that can list and get Endpoints.
+func (s *endpointsLister) Endpoints(namespace string) EndpointsNamespaceLister {
+	return endpointsNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
+}
+
+// EndpointsNamespaceLister helps list and get Endpoints.
 // All objects returned here must be treated as read-only.
 type EndpointsNamespaceLister interface {
-	// List lists all Endpointses in the indexer for a given namespace.
+	// List lists all Endpoints in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Endpoints, err error)
 	// Get retrieves the Endpoints from the indexer for a given namespace and name.
@@ -66,5 +117,28 @@ type EndpointsNamespaceLister interface {
 // endpointsNamespaceLister implements the EndpointsNamespaceLister
 // interface.
 type endpointsNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Endpoints]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Endpoints from the indexer for a given workspace, namespace and name.
+func (s endpointsNamespaceLister) Get(name string) (*v1.Endpoints, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("endpoints"), name)
+	}
+	return obj.(*v1.Endpoints), nil
+}
+
+// List lists all Endpoints in the indexer for a given workspace, namespace and name.
+func (s endpointsNamespaceLister) List(selector labels.Selector) (ret []*v1.Endpoints, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.Endpoints))
+	})
+	return ret, err
 }

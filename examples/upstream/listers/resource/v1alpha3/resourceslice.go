@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha3
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type ResourceSliceLister interface {
 	ResourceSliceListerExpansion
 }
 
-// resourceSliceLister implements the ResourceSliceLister interface.
-type resourceSliceLister struct {
-	listers.ResourceIndexer[*v1alpha3.ResourceSlice]
+// ResourceSliceClusterLister helps list ResourceSlices.
+// All objects returned here must be treated as read-only.
+type ResourceSliceClusterLister interface {
+	// List lists all ResourceSlices in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha3.ResourceSlice, err error)
+	ResourceSliceClusterListerExpansion
 }
 
-// NewResourceSliceLister returns a new ResourceSliceLister.
-func NewResourceSliceLister(indexer cache.Indexer) ResourceSliceLister {
-	return &resourceSliceLister{listers.New[*v1alpha3.ResourceSlice](indexer, v1alpha3.Resource("resourceslice"))}
+// resourceSliceLister implements the ResourceSliceLister interface.
+type resourceSliceLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// resourceSliceLister implements the ResourceSliceClusterLister interface.
+type resourceSliceClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ResourceSlices in the indexer.
+func (s *resourceSliceLister) List(selector labels.Selector) (ret []*v1alpha3.ResourceSlice, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha3.ResourceSlice))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ResourceSlice from the indexer for a given workspace, namespace and name.
+func (s resourceSliceLister) Get(name string) (*v1alpha3.ResourceSlice, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha3.Resource("resourceslice"), name)
+	}
+	return obj.(*v1alpha3.ResourceSlice), nil
+}
+
+// NewResourceSliceClusterLister returns a new ResourceSliceClusterLister.
+func NewResourceSliceClusterLister(indexer cache.Indexer) ResourceSliceClusterLister {
+	return &resourceSliceClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ResourceSlice.
+func (s *resourceSliceClusterLister) Cluster(clusterName logicalcluster.Name) ResourceSliceLister {
+	return &resourceSliceLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ResourceSlices in the indexer.
+func (s *resourceSliceClusterLister) List(selector labels.Selector) (ret []*v1alpha3.ResourceSlice, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha3.ResourceSlice))
+	})
+	return ret, err
 }

@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type ServiceAccountLister interface {
 	ServiceAccountListerExpansion
 }
 
-// serviceAccountLister implements the ServiceAccountLister interface.
-type serviceAccountLister struct {
-	listers.ResourceIndexer[*v1.ServiceAccount]
+// ServiceAccountClusterLister helps list ServiceAccounts.
+// All objects returned here must be treated as read-only.
+type ServiceAccountClusterLister interface {
+	// List lists all ServiceAccounts in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ServiceAccount, err error)
+	ServiceAccountClusterListerExpansion
 }
 
-// NewServiceAccountLister returns a new ServiceAccountLister.
-func NewServiceAccountLister(indexer cache.Indexer) ServiceAccountLister {
-	return &serviceAccountLister{listers.New[*v1.ServiceAccount](indexer, v1.Resource("serviceaccount"))}
+// serviceAccountLister implements the ServiceAccountLister interface.
+type serviceAccountLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// serviceAccountLister implements the ServiceAccountClusterLister interface.
+type serviceAccountClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ServiceAccounts in the indexer.
+func (s *serviceAccountLister) List(selector labels.Selector) (ret []*v1.ServiceAccount, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ServiceAccount))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ServiceAccount from the indexer for a given workspace, namespace and name.
+func (s serviceAccountLister) Get(name string) (*v1.ServiceAccount, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("serviceaccount"), name)
+	}
+	return obj.(*v1.ServiceAccount), nil
+}
+
+// NewServiceAccountClusterLister returns a new ServiceAccountClusterLister.
+func NewServiceAccountClusterLister(indexer cache.Indexer) ServiceAccountClusterLister {
+	return &serviceAccountClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ServiceAccount.
+func (s *serviceAccountClusterLister) Cluster(clusterName logicalcluster.Name) ServiceAccountLister {
+	return &serviceAccountLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ServiceAccounts in the indexer.
+func (s *serviceAccountClusterLister) List(selector labels.Selector) (ret []*v1.ServiceAccount, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ServiceAccount))
+	})
+	return ret, err
 }
 
 // ServiceAccounts returns an object that can list and get ServiceAccounts.
 func (s *serviceAccountLister) ServiceAccounts(namespace string) ServiceAccountNamespaceLister {
-	return serviceAccountNamespaceLister{listers.NewNamespaced[*v1.ServiceAccount](s.ResourceIndexer, namespace)}
+	return serviceAccountNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // ServiceAccountNamespaceLister helps list and get ServiceAccounts.
@@ -66,5 +117,28 @@ type ServiceAccountNamespaceLister interface {
 // serviceAccountNamespaceLister implements the ServiceAccountNamespaceLister
 // interface.
 type serviceAccountNamespaceLister struct {
-	listers.ResourceIndexer[*v1.ServiceAccount]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  ServiceAccount from the indexer for a given workspace, namespace and name.
+func (s serviceAccountNamespaceLister) Get(name string) (*v1.ServiceAccount, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("serviceaccount"), name)
+	}
+	return obj.(*v1.ServiceAccount), nil
+}
+
+// List lists all ServiceAccounts in the indexer for a given workspace, namespace and name.
+func (s serviceAccountNamespaceLister) List(selector labels.Selector) (ret []*v1.ServiceAccount, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ServiceAccount))
+	})
+	return ret, err
 }

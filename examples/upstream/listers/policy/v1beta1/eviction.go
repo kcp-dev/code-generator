@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/policy/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type EvictionLister interface {
 	EvictionListerExpansion
 }
 
-// evictionLister implements the EvictionLister interface.
-type evictionLister struct {
-	listers.ResourceIndexer[*v1beta1.Eviction]
+// EvictionClusterLister helps list Evictions.
+// All objects returned here must be treated as read-only.
+type EvictionClusterLister interface {
+	// List lists all Evictions in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.Eviction, err error)
+	EvictionClusterListerExpansion
 }
 
-// NewEvictionLister returns a new EvictionLister.
-func NewEvictionLister(indexer cache.Indexer) EvictionLister {
-	return &evictionLister{listers.New[*v1beta1.Eviction](indexer, v1beta1.Resource("eviction"))}
+// evictionLister implements the EvictionLister interface.
+type evictionLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// evictionLister implements the EvictionClusterLister interface.
+type evictionClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Evictions in the indexer.
+func (s *evictionLister) List(selector labels.Selector) (ret []*v1beta1.Eviction, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Eviction))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Eviction from the indexer for a given workspace, namespace and name.
+func (s evictionLister) Get(name string) (*v1beta1.Eviction, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("eviction"), name)
+	}
+	return obj.(*v1beta1.Eviction), nil
+}
+
+// NewEvictionClusterLister returns a new EvictionClusterLister.
+func NewEvictionClusterLister(indexer cache.Indexer) EvictionClusterLister {
+	return &evictionClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Eviction.
+func (s *evictionClusterLister) Cluster(clusterName logicalcluster.Name) EvictionLister {
+	return &evictionLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Evictions in the indexer.
+func (s *evictionClusterLister) List(selector labels.Selector) (ret []*v1beta1.Eviction, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.Eviction))
+	})
+	return ret, err
 }
 
 // Evictions returns an object that can list and get Evictions.
 func (s *evictionLister) Evictions(namespace string) EvictionNamespaceLister {
-	return evictionNamespaceLister{listers.NewNamespaced[*v1beta1.Eviction](s.ResourceIndexer, namespace)}
+	return evictionNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // EvictionNamespaceLister helps list and get Evictions.
@@ -66,5 +117,28 @@ type EvictionNamespaceLister interface {
 // evictionNamespaceLister implements the EvictionNamespaceLister
 // interface.
 type evictionNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Eviction]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Eviction from the indexer for a given workspace, namespace and name.
+func (s evictionNamespaceLister) Get(name string) (*v1beta1.Eviction, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("eviction"), name)
+	}
+	return obj.(*v1beta1.Eviction), nil
+}
+
+// List lists all Evictions in the indexer for a given workspace, namespace and name.
+func (s evictionNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Eviction, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Eviction))
+	})
+	return ret, err
 }

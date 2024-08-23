@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/rbac/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type RoleBindingLister interface {
 	RoleBindingListerExpansion
 }
 
-// roleBindingLister implements the RoleBindingLister interface.
-type roleBindingLister struct {
-	listers.ResourceIndexer[*v1alpha1.RoleBinding]
+// RoleBindingClusterLister helps list RoleBindings.
+// All objects returned here must be treated as read-only.
+type RoleBindingClusterLister interface {
+	// List lists all RoleBindings in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error)
+	RoleBindingClusterListerExpansion
 }
 
-// NewRoleBindingLister returns a new RoleBindingLister.
-func NewRoleBindingLister(indexer cache.Indexer) RoleBindingLister {
-	return &roleBindingLister{listers.New[*v1alpha1.RoleBinding](indexer, v1alpha1.Resource("rolebinding"))}
+// roleBindingLister implements the RoleBindingLister interface.
+type roleBindingLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// roleBindingLister implements the RoleBindingClusterLister interface.
+type roleBindingClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all RoleBindings in the indexer.
+func (s *roleBindingLister) List(selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.RoleBinding))
+	})
+	return ret, err
+}
+
+// Get retrieves the  RoleBinding from the indexer for a given workspace, namespace and name.
+func (s roleBindingLister) Get(name string) (*v1alpha1.RoleBinding, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("rolebinding"), name)
+	}
+	return obj.(*v1alpha1.RoleBinding), nil
+}
+
+// NewRoleBindingClusterLister returns a new RoleBindingClusterLister.
+func NewRoleBindingClusterLister(indexer cache.Indexer) RoleBindingClusterLister {
+	return &roleBindingClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get RoleBinding.
+func (s *roleBindingClusterLister) Cluster(clusterName logicalcluster.Name) RoleBindingLister {
+	return &roleBindingLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all RoleBindings in the indexer.
+func (s *roleBindingClusterLister) List(selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.RoleBinding))
+	})
+	return ret, err
 }
 
 // RoleBindings returns an object that can list and get RoleBindings.
 func (s *roleBindingLister) RoleBindings(namespace string) RoleBindingNamespaceLister {
-	return roleBindingNamespaceLister{listers.NewNamespaced[*v1alpha1.RoleBinding](s.ResourceIndexer, namespace)}
+	return roleBindingNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // RoleBindingNamespaceLister helps list and get RoleBindings.
@@ -66,5 +117,28 @@ type RoleBindingNamespaceLister interface {
 // roleBindingNamespaceLister implements the RoleBindingNamespaceLister
 // interface.
 type roleBindingNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.RoleBinding]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  RoleBinding from the indexer for a given workspace, namespace and name.
+func (s roleBindingNamespaceLister) Get(name string) (*v1alpha1.RoleBinding, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("rolebinding"), name)
+	}
+	return obj.(*v1alpha1.RoleBinding), nil
+}
+
+// List lists all RoleBindings in the indexer for a given workspace, namespace and name.
+func (s roleBindingNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.RoleBinding))
+	})
+	return ret, err
 }

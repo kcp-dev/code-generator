@@ -30,10 +30,10 @@ import (
 	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-// EndpointsesGetter has a method to return a EndpointsInterface.
+// EndpointsGetter has a method to return a EndpointsInterface.
 // A group's client should implement this interface.
-type EndpointsesGetter interface {
-	Endpointses(namespace string) EndpointsInterface
+type EndpointsGetter interface {
+	Endpoints(namespace string) EndpointsInterface
 }
 
 // EndpointsInterface has methods to work with Endpoints resources.
@@ -50,16 +50,16 @@ type EndpointsInterface interface {
 	EndpointsExpansion
 }
 
-// endpointses implements EndpointsInterface
-type endpointses struct {
+// endpoints implements EndpointsInterface
+type endpoints struct {
 	*gentype.ClientWithListAndApply[*v1.Endpoints, *v1.EndpointsList, *corev1.EndpointsApplyConfiguration]
 }
 
-// newEndpointses returns a Endpointses
-func newEndpointses(c *CoreV1Client, namespace string) *endpointses {
-	return &endpointses{
+// newEndpoints returns a Endpoints
+func newEndpoints(c *CoreV1Client, namespace string) *endpoints {
+	return &endpoints{
 		gentype.NewClientWithListAndApply[*v1.Endpoints, *v1.EndpointsList, *corev1.EndpointsApplyConfiguration](
-			"endpointses",
+			"endpoints",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,

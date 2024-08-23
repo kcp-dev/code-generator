@@ -19,9 +19,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type RoleLister interface {
 	RoleListerExpansion
 }
 
-// roleLister implements the RoleLister interface.
-type roleLister struct {
-	listers.ResourceIndexer[*v1beta1.Role]
+// RoleClusterLister helps list Roles.
+// All objects returned here must be treated as read-only.
+type RoleClusterLister interface {
+	// List lists all Roles in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1beta1.Role, err error)
+	RoleClusterListerExpansion
 }
 
-// NewRoleLister returns a new RoleLister.
-func NewRoleLister(indexer cache.Indexer) RoleLister {
-	return &roleLister{listers.New[*v1beta1.Role](indexer, v1beta1.Resource("role"))}
+// roleLister implements the RoleLister interface.
+type roleLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// roleLister implements the RoleClusterLister interface.
+type roleClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all Roles in the indexer.
+func (s *roleLister) List(selector labels.Selector) (ret []*v1beta1.Role, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Role))
+	})
+	return ret, err
+}
+
+// Get retrieves the  Role from the indexer for a given workspace, namespace and name.
+func (s roleLister) Get(name string) (*v1beta1.Role, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("role"), name)
+	}
+	return obj.(*v1beta1.Role), nil
+}
+
+// NewRoleClusterLister returns a new RoleClusterLister.
+func NewRoleClusterLister(indexer cache.Indexer) RoleClusterLister {
+	return &roleClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get Role.
+func (s *roleClusterLister) Cluster(clusterName logicalcluster.Name) RoleLister {
+	return &roleLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all Roles in the indexer.
+func (s *roleClusterLister) List(selector labels.Selector) (ret []*v1beta1.Role, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1beta1.Role))
+	})
+	return ret, err
 }
 
 // Roles returns an object that can list and get Roles.
 func (s *roleLister) Roles(namespace string) RoleNamespaceLister {
-	return roleNamespaceLister{listers.NewNamespaced[*v1beta1.Role](s.ResourceIndexer, namespace)}
+	return roleNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // RoleNamespaceLister helps list and get Roles.
@@ -66,5 +117,28 @@ type RoleNamespaceLister interface {
 // roleNamespaceLister implements the RoleNamespaceLister
 // interface.
 type roleNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Role]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  Role from the indexer for a given workspace, namespace and name.
+func (s roleNamespaceLister) Get(name string) (*v1beta1.Role, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1beta1.Resource("role"), name)
+	}
+	return obj.(*v1beta1.Role), nil
+}
+
+// List lists all Roles in the indexer for a given workspace, namespace and name.
+func (s roleNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Role, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1beta1.Role))
+	})
+	return ret, err
 }

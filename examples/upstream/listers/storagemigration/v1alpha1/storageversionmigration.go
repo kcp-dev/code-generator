@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storagemigration/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type StorageVersionMigrationLister interface {
 	StorageVersionMigrationListerExpansion
 }
 
-// storageVersionMigrationLister implements the StorageVersionMigrationLister interface.
-type storageVersionMigrationLister struct {
-	listers.ResourceIndexer[*v1alpha1.StorageVersionMigration]
+// StorageVersionMigrationClusterLister helps list StorageVersionMigrations.
+// All objects returned here must be treated as read-only.
+type StorageVersionMigrationClusterLister interface {
+	// List lists all StorageVersionMigrations in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.StorageVersionMigration, err error)
+	StorageVersionMigrationClusterListerExpansion
 }
 
-// NewStorageVersionMigrationLister returns a new StorageVersionMigrationLister.
-func NewStorageVersionMigrationLister(indexer cache.Indexer) StorageVersionMigrationLister {
-	return &storageVersionMigrationLister{listers.New[*v1alpha1.StorageVersionMigration](indexer, v1alpha1.Resource("storageversionmigration"))}
+// storageVersionMigrationLister implements the StorageVersionMigrationLister interface.
+type storageVersionMigrationLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// storageVersionMigrationLister implements the StorageVersionMigrationClusterLister interface.
+type storageVersionMigrationClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all StorageVersionMigrations in the indexer.
+func (s *storageVersionMigrationLister) List(selector labels.Selector) (ret []*v1alpha1.StorageVersionMigration, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.StorageVersionMigration))
+	})
+	return ret, err
+}
+
+// Get retrieves the  StorageVersionMigration from the indexer for a given workspace, namespace and name.
+func (s storageVersionMigrationLister) Get(name string) (*v1alpha1.StorageVersionMigration, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("storageversionmigration"), name)
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), nil
+}
+
+// NewStorageVersionMigrationClusterLister returns a new StorageVersionMigrationClusterLister.
+func NewStorageVersionMigrationClusterLister(indexer cache.Indexer) StorageVersionMigrationClusterLister {
+	return &storageVersionMigrationClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get StorageVersionMigration.
+func (s *storageVersionMigrationClusterLister) Cluster(clusterName logicalcluster.Name) StorageVersionMigrationLister {
+	return &storageVersionMigrationLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all StorageVersionMigrations in the indexer.
+func (s *storageVersionMigrationClusterLister) List(selector labels.Selector) (ret []*v1alpha1.StorageVersionMigration, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.StorageVersionMigration))
+	})
+	return ret, err
 }

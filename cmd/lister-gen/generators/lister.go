@@ -132,25 +132,37 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 				return tags.GenerateClient && tags.HasVerb("list") && tags.HasVerb("get")
 			},
 			GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
-				generators = append(generators, &expansionGenerator{
-					GoGenerator: generator.GoGenerator{
-						OutputFilename: "expansion_generated.go",
-					},
-					outputPath: outputDir,
-					types:      typesToGenerate,
-				})
-
 				for _, t := range typesToGenerate {
+					group := gv.Group.String()
+					if group == "" {
+						group = "core"
+					}
 					generators = append(generators, &listerGenerator{
 						GoGenerator: generator.GoGenerator{
 							OutputFilename: strings.ToLower(t.Name.Name) + ".go",
 						},
-						outputPackage:  outputPkg,
-						groupVersion:   gv,
-						internalGVPkg:  internalGVPkg,
-						typeToGenerate: t,
-						imports:        generator.NewImportTracker(),
-						objectMeta:     objectMeta,
+						outputPackage:                   outputPkg,
+						group:                           group,
+						version:                         gv.Version.String(),
+						internalGVPkg:                   internalGVPkg,
+						typeToGenerate:                  t,
+						imports:                         generator.NewImportTracker(),
+						objectMeta:                      objectMeta,
+						singleClusterListersPackagePath: args.SingleClusterListersPackagePath,
+					})
+					// TODO: Upstream this to the upstream lister-gen
+					generators = append(generators, &expansionGenerator{
+						GoGenerator: generator.GoGenerator{
+							OutputFilename: strings.ToLower(t.Name.Name) + "_expansions.go",
+						},
+						outputPath:                      outputDir,
+						outputPackage:                   outputPkg,
+						typeToGenerate:                  t,
+						group:                           group,
+						version:                         gv.Version.String(),
+						imports:                         generator.NewImportTracker(),
+						singleClusterListersPackagePath: args.SingleClusterListersPackagePath,
+						staticExpansionsListers:         args.StaticExpansionsListers,
 					})
 				}
 				return generators
@@ -192,11 +204,14 @@ func isInternal(m types.Member) bool {
 type listerGenerator struct {
 	generator.GoGenerator
 	outputPackage  string
-	groupVersion   clientgentypes.GroupVersion
 	internalGVPkg  string
 	typeToGenerate *types.Type
 	imports        namer.ImportTracker
 	objectMeta     *types.Type
+	// SingleClusterListersPackagePath is the package path for the single cluster listers when using upstream listers.
+	singleClusterListersPackagePath string
+	group                           string
+	version                         string
 }
 
 var _ generator.Generator = &listerGenerator{}
@@ -218,6 +233,14 @@ func (g *listerGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, "k8s.io/client-go/listers")
 	// for Indexer
 	imports = append(imports, "k8s.io/client-go/tools/cache")
+	// KCP specific
+	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
+	imports = append(imports, "kcpcache \"github.com/kcp-dev/apimachinery/v2/pkg/cache\"")
+	if g.singleClusterListersPackagePath != "" {
+		// Sorry :(
+		imp := strings.ToLower(g.group+g.version+"listers \"") + g.singleClusterListersPackagePath + "/" + strings.ToLower(g.group) + "/" + strings.ToLower(g.version) + "\""
+		imports = append(imports, imp)
+	}
 	return
 }
 
@@ -226,9 +249,11 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 
 	klog.V(5).Infof("processing type %v", t)
 	m := map[string]interface{}{
-		"Resource":   c.Universe.Function(types.Name{Package: t.Name.Package, Name: "Resource"}),
-		"type":       t,
-		"objectMeta": g.objectMeta,
+		"Resource":                c.Universe.Function(types.Name{Package: t.Name.Package, Name: "Resource"}),
+		"type":                    t,
+		"objectMeta":              g.objectMeta,
+		"externalLister":          strings.ToLower(g.group+g.version+"listers.") + t.Name.Name + "Lister",
+		"externalNamespaceLister": strings.ToLower(g.group+g.version+"listers.") + t.Name.Name + "NamespaceLister",
 	}
 
 	tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
@@ -238,23 +263,53 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 
 	if tags.NonNamespaced {
 		sw.Do(typeListerInterfaceNonNamespaced, m)
+		sw.Do(typeClusterListerInterface, m)
 	} else {
 		sw.Do(typeListerInterface, m)
+		sw.Do(typeClusterListerInterface, m)
 	}
 
 	sw.Do(typeListerStruct, m)
-	sw.Do(typeListerConstructor, m)
+	sw.Do(typeClusterListerStruct, m)
+	//sw.Do(typeListerConstructor, m)
+	sw.Do(typeListerListMethod, m)
+	sw.Do(typeListerGetMethod, m)
+	sw.Do(typeClusterListerConstructor, m)
+	if g.singleClusterListersPackagePath != "" {
+		sw.Do(typeExternalClusterListerClusterMethod, m)
+	} else {
+		sw.Do(typeClusterListerClusterMethod, m)
+	}
+	sw.Do(typeClusterListerListMethod, m)
 
 	if tags.NonNamespaced {
 		return sw.Error()
 	}
 
-	sw.Do(typeListerNamespaceLister, m)
+	if g.singleClusterListersPackagePath != "" {
+		sw.Do(typeExternalListerNamespaceLister, m)
+	} else {
+		sw.Do(typeListerNamespaceLister, m)
+	}
+
 	sw.Do(namespaceListerInterface, m)
 	sw.Do(namespaceListerStruct, m)
+	sw.Do(namespaceListerMethodGet, m)
+	sw.Do(namespaceListerMethodList, m)
 
 	return sw.Error()
 }
+
+var typeClusterListerInterface = `
+// $.type|public$ClusterLister helps list $.type|publicPlural$.
+// All objects returned here must be treated as read-only.
+type $.type|public$ClusterLister interface {
+	// List lists all $.type|publicPlural$ in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*$.type|raw$, err error)
+	$.type|public$ClusterListerExpansion
+}
+`
 
 var typeListerInterface = `
 // $.type|public$Lister helps list $.type|publicPlural$.
@@ -289,7 +344,15 @@ type $.type|public$Lister interface {
 var typeListerStruct = `
 // $.type|private$Lister implements the $.type|public$Lister interface.
 type $.type|private$Lister struct {
-	listers.ResourceIndexer[*$.type|raw$]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+`
+
+var typeClusterListerStruct = `
+// $.type|private$Lister implements the $.type|public$ClusterLister interface.
+type $.type|private$ClusterLister struct {
+	indexer cache.Indexer
 }
 `
 
@@ -300,10 +363,58 @@ func New$.type|public$Lister(indexer cache.Indexer) $.type|public$Lister {
 }
 `
 
+var typeClusterListerConstructor = `
+// New$.type|public$ClusterLister returns a new $.type|public$ClusterLister.
+func New$.type|public$ClusterLister(indexer cache.Indexer) $.type|public$ClusterLister {
+	return &$.type|private$ClusterLister{indexer: indexer}
+}
+`
+
+var typeClusterListerClusterMethod = `
+// Cluster scopes the lister to one workspace, allowing users to list and get $.type|public$.
+func (s *$.type|private$ClusterLister) Cluster(clusterName logicalcluster.Name) $.type|public$Lister {
+	return &$.type|private$Lister{indexer: s.indexer, clusterName: clusterName}
+}
+`
+
+var typeExternalClusterListerClusterMethod = `
+// Cluster scopes the lister to one workspace, allowing users to list and get $.type|public$.
+func (s *$.type|private$ClusterLister) Cluster(clusterName logicalcluster.Name) $.externalLister$ {
+	return &$.type|private$Lister{indexer: s.indexer, clusterName: clusterName}
+}
+`
+
+var typeClusterListerListMethod = `
+// List lists all $.type|publicPlural$ in the indexer.
+func (s *$.type|private$ClusterLister) List(selector labels.Selector) (ret []*$.type|raw$, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*$.type|raw$))
+	})
+	return ret, err
+}
+`
+
+var typeListerListMethod = `
+// List lists all $.type|publicPlural$ in the indexer.
+func (s *$.type|private$Lister) List(selector labels.Selector) (ret []*$.type|raw$, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*$.type|raw$))
+	})
+	return ret, err
+}
+`
+
 var typeListerNamespaceLister = `
 // $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$.
 func (s *$.type|private$Lister) $.type|publicPlural$(namespace string) $.type|public$NamespaceLister {
-	return $.type|private$NamespaceLister{listers.NewNamespaced[*$.type|raw$](s.ResourceIndexer, namespace)}
+	return $.type|private$NamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
+}
+`
+
+var typeExternalListerNamespaceLister = `
+// $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$.
+func (s *$.type|private$Lister) $.type|publicPlural$(namespace string) $.externalNamespaceLister$ {
+	return $.type|private$NamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 `
 
@@ -328,6 +439,48 @@ var namespaceListerStruct = `
 // $.type|private$NamespaceLister implements the $.type|public$NamespaceLister
 // interface.
 type $.type|private$NamespaceLister struct {
-	listers.ResourceIndexer[*$.type|raw$]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+`
+
+var namespaceListerMethodGet = `
+// Get retrieves the  $.type|public$ from the indexer for a given workspace, namespace and name.
+func (s $.type|private$NamespaceLister) Get(name string) (*$.type|raw$, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound($.Resource|raw$("$.type|lowercaseSingular$"), name)
+	}
+	return obj.(*$.type|raw$), nil
+}
+`
+
+var typeListerGetMethod = `
+// Get retrieves the  $.type|public$ from the indexer for a given workspace, namespace and name.
+func (s $.type|private$Lister) Get(name string) (*$.type|raw$, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound($.Resource|raw$("$.type|lowercaseSingular$"), name)
+	}
+	return obj.(*$.type|raw$), nil
+}
+`
+
+var namespaceListerMethodList = `
+// List lists all $.type|publicPlural$ in the indexer for a given workspace, namespace and name.
+func (s $.type|private$NamespaceLister) List(selector labels.Selector) (ret []*$.type|raw$, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*$.type|raw$))
+	})
+	return ret, err
 }
 `

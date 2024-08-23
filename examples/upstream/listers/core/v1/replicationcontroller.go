@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type ReplicationControllerLister interface {
 	ReplicationControllerListerExpansion
 }
 
-// replicationControllerLister implements the ReplicationControllerLister interface.
-type replicationControllerLister struct {
-	listers.ResourceIndexer[*v1.ReplicationController]
+// ReplicationControllerClusterLister helps list ReplicationControllers.
+// All objects returned here must be treated as read-only.
+type ReplicationControllerClusterLister interface {
+	// List lists all ReplicationControllers in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.ReplicationController, err error)
+	ReplicationControllerClusterListerExpansion
 }
 
-// NewReplicationControllerLister returns a new ReplicationControllerLister.
-func NewReplicationControllerLister(indexer cache.Indexer) ReplicationControllerLister {
-	return &replicationControllerLister{listers.New[*v1.ReplicationController](indexer, v1.Resource("replicationcontroller"))}
+// replicationControllerLister implements the ReplicationControllerLister interface.
+type replicationControllerLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// replicationControllerLister implements the ReplicationControllerClusterLister interface.
+type replicationControllerClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ReplicationControllers in the indexer.
+func (s *replicationControllerLister) List(selector labels.Selector) (ret []*v1.ReplicationController, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ReplicationController))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ReplicationController from the indexer for a given workspace, namespace and name.
+func (s replicationControllerLister) Get(name string) (*v1.ReplicationController, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("replicationcontroller"), name)
+	}
+	return obj.(*v1.ReplicationController), nil
+}
+
+// NewReplicationControllerClusterLister returns a new ReplicationControllerClusterLister.
+func NewReplicationControllerClusterLister(indexer cache.Indexer) ReplicationControllerClusterLister {
+	return &replicationControllerClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ReplicationController.
+func (s *replicationControllerClusterLister) Cluster(clusterName logicalcluster.Name) ReplicationControllerLister {
+	return &replicationControllerLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ReplicationControllers in the indexer.
+func (s *replicationControllerClusterLister) List(selector labels.Selector) (ret []*v1.ReplicationController, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ReplicationController))
+	})
+	return ret, err
 }
 
 // ReplicationControllers returns an object that can list and get ReplicationControllers.
 func (s *replicationControllerLister) ReplicationControllers(namespace string) ReplicationControllerNamespaceLister {
-	return replicationControllerNamespaceLister{listers.NewNamespaced[*v1.ReplicationController](s.ResourceIndexer, namespace)}
+	return replicationControllerNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // ReplicationControllerNamespaceLister helps list and get ReplicationControllers.
@@ -66,5 +117,28 @@ type ReplicationControllerNamespaceLister interface {
 // replicationControllerNamespaceLister implements the ReplicationControllerNamespaceLister
 // interface.
 type replicationControllerNamespaceLister struct {
-	listers.ResourceIndexer[*v1.ReplicationController]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  ReplicationController from the indexer for a given workspace, namespace and name.
+func (s replicationControllerNamespaceLister) Get(name string) (*v1.ReplicationController, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("replicationcontroller"), name)
+	}
+	return obj.(*v1.ReplicationController), nil
+}
+
+// List lists all ReplicationControllers in the indexer for a given workspace, namespace and name.
+func (s replicationControllerNamespaceLister) List(selector labels.Selector) (ret []*v1.ReplicationController, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.ReplicationController))
+	})
+	return ret, err
 }

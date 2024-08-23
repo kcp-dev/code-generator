@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha3
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type ResourceClaimTemplateLister interface {
 	ResourceClaimTemplateListerExpansion
 }
 
-// resourceClaimTemplateLister implements the ResourceClaimTemplateLister interface.
-type resourceClaimTemplateLister struct {
-	listers.ResourceIndexer[*v1alpha3.ResourceClaimTemplate]
+// ResourceClaimTemplateClusterLister helps list ResourceClaimTemplates.
+// All objects returned here must be treated as read-only.
+type ResourceClaimTemplateClusterLister interface {
+	// List lists all ResourceClaimTemplates in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha3.ResourceClaimTemplate, err error)
+	ResourceClaimTemplateClusterListerExpansion
 }
 
-// NewResourceClaimTemplateLister returns a new ResourceClaimTemplateLister.
-func NewResourceClaimTemplateLister(indexer cache.Indexer) ResourceClaimTemplateLister {
-	return &resourceClaimTemplateLister{listers.New[*v1alpha3.ResourceClaimTemplate](indexer, v1alpha3.Resource("resourceclaimtemplate"))}
+// resourceClaimTemplateLister implements the ResourceClaimTemplateLister interface.
+type resourceClaimTemplateLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// resourceClaimTemplateLister implements the ResourceClaimTemplateClusterLister interface.
+type resourceClaimTemplateClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all ResourceClaimTemplates in the indexer.
+func (s *resourceClaimTemplateLister) List(selector labels.Selector) (ret []*v1alpha3.ResourceClaimTemplate, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha3.ResourceClaimTemplate))
+	})
+	return ret, err
+}
+
+// Get retrieves the  ResourceClaimTemplate from the indexer for a given workspace, namespace and name.
+func (s resourceClaimTemplateLister) Get(name string) (*v1alpha3.ResourceClaimTemplate, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha3.Resource("resourceclaimtemplate"), name)
+	}
+	return obj.(*v1alpha3.ResourceClaimTemplate), nil
+}
+
+// NewResourceClaimTemplateClusterLister returns a new ResourceClaimTemplateClusterLister.
+func NewResourceClaimTemplateClusterLister(indexer cache.Indexer) ResourceClaimTemplateClusterLister {
+	return &resourceClaimTemplateClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get ResourceClaimTemplate.
+func (s *resourceClaimTemplateClusterLister) Cluster(clusterName logicalcluster.Name) ResourceClaimTemplateLister {
+	return &resourceClaimTemplateLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all ResourceClaimTemplates in the indexer.
+func (s *resourceClaimTemplateClusterLister) List(selector labels.Selector) (ret []*v1alpha3.ResourceClaimTemplate, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha3.ResourceClaimTemplate))
+	})
+	return ret, err
 }
 
 // ResourceClaimTemplates returns an object that can list and get ResourceClaimTemplates.
 func (s *resourceClaimTemplateLister) ResourceClaimTemplates(namespace string) ResourceClaimTemplateNamespaceLister {
-	return resourceClaimTemplateNamespaceLister{listers.NewNamespaced[*v1alpha3.ResourceClaimTemplate](s.ResourceIndexer, namespace)}
+	return resourceClaimTemplateNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // ResourceClaimTemplateNamespaceLister helps list and get ResourceClaimTemplates.
@@ -66,5 +117,28 @@ type ResourceClaimTemplateNamespaceLister interface {
 // resourceClaimTemplateNamespaceLister implements the ResourceClaimTemplateNamespaceLister
 // interface.
 type resourceClaimTemplateNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha3.ResourceClaimTemplate]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  ResourceClaimTemplate from the indexer for a given workspace, namespace and name.
+func (s resourceClaimTemplateNamespaceLister) Get(name string) (*v1alpha3.ResourceClaimTemplate, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha3.Resource("resourceclaimtemplate"), name)
+	}
+	return obj.(*v1alpha3.ResourceClaimTemplate), nil
+}
+
+// List lists all ResourceClaimTemplates in the indexer for a given workspace, namespace and name.
+func (s resourceClaimTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha3.ResourceClaimTemplate, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha3.ResourceClaimTemplate))
+	})
+	return ret, err
 }

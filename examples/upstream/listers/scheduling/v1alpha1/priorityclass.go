@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/scheduling/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type PriorityClassLister interface {
 	PriorityClassListerExpansion
 }
 
-// priorityClassLister implements the PriorityClassLister interface.
-type priorityClassLister struct {
-	listers.ResourceIndexer[*v1alpha1.PriorityClass]
+// PriorityClassClusterLister helps list PriorityClasses.
+// All objects returned here must be treated as read-only.
+type PriorityClassClusterLister interface {
+	// List lists all PriorityClasses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.PriorityClass, err error)
+	PriorityClassClusterListerExpansion
 }
 
-// NewPriorityClassLister returns a new PriorityClassLister.
-func NewPriorityClassLister(indexer cache.Indexer) PriorityClassLister {
-	return &priorityClassLister{listers.New[*v1alpha1.PriorityClass](indexer, v1alpha1.Resource("priorityclass"))}
+// priorityClassLister implements the PriorityClassLister interface.
+type priorityClassLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// priorityClassLister implements the PriorityClassClusterLister interface.
+type priorityClassClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all PriorityClasses in the indexer.
+func (s *priorityClassLister) List(selector labels.Selector) (ret []*v1alpha1.PriorityClass, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.PriorityClass))
+	})
+	return ret, err
+}
+
+// Get retrieves the  PriorityClass from the indexer for a given workspace, namespace and name.
+func (s priorityClassLister) Get(name string) (*v1alpha1.PriorityClass, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("priorityclass"), name)
+	}
+	return obj.(*v1alpha1.PriorityClass), nil
+}
+
+// NewPriorityClassClusterLister returns a new PriorityClassClusterLister.
+func NewPriorityClassClusterLister(indexer cache.Indexer) PriorityClassClusterLister {
+	return &priorityClassClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get PriorityClass.
+func (s *priorityClassClusterLister) Cluster(clusterName logicalcluster.Name) PriorityClassLister {
+	return &priorityClassLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all PriorityClasses in the indexer.
+func (s *priorityClassClusterLister) List(selector labels.Selector) (ret []*v1alpha1.PriorityClass, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.PriorityClass))
+	})
+	return ret, err
 }

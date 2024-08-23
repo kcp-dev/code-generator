@@ -28,8 +28,8 @@ type Interface interface {
 	ComponentStatuses() ComponentStatusInformer
 	// ConfigMaps returns a ConfigMapInformer.
 	ConfigMaps() ConfigMapInformer
-	// Endpointses returns a EndpointsInformer.
-	Endpointses() EndpointsInformer
+	// Endpoints returns a EndpointsInformer.
+	Endpoints() EndpointsInformer
 	// Events returns a EventInformer.
 	Events() EventInformer
 	// LimitRanges returns a LimitRangeInformer.
@@ -79,8 +79,8 @@ func (v *version) ConfigMaps() ConfigMapInformer {
 	return &configMapInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Endpointses returns a EndpointsInformer.
-func (v *version) Endpointses() EndpointsInformer {
+// Endpoints returns a EndpointsInformer.
+func (v *version) Endpoints() EndpointsInformer {
 	return &endpointsInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 

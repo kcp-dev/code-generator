@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -36,19 +38,68 @@ type CSIStorageCapacityLister interface {
 	CSIStorageCapacityListerExpansion
 }
 
-// cSIStorageCapacityLister implements the CSIStorageCapacityLister interface.
-type cSIStorageCapacityLister struct {
-	listers.ResourceIndexer[*v1alpha1.CSIStorageCapacity]
+// CSIStorageCapacityClusterLister helps list CSIStorageCapacities.
+// All objects returned here must be treated as read-only.
+type CSIStorageCapacityClusterLister interface {
+	// List lists all CSIStorageCapacities in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.CSIStorageCapacity, err error)
+	CSIStorageCapacityClusterListerExpansion
 }
 
-// NewCSIStorageCapacityLister returns a new CSIStorageCapacityLister.
-func NewCSIStorageCapacityLister(indexer cache.Indexer) CSIStorageCapacityLister {
-	return &cSIStorageCapacityLister{listers.New[*v1alpha1.CSIStorageCapacity](indexer, v1alpha1.Resource("csistoragecapacity"))}
+// cSIStorageCapacityLister implements the CSIStorageCapacityLister interface.
+type cSIStorageCapacityLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// cSIStorageCapacityLister implements the CSIStorageCapacityClusterLister interface.
+type cSIStorageCapacityClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all CSIStorageCapacities in the indexer.
+func (s *cSIStorageCapacityLister) List(selector labels.Selector) (ret []*v1alpha1.CSIStorageCapacity, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.CSIStorageCapacity))
+	})
+	return ret, err
+}
+
+// Get retrieves the  CSIStorageCapacity from the indexer for a given workspace, namespace and name.
+func (s cSIStorageCapacityLister) Get(name string) (*v1alpha1.CSIStorageCapacity, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("csistoragecapacity"), name)
+	}
+	return obj.(*v1alpha1.CSIStorageCapacity), nil
+}
+
+// NewCSIStorageCapacityClusterLister returns a new CSIStorageCapacityClusterLister.
+func NewCSIStorageCapacityClusterLister(indexer cache.Indexer) CSIStorageCapacityClusterLister {
+	return &cSIStorageCapacityClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get CSIStorageCapacity.
+func (s *cSIStorageCapacityClusterLister) Cluster(clusterName logicalcluster.Name) CSIStorageCapacityLister {
+	return &cSIStorageCapacityLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all CSIStorageCapacities in the indexer.
+func (s *cSIStorageCapacityClusterLister) List(selector labels.Selector) (ret []*v1alpha1.CSIStorageCapacity, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.CSIStorageCapacity))
+	})
+	return ret, err
 }
 
 // CSIStorageCapacities returns an object that can list and get CSIStorageCapacities.
 func (s *cSIStorageCapacityLister) CSIStorageCapacities(namespace string) CSIStorageCapacityNamespaceLister {
-	return cSIStorageCapacityNamespaceLister{listers.NewNamespaced[*v1alpha1.CSIStorageCapacity](s.ResourceIndexer, namespace)}
+	return cSIStorageCapacityNamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
 
 // CSIStorageCapacityNamespaceLister helps list and get CSIStorageCapacities.
@@ -66,5 +117,28 @@ type CSIStorageCapacityNamespaceLister interface {
 // cSIStorageCapacityNamespaceLister implements the CSIStorageCapacityNamespaceLister
 // interface.
 type cSIStorageCapacityNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.CSIStorageCapacity]
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+	namespace   string
+}
+
+// Get retrieves the  CSIStorageCapacity from the indexer for a given workspace, namespace and name.
+func (s cSIStorageCapacityNamespaceLister) Get(name string) (*v1alpha1.CSIStorageCapacity, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("csistoragecapacity"), name)
+	}
+	return obj.(*v1alpha1.CSIStorageCapacity), nil
+}
+
+// List lists all CSIStorageCapacities in the indexer for a given workspace, namespace and name.
+func (s cSIStorageCapacityNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.CSIStorageCapacity, err error) {
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.CSIStorageCapacity))
+	})
+	return ret, err
 }

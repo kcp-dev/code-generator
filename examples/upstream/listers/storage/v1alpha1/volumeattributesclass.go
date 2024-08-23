@@ -19,9 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type VolumeAttributesClassLister interface {
 	VolumeAttributesClassListerExpansion
 }
 
-// volumeAttributesClassLister implements the VolumeAttributesClassLister interface.
-type volumeAttributesClassLister struct {
-	listers.ResourceIndexer[*v1alpha1.VolumeAttributesClass]
+// VolumeAttributesClassClusterLister helps list VolumeAttributesClasses.
+// All objects returned here must be treated as read-only.
+type VolumeAttributesClassClusterLister interface {
+	// List lists all VolumeAttributesClasses in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.VolumeAttributesClass, err error)
+	VolumeAttributesClassClusterListerExpansion
 }
 
-// NewVolumeAttributesClassLister returns a new VolumeAttributesClassLister.
-func NewVolumeAttributesClassLister(indexer cache.Indexer) VolumeAttributesClassLister {
-	return &volumeAttributesClassLister{listers.New[*v1alpha1.VolumeAttributesClass](indexer, v1alpha1.Resource("volumeattributesclass"))}
+// volumeAttributesClassLister implements the VolumeAttributesClassLister interface.
+type volumeAttributesClassLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// volumeAttributesClassLister implements the VolumeAttributesClassClusterLister interface.
+type volumeAttributesClassClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all VolumeAttributesClasses in the indexer.
+func (s *volumeAttributesClassLister) List(selector labels.Selector) (ret []*v1alpha1.VolumeAttributesClass, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1alpha1.VolumeAttributesClass))
+	})
+	return ret, err
+}
+
+// Get retrieves the  VolumeAttributesClass from the indexer for a given workspace, namespace and name.
+func (s volumeAttributesClassLister) Get(name string) (*v1alpha1.VolumeAttributesClass, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1alpha1.Resource("volumeattributesclass"), name)
+	}
+	return obj.(*v1alpha1.VolumeAttributesClass), nil
+}
+
+// NewVolumeAttributesClassClusterLister returns a new VolumeAttributesClassClusterLister.
+func NewVolumeAttributesClassClusterLister(indexer cache.Indexer) VolumeAttributesClassClusterLister {
+	return &volumeAttributesClassClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get VolumeAttributesClass.
+func (s *volumeAttributesClassClusterLister) Cluster(clusterName logicalcluster.Name) VolumeAttributesClassLister {
+	return &volumeAttributesClassLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all VolumeAttributesClasses in the indexer.
+func (s *volumeAttributesClassClusterLister) List(selector labels.Selector) (ret []*v1alpha1.VolumeAttributesClass, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.VolumeAttributesClass))
+	})
+	return ret, err
 }

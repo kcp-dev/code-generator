@@ -19,9 +19,11 @@ limitations under the License.
 package v1
 
 import (
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,12 +39,61 @@ type CSINodeLister interface {
 	CSINodeListerExpansion
 }
 
-// cSINodeLister implements the CSINodeLister interface.
-type cSINodeLister struct {
-	listers.ResourceIndexer[*v1.CSINode]
+// CSINodeClusterLister helps list CSINodes.
+// All objects returned here must be treated as read-only.
+type CSINodeClusterLister interface {
+	// List lists all CSINodes in the indexer.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1.CSINode, err error)
+	CSINodeClusterListerExpansion
 }
 
-// NewCSINodeLister returns a new CSINodeLister.
-func NewCSINodeLister(indexer cache.Indexer) CSINodeLister {
-	return &cSINodeLister{listers.New[*v1.CSINode](indexer, v1.Resource("csinode"))}
+// cSINodeLister implements the CSINodeLister interface.
+type cSINodeLister struct {
+	indexer     cache.Indexer
+	clusterName logicalcluster.Name
+}
+
+// cSINodeLister implements the CSINodeClusterLister interface.
+type cSINodeClusterLister struct {
+	indexer cache.Indexer
+}
+
+// List lists all CSINodes in the indexer.
+func (s *cSINodeLister) List(selector labels.Selector) (ret []*v1.CSINode, err error) {
+	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
+		ret = append(ret, i.(*v1.CSINode))
+	})
+	return ret, err
+}
+
+// Get retrieves the  CSINode from the indexer for a given workspace, namespace and name.
+func (s cSINodeLister) Get(name string) (*v1.CSINode, error) {
+	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
+	obj, exists, err := s.indexer.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("csinode"), name)
+	}
+	return obj.(*v1.CSINode), nil
+}
+
+// NewCSINodeClusterLister returns a new CSINodeClusterLister.
+func NewCSINodeClusterLister(indexer cache.Indexer) CSINodeClusterLister {
+	return &cSINodeClusterLister{indexer: indexer}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get CSINode.
+func (s *cSINodeClusterLister) Cluster(clusterName logicalcluster.Name) CSINodeLister {
+	return &cSINodeLister{indexer: s.indexer, clusterName: clusterName}
+}
+
+// List lists all CSINodes in the indexer.
+func (s *cSINodeClusterLister) List(selector labels.Selector) (ret []*v1.CSINode, err error) {
+	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.CSINode))
+	})
+	return ret, err
 }
