@@ -22,41 +22,46 @@ import (
 	"context"
 	time "time"
 
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1informers "k8s.io/client-go/informers/v1/core"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/code-generator/examples/upstream/listers/core/v1"
 )
 
-// ServiceAccountInformer provides access to a shared informer and lister for
+// ServiceAccountClusterInformer provides access to a shared informer and lister for
 // ServiceAccounts.
-type ServiceAccountInformer interface {
-	Informer() cache.SharedIndexInformer
+type ServiceAccountClusterInformer interface {
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() v1.ServiceAccountLister
+	Cluster(logicalcluster.Name) upstreamcorev1informers.ServiceAccountInformer
 }
 
-type serviceAccountInformer struct {
+type serviceAccountClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewServiceAccountInformer constructs a new informer for ServiceAccount type.
+// NewServiceAccountClusterInformer constructs a new informer for ServiceAccount type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewServiceAccountInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredServiceAccountInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewServiceAccountClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredServiceAccountClusterInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredServiceAccountInformer constructs a new informer for ServiceAccount type.
+// NewFilteredServiceAccountClusterInformer constructs a new informer for ServiceAccount type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredServiceAccountInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+func NewFilteredServiceAccountClusterInformer(client versioned.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return informers.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -77,8 +82,10 @@ func NewFilteredServiceAccountInformer(client versioned.Interface, namespace str
 	)
 }
 
-func (f *serviceAccountInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredServiceAccountInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *serviceAccountClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredServiceAccountClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+		f.tweakListOptions)
 }
 
 func (f *serviceAccountInformer) Informer() cache.SharedIndexInformer {

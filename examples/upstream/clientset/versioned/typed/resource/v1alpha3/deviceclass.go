@@ -21,49 +21,28 @@ package v1alpha3
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 )
 
-// DeviceClassesGetter has a method to return a DeviceClassInterface.
+// DeviceClassesClusterGetter has a method to return a DeviceClassClusterInterface.
 // A group's client should implement this interface.
-type DeviceClassesGetter interface {
-	DeviceClasses() DeviceClassInterface
+type DeviceClassesClusterGetter interface {
+	DeviceClasses() DeviceClassClusterInterface
 }
 
-// DeviceClassInterface has methods to work with DeviceClass resources.
-type DeviceClassInterface interface {
-	Create(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.CreateOptions) (*v1alpha3.DeviceClass, error)
-	Update(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.UpdateOptions) (*v1alpha3.DeviceClass, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha3.DeviceClass, error)
+// DeviceClassClusterInterface has methods to work with DeviceClass resources.
+type DeviceClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.DeviceClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.DeviceClass, err error)
-	Apply(ctx context.Context, deviceClass *resourcev1alpha3.DeviceClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.DeviceClass, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	DeviceClassExpansion
 }
 
-// deviceClasses implements DeviceClassInterface
-type deviceClasses struct {
-	*gentype.ClientWithListAndApply[*v1alpha3.DeviceClass, *v1alpha3.DeviceClassList, *resourcev1alpha3.DeviceClassApplyConfiguration]
-}
-
-// newDeviceClasses returns a DeviceClasses
-func newDeviceClasses(c *ResourceV1alpha3Client) *deviceClasses {
-	return &deviceClasses{
-		gentype.NewClientWithListAndApply[*v1alpha3.DeviceClass, *v1alpha3.DeviceClassList, *resourcev1alpha3.DeviceClassApplyConfiguration](
-			"deviceclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha3.DeviceClass { return &v1alpha3.DeviceClass{} },
-			func() *v1alpha3.DeviceClassList { return &v1alpha3.DeviceClassList{} }),
-	}
+type deviceClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
 }

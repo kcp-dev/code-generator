@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/node/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	nodev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/node/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamnodev1beta1client "k8s.io/client-go/kubernetes/typed/node/v1beta1"
 )
 
-// RuntimeClassesGetter has a method to return a RuntimeClassInterface.
+// RuntimeClassesClusterGetter has a method to return a RuntimeClassClusterInterface.
 // A group's client should implement this interface.
-type RuntimeClassesGetter interface {
-	RuntimeClasses() RuntimeClassInterface
+type RuntimeClassesClusterGetter interface {
+	RuntimeClasses() RuntimeClassClusterInterface
 }
 
-// RuntimeClassInterface has methods to work with RuntimeClass resources.
-type RuntimeClassInterface interface {
-	Create(ctx context.Context, runtimeClass *v1beta1.RuntimeClass, opts v1.CreateOptions) (*v1beta1.RuntimeClass, error)
-	Update(ctx context.Context, runtimeClass *v1beta1.RuntimeClass, opts v1.UpdateOptions) (*v1beta1.RuntimeClass, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.RuntimeClass, error)
+// RuntimeClassClusterInterface has methods to work with RuntimeClass resources.
+type RuntimeClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.RuntimeClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.RuntimeClass, err error)
-	Apply(ctx context.Context, runtimeClass *nodev1beta1.RuntimeClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.RuntimeClass, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	RuntimeClassExpansion
 }
 
-// runtimeClasses implements RuntimeClassInterface
-type runtimeClasses struct {
-	*gentype.ClientWithListAndApply[*v1beta1.RuntimeClass, *v1beta1.RuntimeClassList, *nodev1beta1.RuntimeClassApplyConfiguration]
-}
-
-// newRuntimeClasses returns a RuntimeClasses
-func newRuntimeClasses(c *NodeV1beta1Client) *runtimeClasses {
-	return &runtimeClasses{
-		gentype.NewClientWithListAndApply[*v1beta1.RuntimeClass, *v1beta1.RuntimeClassList, *nodev1beta1.RuntimeClassApplyConfiguration](
-			"runtimeclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.RuntimeClass { return &v1beta1.RuntimeClass{} },
-			func() *v1beta1.RuntimeClassList { return &v1beta1.RuntimeClassList{} }),
-	}
+type runtimeClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamnodev1beta1client.NodeV1beta1Client]
 }

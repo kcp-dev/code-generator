@@ -21,53 +21,28 @@ package v1beta2
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 )
 
-// DaemonSetsGetter has a method to return a DaemonSetInterface.
+// DaemonSetsClusterGetter has a method to return a DaemonSetClusterInterface.
 // A group's client should implement this interface.
-type DaemonSetsGetter interface {
-	DaemonSets(namespace string) DaemonSetInterface
+type DaemonSetsClusterGetter interface {
+	DaemonSets() DaemonSetClusterInterface
 }
 
-// DaemonSetInterface has methods to work with DaemonSet resources.
-type DaemonSetInterface interface {
-	Create(ctx context.Context, daemonSet *v1beta2.DaemonSet, opts v1.CreateOptions) (*v1beta2.DaemonSet, error)
-	Update(ctx context.Context, daemonSet *v1beta2.DaemonSet, opts v1.UpdateOptions) (*v1beta2.DaemonSet, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, daemonSet *v1beta2.DaemonSet, opts v1.UpdateOptions) (*v1beta2.DaemonSet, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.DaemonSet, error)
+// DaemonSetClusterInterface has methods to work with DaemonSet resources.
+type DaemonSetClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta2.DaemonSetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.DaemonSet, err error)
-	Apply(ctx context.Context, daemonSet *appsv1beta2.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.DaemonSet, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, daemonSet *appsv1beta2.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.DaemonSet, err error)
+	Cluster(logicalcluster.Path) DaemonSetNamespacer
 	DaemonSetExpansion
 }
 
-// daemonSets implements DaemonSetInterface
-type daemonSets struct {
-	*gentype.ClientWithListAndApply[*v1beta2.DaemonSet, *v1beta2.DaemonSetList, *appsv1beta2.DaemonSetApplyConfiguration]
-}
-
-// newDaemonSets returns a DaemonSets
-func newDaemonSets(c *AppsV1beta2Client, namespace string) *daemonSets {
-	return &daemonSets{
-		gentype.NewClientWithListAndApply[*v1beta2.DaemonSet, *v1beta2.DaemonSetList, *appsv1beta2.DaemonSetApplyConfiguration](
-			"daemonsets",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta2.DaemonSet { return &v1beta2.DaemonSet{} },
-			func() *v1beta2.DaemonSetList { return &v1beta2.DaemonSetList{} }),
-	}
+type daemonSetsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
 }

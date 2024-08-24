@@ -22,41 +22,46 @@ import (
 	"context"
 	time "time"
 
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1beta2informers "k8s.io/client-go/informers/v1beta2/apps"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta2 "k8s.io/code-generator/examples/upstream/listers/apps/v1beta2"
 )
 
-// StatefulSetInformer provides access to a shared informer and lister for
+// StatefulSetClusterInformer provides access to a shared informer and lister for
 // StatefulSets.
-type StatefulSetInformer interface {
-	Informer() cache.SharedIndexInformer
+type StatefulSetClusterInformer interface {
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() v1beta2.StatefulSetLister
+	Cluster(logicalcluster.Name) upstreamappsv1beta2informers.StatefulSetInformer
 }
 
-type statefulSetInformer struct {
+type statefulSetClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewStatefulSetInformer constructs a new informer for StatefulSet type.
+// NewStatefulSetClusterInformer constructs a new informer for StatefulSet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewStatefulSetInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredStatefulSetInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewStatefulSetClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredStatefulSetClusterInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredStatefulSetInformer constructs a new informer for StatefulSet type.
+// NewFilteredStatefulSetClusterInformer constructs a new informer for StatefulSet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredStatefulSetInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+func NewFilteredStatefulSetClusterInformer(client versioned.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return informers.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -77,8 +82,10 @@ func NewFilteredStatefulSetInformer(client versioned.Interface, namespace string
 	)
 }
 
-func (f *statefulSetInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredStatefulSetInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *statefulSetClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredStatefulSetClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+		f.tweakListOptions)
 }
 
 func (f *statefulSetInformer) Informer() cache.SharedIndexInformer {

@@ -21,53 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/apps/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	appsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 )
 
-// DeploymentsGetter has a method to return a DeploymentInterface.
+// DeploymentsClusterGetter has a method to return a DeploymentClusterInterface.
 // A group's client should implement this interface.
-type DeploymentsGetter interface {
-	Deployments(namespace string) DeploymentInterface
+type DeploymentsClusterGetter interface {
+	Deployments() DeploymentClusterInterface
 }
 
-// DeploymentInterface has methods to work with Deployment resources.
-type DeploymentInterface interface {
-	Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (*v1beta1.Deployment, error)
-	Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Deployment, error)
+// DeploymentClusterInterface has methods to work with Deployment resources.
+type DeploymentClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.DeploymentList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Deployment, err error)
-	Apply(ctx context.Context, deployment *appsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, deployment *appsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error)
+	Cluster(logicalcluster.Path) DeploymentNamespacer
 	DeploymentExpansion
 }
 
-// deployments implements DeploymentInterface
-type deployments struct {
-	*gentype.ClientWithListAndApply[*v1beta1.Deployment, *v1beta1.DeploymentList, *appsv1beta1.DeploymentApplyConfiguration]
-}
-
-// newDeployments returns a Deployments
-func newDeployments(c *AppsV1beta1Client, namespace string) *deployments {
-	return &deployments{
-		gentype.NewClientWithListAndApply[*v1beta1.Deployment, *v1beta1.DeploymentList, *appsv1beta1.DeploymentApplyConfiguration](
-			"deployments",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta1.Deployment { return &v1beta1.Deployment{} },
-			func() *v1beta1.DeploymentList { return &v1beta1.DeploymentList{} }),
-	}
+type deploymentsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta1client.AppsV1beta1Client]
 }

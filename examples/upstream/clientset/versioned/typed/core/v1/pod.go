@@ -21,70 +21,29 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// PodsGetter has a method to return a PodInterface.
+// PodsClusterGetter has a method to return a PodClusterInterface.
 // A group's client should implement this interface.
-type PodsGetter interface {
-	Pods(namespace string) PodInterface
+type PodsClusterGetter interface {
+	Pods() PodClusterInterface
 }
 
-// PodInterface has methods to work with Pod resources.
-type PodInterface interface {
-	Create(ctx context.Context, pod *v1.Pod, opts metav1.CreateOptions) (*v1.Pod, error)
-	Update(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (*v1.Pod, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (*v1.Pod, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Pod, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.PodList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Pod, err error)
-	Apply(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error)
-	UpdateEphemeralContainers(ctx context.Context, podName string, pod *v1.Pod, opts metav1.UpdateOptions) (*v1.Pod, error)
+// PodClusterInterface has methods to work with Pod resources.
+type PodClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.PodList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) PodNamespacer
 
 	PodExpansion
 }
 
-// pods implements PodInterface
-type pods struct {
-	*gentype.ClientWithListAndApply[*v1.Pod, *v1.PodList, *corev1.PodApplyConfiguration]
-}
-
-// newPods returns a Pods
-func newPods(c *CoreV1Client, namespace string) *pods {
-	return &pods{
-		gentype.NewClientWithListAndApply[*v1.Pod, *v1.PodList, *corev1.PodApplyConfiguration](
-			"pods",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Pod { return &v1.Pod{} },
-			func() *v1.PodList { return &v1.PodList{} }),
-	}
-}
-
-// UpdateEphemeralContainers takes the top resource name and the representation of a pod and updates it. Returns the server's representation of the pod, and an error, if there is any.
-func (c *pods) UpdateEphemeralContainers(ctx context.Context, podName string, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
-	result = &v1.Pod{}
-	err = c.GetClient().Put().
-		Namespace(c.GetNamespace()).
-		Resource("pods").
-		Name(podName).
-		SubResource("ephemeralcontainers").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(pod).
-		Do(ctx).
-		Into(result)
-	return
+type podsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

@@ -19,39 +19,21 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
-	v1beta1 "k8s.io/api/authentication/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamauthenticationv1beta1client "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 )
 
-// TokenReviewsGetter has a method to return a TokenReviewInterface.
+// TokenReviewsClusterGetter has a method to return a TokenReviewClusterInterface.
 // A group's client should implement this interface.
-type TokenReviewsGetter interface {
-	TokenReviews() TokenReviewInterface
+type TokenReviewsClusterGetter interface {
+	TokenReviews() TokenReviewClusterInterface
 }
 
-// TokenReviewInterface has methods to work with TokenReview resources.
-type TokenReviewInterface interface {
-	Create(ctx context.Context, tokenReview *v1beta1.TokenReview, opts v1.CreateOptions) (*v1beta1.TokenReview, error)
+// TokenReviewClusterInterface has methods to work with TokenReview resources.
+type TokenReviewClusterInterface interface {
 	TokenReviewExpansion
 }
 
-// tokenReviews implements TokenReviewInterface
-type tokenReviews struct {
-	*gentype.Client[*v1beta1.TokenReview]
-}
-
-// newTokenReviews returns a TokenReviews
-func newTokenReviews(c *AuthenticationV1beta1Client) *tokenReviews {
-	return &tokenReviews{
-		gentype.NewClient[*v1beta1.TokenReview](
-			"tokenreviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.TokenReview { return &v1beta1.TokenReview{} }),
-	}
+type tokenReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamauthenticationv1beta1client.AuthenticationV1beta1Client]
 }

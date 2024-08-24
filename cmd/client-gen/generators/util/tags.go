@@ -48,6 +48,7 @@ var SupportedVerbs = []string{
 	"patch",
 	"apply",
 	"applyStatus",
+	"cluster",
 }
 
 // ReadonlyVerbs represents a list of read-only verbs.
@@ -55,6 +56,7 @@ var ReadonlyVerbs = []string{
 	"get",
 	"list",
 	"watch",
+	"cluster",
 }
 
 // genClientPrefix is the default prefix for all genclient tags.

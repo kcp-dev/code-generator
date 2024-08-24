@@ -21,53 +21,28 @@ package v1alpha3
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 )
 
-// PodSchedulingContextsGetter has a method to return a PodSchedulingContextInterface.
+// PodSchedulingContextsClusterGetter has a method to return a PodSchedulingContextClusterInterface.
 // A group's client should implement this interface.
-type PodSchedulingContextsGetter interface {
-	PodSchedulingContexts(namespace string) PodSchedulingContextInterface
+type PodSchedulingContextsClusterGetter interface {
+	PodSchedulingContexts() PodSchedulingContextClusterInterface
 }
 
-// PodSchedulingContextInterface has methods to work with PodSchedulingContext resources.
-type PodSchedulingContextInterface interface {
-	Create(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts v1.CreateOptions) (*v1alpha3.PodSchedulingContext, error)
-	Update(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts v1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts v1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha3.PodSchedulingContext, error)
+// PodSchedulingContextClusterInterface has methods to work with PodSchedulingContext resources.
+type PodSchedulingContextClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.PodSchedulingContextList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.PodSchedulingContext, err error)
-	Apply(ctx context.Context, podSchedulingContext *resourcev1alpha3.PodSchedulingContextApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.PodSchedulingContext, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, podSchedulingContext *resourcev1alpha3.PodSchedulingContextApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.PodSchedulingContext, err error)
+	Cluster(logicalcluster.Path) PodSchedulingContextNamespacer
 	PodSchedulingContextExpansion
 }
 
-// podSchedulingContexts implements PodSchedulingContextInterface
-type podSchedulingContexts struct {
-	*gentype.ClientWithListAndApply[*v1alpha3.PodSchedulingContext, *v1alpha3.PodSchedulingContextList, *resourcev1alpha3.PodSchedulingContextApplyConfiguration]
-}
-
-// newPodSchedulingContexts returns a PodSchedulingContexts
-func newPodSchedulingContexts(c *ResourceV1alpha3Client, namespace string) *podSchedulingContexts {
-	return &podSchedulingContexts{
-		gentype.NewClientWithListAndApply[*v1alpha3.PodSchedulingContext, *v1alpha3.PodSchedulingContextList, *resourcev1alpha3.PodSchedulingContextApplyConfiguration](
-			"podschedulingcontexts",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1alpha3.PodSchedulingContext { return &v1alpha3.PodSchedulingContext{} },
-			func() *v1alpha3.PodSchedulingContextList { return &v1alpha3.PodSchedulingContextList{} }),
-	}
+type podSchedulingContextsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
 }

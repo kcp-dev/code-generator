@@ -21,53 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// ResourceQuotasGetter has a method to return a ResourceQuotaInterface.
+// ResourceQuotasClusterGetter has a method to return a ResourceQuotaClusterInterface.
 // A group's client should implement this interface.
-type ResourceQuotasGetter interface {
-	ResourceQuotas(namespace string) ResourceQuotaInterface
+type ResourceQuotasClusterGetter interface {
+	ResourceQuotas() ResourceQuotaClusterInterface
 }
 
-// ResourceQuotaInterface has methods to work with ResourceQuota resources.
-type ResourceQuotaInterface interface {
-	Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error)
-	Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ResourceQuota, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ResourceQuotaList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ResourceQuota, err error)
-	Apply(ctx context.Context, resourceQuota *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ResourceQuota, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, resourceQuota *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ResourceQuota, err error)
+// ResourceQuotaClusterInterface has methods to work with ResourceQuota resources.
+type ResourceQuotaClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.ResourceQuotaList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) ResourceQuotaNamespacer
 	ResourceQuotaExpansion
 }
 
-// resourceQuotas implements ResourceQuotaInterface
-type resourceQuotas struct {
-	*gentype.ClientWithListAndApply[*v1.ResourceQuota, *v1.ResourceQuotaList, *corev1.ResourceQuotaApplyConfiguration]
-}
-
-// newResourceQuotas returns a ResourceQuotas
-func newResourceQuotas(c *CoreV1Client, namespace string) *resourceQuotas {
-	return &resourceQuotas{
-		gentype.NewClientWithListAndApply[*v1.ResourceQuota, *v1.ResourceQuotaList, *corev1.ResourceQuotaApplyConfiguration](
-			"resourcequotas",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.ResourceQuota { return &v1.ResourceQuota{} },
-			func() *v1.ResourceQuotaList { return &v1.ResourceQuotaList{} }),
-	}
+type resourceQuotasClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

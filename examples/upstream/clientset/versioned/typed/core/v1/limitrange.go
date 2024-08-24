@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// LimitRangesGetter has a method to return a LimitRangeInterface.
+// LimitRangesClusterGetter has a method to return a LimitRangeClusterInterface.
 // A group's client should implement this interface.
-type LimitRangesGetter interface {
-	LimitRanges(namespace string) LimitRangeInterface
+type LimitRangesClusterGetter interface {
+	LimitRanges() LimitRangeClusterInterface
 }
 
-// LimitRangeInterface has methods to work with LimitRange resources.
-type LimitRangeInterface interface {
-	Create(ctx context.Context, limitRange *v1.LimitRange, opts metav1.CreateOptions) (*v1.LimitRange, error)
-	Update(ctx context.Context, limitRange *v1.LimitRange, opts metav1.UpdateOptions) (*v1.LimitRange, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.LimitRange, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.LimitRangeList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.LimitRange, err error)
-	Apply(ctx context.Context, limitRange *corev1.LimitRangeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.LimitRange, err error)
+// LimitRangeClusterInterface has methods to work with LimitRange resources.
+type LimitRangeClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.LimitRangeList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) LimitRangeNamespacer
 	LimitRangeExpansion
 }
 
-// limitRanges implements LimitRangeInterface
-type limitRanges struct {
-	*gentype.ClientWithListAndApply[*v1.LimitRange, *v1.LimitRangeList, *corev1.LimitRangeApplyConfiguration]
-}
-
-// newLimitRanges returns a LimitRanges
-func newLimitRanges(c *CoreV1Client, namespace string) *limitRanges {
-	return &limitRanges{
-		gentype.NewClientWithListAndApply[*v1.LimitRange, *v1.LimitRangeList, *corev1.LimitRangeApplyConfiguration](
-			"limitranges",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.LimitRange { return &v1.LimitRange{} },
-			func() *v1.LimitRangeList { return &v1.LimitRangeList{} }),
-	}
+type limitRangesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

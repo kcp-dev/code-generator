@@ -445,6 +445,8 @@ function kube::codegen::gen_openapi() {
 #   --static-expansions-listers <string = "">
 #     An optional list of comma separated static expansions for listers in <type-package>.<type-name>:<expansion-package-from-static> form.
 #
+#   --single-cluster-typed-client-package-path <string = "">
+#     SingleClusterTypedClientPackagePath is the root directory under which single-cluster-aware typed clients exist. e.g. "k8s.io/client-go/kubernetes/typed"
 function kube::codegen::gen_client() {
     local in_dir=""
     local one_input_api=""
@@ -463,6 +465,8 @@ function kube::codegen::gen_client() {
     local plural_exceptions=""
     local v="${KUBE_VERBOSE:-0}"
     local single_cluster_listers_package_path=""
+    local single_cluster_informers_package_path=""
+    local single_cluster_typed_client_package_path=""
     local static_expansions_listers=""
 
     while [ "$#" -gt 0 ]; do
@@ -525,6 +529,14 @@ function kube::codegen::gen_client() {
                 ;;
             "--single-cluster-listers-package-path")
                 single_cluster_listers_package_path="$2"
+                shift 2
+                ;;
+            "--single-cluster-informers-package-path")
+                single_cluster_informers_package_path="$2"
+                shift 2
+                ;;
+            "--single-cluster-typed-client-package-path")
+                single_cluster_typed_client_package_path="$2"
                 shift 2
                 ;;
             "--static-expansions-listers")
@@ -645,6 +657,7 @@ function kube::codegen::gen_client() {
         --output-pkg "${out_pkg}/${clientset_subdir}" \
         --clientset-name "${clientset_versioned_name}" \
         --apply-configuration-package "${applyconfig_pkg}" \
+        --single-cluster-typed-client-package-path "${single_cluster_typed_client_package_path}" \
         --input-base "$(cd "${in_dir}" && pwd -P)" `# must be absolute path or Go import path"` \
         --plural-exceptions "${plural_exceptions}" \
         "${inputs[@]}"
@@ -685,6 +698,7 @@ function kube::codegen::gen_client() {
             --output-pkg "${out_pkg}/${informers_subdir}" \
             --versioned-clientset-package "${out_pkg}/${clientset_subdir}/${clientset_versioned_name}" \
             --listers-package "${out_pkg}/${listers_subdir}" \
+            --single-cluster-informers-package-path "${single_cluster_informers_package_path}" \
             --plural-exceptions "${plural_exceptions}" \
             "${input_pkgs[@]}"
     fi

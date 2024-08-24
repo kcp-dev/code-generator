@@ -21,51 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	admissionregistrationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamadmissionregistrationv1beta1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 )
 
-// ValidatingWebhookConfigurationsGetter has a method to return a ValidatingWebhookConfigurationInterface.
+// ValidatingWebhookConfigurationsClusterGetter has a method to return a ValidatingWebhookConfigurationClusterInterface.
 // A group's client should implement this interface.
-type ValidatingWebhookConfigurationsGetter interface {
-	ValidatingWebhookConfigurations() ValidatingWebhookConfigurationInterface
+type ValidatingWebhookConfigurationsClusterGetter interface {
+	ValidatingWebhookConfigurations() ValidatingWebhookConfigurationClusterInterface
 }
 
-// ValidatingWebhookConfigurationInterface has methods to work with ValidatingWebhookConfiguration resources.
-type ValidatingWebhookConfigurationInterface interface {
-	Create(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.CreateOptions) (*v1beta1.ValidatingWebhookConfiguration, error)
-	Update(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.UpdateOptions) (*v1beta1.ValidatingWebhookConfiguration, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ValidatingWebhookConfiguration, error)
+// ValidatingWebhookConfigurationClusterInterface has methods to work with ValidatingWebhookConfiguration resources.
+type ValidatingWebhookConfigurationClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ValidatingWebhookConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ValidatingWebhookConfiguration, err error)
-	Apply(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1beta1.ValidatingWebhookConfigurationApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.ValidatingWebhookConfiguration, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ValidatingWebhookConfigurationExpansion
 }
 
-// validatingWebhookConfigurations implements ValidatingWebhookConfigurationInterface
-type validatingWebhookConfigurations struct {
-	*gentype.ClientWithListAndApply[*v1beta1.ValidatingWebhookConfiguration, *v1beta1.ValidatingWebhookConfigurationList, *admissionregistrationv1beta1.ValidatingWebhookConfigurationApplyConfiguration]
-}
-
-// newValidatingWebhookConfigurations returns a ValidatingWebhookConfigurations
-func newValidatingWebhookConfigurations(c *AdmissionregistrationV1beta1Client) *validatingWebhookConfigurations {
-	return &validatingWebhookConfigurations{
-		gentype.NewClientWithListAndApply[*v1beta1.ValidatingWebhookConfiguration, *v1beta1.ValidatingWebhookConfigurationList, *admissionregistrationv1beta1.ValidatingWebhookConfigurationApplyConfiguration](
-			"validatingwebhookconfigurations",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.ValidatingWebhookConfiguration { return &v1beta1.ValidatingWebhookConfiguration{} },
-			func() *v1beta1.ValidatingWebhookConfigurationList {
-				return &v1beta1.ValidatingWebhookConfigurationList{}
-			}),
-	}
+type validatingWebhookConfigurationsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1beta1client.AdmissionregistrationV1beta1Client]
 }

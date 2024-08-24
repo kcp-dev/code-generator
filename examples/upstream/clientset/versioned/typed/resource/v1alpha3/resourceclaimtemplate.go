@@ -21,49 +21,28 @@ package v1alpha3
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 )
 
-// ResourceClaimTemplatesGetter has a method to return a ResourceClaimTemplateInterface.
+// ResourceClaimTemplatesClusterGetter has a method to return a ResourceClaimTemplateClusterInterface.
 // A group's client should implement this interface.
-type ResourceClaimTemplatesGetter interface {
-	ResourceClaimTemplates(namespace string) ResourceClaimTemplateInterface
+type ResourceClaimTemplatesClusterGetter interface {
+	ResourceClaimTemplates() ResourceClaimTemplateClusterInterface
 }
 
-// ResourceClaimTemplateInterface has methods to work with ResourceClaimTemplate resources.
-type ResourceClaimTemplateInterface interface {
-	Create(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.CreateOptions) (*v1alpha3.ResourceClaimTemplate, error)
-	Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.UpdateOptions) (*v1alpha3.ResourceClaimTemplate, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha3.ResourceClaimTemplate, error)
+// ResourceClaimTemplateClusterInterface has methods to work with ResourceClaimTemplate resources.
+type ResourceClaimTemplateClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.ResourceClaimTemplateList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.ResourceClaimTemplate, err error)
-	Apply(ctx context.Context, resourceClaimTemplate *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaimTemplate, err error)
+	Cluster(logicalcluster.Path) ResourceClaimTemplateNamespacer
 	ResourceClaimTemplateExpansion
 }
 
-// resourceClaimTemplates implements ResourceClaimTemplateInterface
-type resourceClaimTemplates struct {
-	*gentype.ClientWithListAndApply[*v1alpha3.ResourceClaimTemplate, *v1alpha3.ResourceClaimTemplateList, *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration]
-}
-
-// newResourceClaimTemplates returns a ResourceClaimTemplates
-func newResourceClaimTemplates(c *ResourceV1alpha3Client, namespace string) *resourceClaimTemplates {
-	return &resourceClaimTemplates{
-		gentype.NewClientWithListAndApply[*v1alpha3.ResourceClaimTemplate, *v1alpha3.ResourceClaimTemplateList, *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration](
-			"resourceclaimtemplates",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1alpha3.ResourceClaimTemplate { return &v1alpha3.ResourceClaimTemplate{} },
-			func() *v1alpha3.ResourceClaimTemplateList { return &v1alpha3.ResourceClaimTemplateList{} }),
-	}
+type resourceClaimTemplatesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
 }

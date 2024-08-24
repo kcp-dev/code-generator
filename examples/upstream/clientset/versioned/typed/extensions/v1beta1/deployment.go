@@ -20,114 +20,30 @@ package v1beta1
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	extensionsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/extensions/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamextensionsv1beta1client "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 )
 
-// DeploymentsGetter has a method to return a DeploymentInterface.
+// DeploymentsClusterGetter has a method to return a DeploymentClusterInterface.
 // A group's client should implement this interface.
-type DeploymentsGetter interface {
-	Deployments(namespace string) DeploymentInterface
+type DeploymentsClusterGetter interface {
+	Deployments() DeploymentClusterInterface
 }
 
-// DeploymentInterface has methods to work with Deployment resources.
-type DeploymentInterface interface {
-	Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (*v1beta1.Deployment, error)
-	Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Deployment, error)
+// DeploymentClusterInterface has methods to work with Deployment resources.
+type DeploymentClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.DeploymentList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Deployment, err error)
-	Apply(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error)
-	GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (*v1beta1.Scale, error)
-	UpdateScale(ctx context.Context, deploymentName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (*v1beta1.Scale, error)
-	ApplyScale(ctx context.Context, deploymentName string, scale *extensionsv1beta1.ScaleApplyConfiguration, opts v1.ApplyOptions) (*v1beta1.Scale, error)
+	Cluster(logicalcluster.Path) DeploymentNamespacer
 
 	DeploymentExpansion
 }
 
-// deployments implements DeploymentInterface
-type deployments struct {
-	*gentype.ClientWithListAndApply[*v1beta1.Deployment, *v1beta1.DeploymentList, *extensionsv1beta1.DeploymentApplyConfiguration]
-}
-
-// newDeployments returns a Deployments
-func newDeployments(c *ExtensionsV1beta1Client, namespace string) *deployments {
-	return &deployments{
-		gentype.NewClientWithListAndApply[*v1beta1.Deployment, *v1beta1.DeploymentList, *extensionsv1beta1.DeploymentApplyConfiguration](
-			"deployments",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta1.Deployment { return &v1beta1.Deployment{} },
-			func() *v1beta1.DeploymentList { return &v1beta1.DeploymentList{} }),
-	}
-}
-
-// GetScale takes name of the deployment, and returns the corresponding v1beta1.Scale object, and an error if there is any.
-func (c *deployments) GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (result *v1beta1.Scale, err error) {
-	result = &v1beta1.Scale{}
-	err = c.GetClient().Get().
-		Namespace(c.GetNamespace()).
-		Resource("deployments").
-		Name(deploymentName).
-		SubResource("scale").
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateScale takes the top resource name and the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *deployments) UpdateScale(ctx context.Context, deploymentName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (result *v1beta1.Scale, err error) {
-	result = &v1beta1.Scale{}
-	err = c.GetClient().Put().
-		Namespace(c.GetNamespace()).
-		Resource("deployments").
-		Name(deploymentName).
-		SubResource("scale").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(scale).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// ApplyScale takes top resource name and the apply declarative configuration for scale,
-// applies it and returns the applied scale, and an error, if there is any.
-func (c *deployments) ApplyScale(ctx context.Context, deploymentName string, scale *extensionsv1beta1.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Scale, err error) {
-	if scale == nil {
-		return nil, fmt.Errorf("scale provided to ApplyScale must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(scale)
-	if err != nil {
-		return nil, err
-	}
-
-	result = &v1beta1.Scale{}
-	err = c.GetClient().Patch(types.ApplyPatchType).
-		Namespace(c.GetNamespace()).
-		Resource("deployments").
-		Name(deploymentName).
-		SubResource("scale").
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
+type deploymentsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamextensionsv1beta1client.ExtensionsV1beta1Client]
 }

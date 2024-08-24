@@ -19,35 +19,21 @@ limitations under the License.
 package v1beta1
 
 import (
-	v1beta1 "k8s.io/api/policy/v1beta1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreampolicyv1beta1client "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 )
 
-// EvictionsGetter has a method to return a EvictionInterface.
+// EvictionsClusterGetter has a method to return a EvictionClusterInterface.
 // A group's client should implement this interface.
-type EvictionsGetter interface {
-	Evictions(namespace string) EvictionInterface
+type EvictionsClusterGetter interface {
+	Evictions() EvictionClusterInterface
 }
 
-// EvictionInterface has methods to work with Eviction resources.
-type EvictionInterface interface {
+// EvictionClusterInterface has methods to work with Eviction resources.
+type EvictionClusterInterface interface {
 	EvictionExpansion
 }
 
-// evictions implements EvictionInterface
-type evictions struct {
-	*gentype.Client[*v1beta1.Eviction]
-}
-
-// newEvictions returns a Evictions
-func newEvictions(c *PolicyV1beta1Client, namespace string) *evictions {
-	return &evictions{
-		gentype.NewClient[*v1beta1.Eviction](
-			"evictions",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta1.Eviction { return &v1beta1.Eviction{} }),
-	}
+type evictionsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreampolicyv1beta1client.PolicyV1beta1Client]
 }

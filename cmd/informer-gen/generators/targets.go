@@ -189,17 +189,31 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		if internal {
 			targetList = append(targetList,
 				versionTarget(
-					internalVersionOutputDir, internalVersionOutputPkg,
-					groupPackageName, gv, groupGoNames[groupPackageName],
-					boilerplate, typesToGenerate,
-					args.InternalClientSetPackage, args.ListersPackage))
+					internalVersionOutputDir,
+					internalVersionOutputPkg,
+					groupPackageName,
+					gv,
+					groupGoNames[groupPackageName],
+					boilerplate,
+					typesToGenerate,
+					args.InternalClientSetPackage,
+					args.ListersPackage,
+					args.SingleClusterInformersPackagePath,
+				))
 		} else {
 			targetList = append(targetList,
 				versionTarget(
-					externalVersionOutputDir, externalVersionOutputPkg,
-					groupPackageName, gv, groupGoNames[groupPackageName],
-					boilerplate, typesToGenerate,
-					args.VersionedClientSetPackage, args.ListersPackage))
+					externalVersionOutputDir,
+					externalVersionOutputPkg,
+					groupPackageName,
+					gv,
+					groupGoNames[groupPackageName],
+					boilerplate,
+					typesToGenerate,
+					args.VersionedClientSetPackage,
+					args.ListersPackage,
+					args.SingleClusterInformersPackagePath,
+				))
 		}
 	}
 
@@ -326,7 +340,7 @@ func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientge
 	}
 }
 
-func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv clientgentypes.GroupVersion, groupGoName string, boilerplate []byte, typesToGenerate []*types.Type, clientSetPackage, listersPackage string) generator.Target {
+func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv clientgentypes.GroupVersion, groupGoName string, boilerplate []byte, typesToGenerate []*types.Type, clientSetPackage, listersPackage string, singleClusterInformersPackagePath string) generator.Target {
 	subdir := []string{groupPkgName, strings.ToLower(gv.Version.NonEmpty())}
 	outputDir := filepath.Join(outputDirBase, filepath.Join(subdir...))
 	outputPkg := path.Join(outputPkgBase, path.Join(subdir...))
@@ -352,15 +366,16 @@ func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv 
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: strings.ToLower(t.Name.Name) + ".go",
 					},
-					outputPackage:             outputPkg,
-					groupPkgName:              groupPkgName,
-					groupVersion:              gv,
-					groupGoName:               groupGoName,
-					typeToGenerate:            t,
-					imports:                   generator.NewImportTracker(),
-					clientSetPackage:          clientSetPackage,
-					listersPackage:            listersPackage,
-					internalInterfacesPackage: path.Join(outputPkgBase, subdirForInternalInterfaces),
+					outputPackage:                     outputPkg,
+					groupPkgName:                      groupPkgName,
+					groupVersion:                      gv,
+					groupGoName:                       groupGoName,
+					typeToGenerate:                    t,
+					imports:                           generator.NewImportTracker(),
+					clientSetPackage:                  clientSetPackage,
+					listersPackage:                    listersPackage,
+					internalInterfacesPackage:         path.Join(outputPkgBase, subdirForInternalInterfaces),
+					singleClusterInformersPackagePath: singleClusterInformersPackagePath,
 				})
 			}
 			return generators

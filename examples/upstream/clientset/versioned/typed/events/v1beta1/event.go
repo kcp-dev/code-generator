@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/events/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	eventsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/events/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreameventsv1beta1client "k8s.io/client-go/kubernetes/typed/events/v1beta1"
 )
 
-// EventsGetter has a method to return a EventInterface.
+// EventsClusterGetter has a method to return a EventClusterInterface.
 // A group's client should implement this interface.
-type EventsGetter interface {
-	Events(namespace string) EventInterface
+type EventsClusterGetter interface {
+	Events() EventClusterInterface
 }
 
-// EventInterface has methods to work with Event resources.
-type EventInterface interface {
-	Create(ctx context.Context, event *v1beta1.Event, opts v1.CreateOptions) (*v1beta1.Event, error)
-	Update(ctx context.Context, event *v1beta1.Event, opts v1.UpdateOptions) (*v1beta1.Event, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Event, error)
+// EventClusterInterface has methods to work with Event resources.
+type EventClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.EventList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Event, err error)
-	Apply(ctx context.Context, event *eventsv1beta1.EventApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Event, err error)
+	Cluster(logicalcluster.Path) EventNamespacer
 	EventExpansion
 }
 
-// events implements EventInterface
-type events struct {
-	*gentype.ClientWithListAndApply[*v1beta1.Event, *v1beta1.EventList, *eventsv1beta1.EventApplyConfiguration]
-}
-
-// newEvents returns a Events
-func newEvents(c *EventsV1beta1Client, namespace string) *events {
-	return &events{
-		gentype.NewClientWithListAndApply[*v1beta1.Event, *v1beta1.EventList, *eventsv1beta1.EventApplyConfiguration](
-			"events",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta1.Event { return &v1beta1.Event{} },
-			func() *v1beta1.EventList { return &v1beta1.EventList{} }),
-	}
+type eventsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreameventsv1beta1client.EventsV1beta1Client]
 }

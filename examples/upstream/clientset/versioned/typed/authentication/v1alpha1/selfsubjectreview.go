@@ -19,39 +19,21 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
-
-	v1alpha1 "k8s.io/api/authentication/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamauthenticationv1alpha1client "k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
 )
 
-// SelfSubjectReviewsGetter has a method to return a SelfSubjectReviewInterface.
+// SelfSubjectReviewsClusterGetter has a method to return a SelfSubjectReviewClusterInterface.
 // A group's client should implement this interface.
-type SelfSubjectReviewsGetter interface {
-	SelfSubjectReviews() SelfSubjectReviewInterface
+type SelfSubjectReviewsClusterGetter interface {
+	SelfSubjectReviews() SelfSubjectReviewClusterInterface
 }
 
-// SelfSubjectReviewInterface has methods to work with SelfSubjectReview resources.
-type SelfSubjectReviewInterface interface {
-	Create(ctx context.Context, selfSubjectReview *v1alpha1.SelfSubjectReview, opts v1.CreateOptions) (*v1alpha1.SelfSubjectReview, error)
+// SelfSubjectReviewClusterInterface has methods to work with SelfSubjectReview resources.
+type SelfSubjectReviewClusterInterface interface {
 	SelfSubjectReviewExpansion
 }
 
-// selfSubjectReviews implements SelfSubjectReviewInterface
-type selfSubjectReviews struct {
-	*gentype.Client[*v1alpha1.SelfSubjectReview]
-}
-
-// newSelfSubjectReviews returns a SelfSubjectReviews
-func newSelfSubjectReviews(c *AuthenticationV1alpha1Client) *selfSubjectReviews {
-	return &selfSubjectReviews{
-		gentype.NewClient[*v1alpha1.SelfSubjectReview](
-			"selfsubjectreviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.SelfSubjectReview { return &v1alpha1.SelfSubjectReview{} }),
-	}
+type selfSubjectReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamauthenticationv1alpha1client.AuthenticationV1alpha1Client]
 }

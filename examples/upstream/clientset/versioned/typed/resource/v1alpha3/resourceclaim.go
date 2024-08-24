@@ -21,53 +21,28 @@ package v1alpha3
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 )
 
-// ResourceClaimsGetter has a method to return a ResourceClaimInterface.
+// ResourceClaimsClusterGetter has a method to return a ResourceClaimClusterInterface.
 // A group's client should implement this interface.
-type ResourceClaimsGetter interface {
-	ResourceClaims(namespace string) ResourceClaimInterface
+type ResourceClaimsClusterGetter interface {
+	ResourceClaims() ResourceClaimClusterInterface
 }
 
-// ResourceClaimInterface has methods to work with ResourceClaim resources.
-type ResourceClaimInterface interface {
-	Create(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.CreateOptions) (*v1alpha3.ResourceClaim, error)
-	Update(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.UpdateOptions) (*v1alpha3.ResourceClaim, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.UpdateOptions) (*v1alpha3.ResourceClaim, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha3.ResourceClaim, error)
+// ResourceClaimClusterInterface has methods to work with ResourceClaim resources.
+type ResourceClaimClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.ResourceClaimList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.ResourceClaim, err error)
-	Apply(ctx context.Context, resourceClaim *resourcev1alpha3.ResourceClaimApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaim, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, resourceClaim *resourcev1alpha3.ResourceClaimApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaim, err error)
+	Cluster(logicalcluster.Path) ResourceClaimNamespacer
 	ResourceClaimExpansion
 }
 
-// resourceClaims implements ResourceClaimInterface
-type resourceClaims struct {
-	*gentype.ClientWithListAndApply[*v1alpha3.ResourceClaim, *v1alpha3.ResourceClaimList, *resourcev1alpha3.ResourceClaimApplyConfiguration]
-}
-
-// newResourceClaims returns a ResourceClaims
-func newResourceClaims(c *ResourceV1alpha3Client, namespace string) *resourceClaims {
-	return &resourceClaims{
-		gentype.NewClientWithListAndApply[*v1alpha3.ResourceClaim, *v1alpha3.ResourceClaimList, *resourcev1alpha3.ResourceClaimApplyConfiguration](
-			"resourceclaims",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1alpha3.ResourceClaim { return &v1alpha3.ResourceClaim{} },
-			func() *v1alpha3.ResourceClaimList { return &v1alpha3.ResourceClaimList{} }),
-	}
+type resourceClaimsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
 }

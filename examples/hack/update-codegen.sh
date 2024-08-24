@@ -93,5 +93,8 @@ kube::codegen::gen_client \
     --output-pkg "${THIS_PKG}/upstream" \
     --plural-exceptions "Endpoints:Endpoints" \
     --static-expansions-listers "k8s.io/api/core/v1.ReplicationController:ReplicationControllerLister" \
+    --single-cluster-listers-package-path "k8s.io/client-go/listers" \
+    --single-cluster-informers-package-path "k8s.io/client-go/informers" \
+    --single-cluster-typed-client-package-path "k8s.io/client-go/kubernetes/typed" \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
     "$(go list -m -json k8s.io/api | jq --raw-output .Dir )"

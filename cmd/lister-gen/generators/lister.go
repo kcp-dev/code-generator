@@ -141,28 +141,26 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 						GoGenerator: generator.GoGenerator{
 							OutputFilename: strings.ToLower(t.Name.Name) + ".go",
 						},
-						outputPackage:                   outputPkg,
-						group:                           group,
-						version:                         gv.Version.String(),
-						internalGVPkg:                   internalGVPkg,
-						typeToGenerate:                  t,
-						imports:                         generator.NewImportTracker(),
-						objectMeta:                      objectMeta,
-						singleClusterListersPackagePath: args.SingleClusterListersPackagePath,
+						outputPackage:  outputPkg,
+						group:          group,
+						version:        gv.Version.String(),
+						internalGVPkg:  internalGVPkg,
+						typeToGenerate: t,
+						imports:        generator.NewImportTracker(),
+						objectMeta:     objectMeta,
 					})
 					// TODO: Upstream this to the upstream lister-gen
 					generators = append(generators, &expansionGenerator{
 						GoGenerator: generator.GoGenerator{
 							OutputFilename: strings.ToLower(t.Name.Name) + "_expansions.go",
 						},
-						outputPath:                      outputDir,
-						outputPackage:                   outputPkg,
-						typeToGenerate:                  t,
-						group:                           group,
-						version:                         gv.Version.String(),
-						imports:                         generator.NewImportTracker(),
-						singleClusterListersPackagePath: args.SingleClusterListersPackagePath,
-						staticExpansionsListers:         args.StaticExpansionsListers,
+						outputPath:              outputDir,
+						outputPackage:           outputPkg,
+						typeToGenerate:          t,
+						group:                   group,
+						version:                 gv.Version.String(),
+						imports:                 generator.NewImportTracker(),
+						staticExpansionsListers: args.StaticExpansionsListers,
 					})
 				}
 				return generators
@@ -208,10 +206,8 @@ type listerGenerator struct {
 	typeToGenerate *types.Type
 	imports        namer.ImportTracker
 	objectMeta     *types.Type
-	// SingleClusterListersPackagePath is the package path for the single cluster listers when using upstream listers.
-	singleClusterListersPackagePath string
-	group                           string
-	version                         string
+	group          string
+	version        string
 }
 
 var _ generator.Generator = &listerGenerator{}
@@ -236,11 +232,6 @@ func (g *listerGenerator) Imports(c *generator.Context) (imports []string) {
 	// KCP specific
 	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
 	imports = append(imports, "kcpcache \"github.com/kcp-dev/apimachinery/v2/pkg/cache\"")
-	if g.singleClusterListersPackagePath != "" {
-		// Sorry :(
-		imp := strings.ToLower(g.group+g.version+"listers \"") + g.singleClusterListersPackagePath + "/" + strings.ToLower(g.group) + "/" + strings.ToLower(g.version) + "\""
-		imports = append(imports, imp)
-	}
 	return
 }
 
@@ -275,22 +266,14 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 	sw.Do(typeListerListMethod, m)
 	sw.Do(typeListerGetMethod, m)
 	sw.Do(typeClusterListerConstructor, m)
-	if g.singleClusterListersPackagePath != "" {
-		sw.Do(typeExternalClusterListerClusterMethod, m)
-	} else {
-		sw.Do(typeClusterListerClusterMethod, m)
-	}
+	sw.Do(typeClusterListerClusterMethod, m)
 	sw.Do(typeClusterListerListMethod, m)
 
 	if tags.NonNamespaced {
 		return sw.Error()
 	}
 
-	if g.singleClusterListersPackagePath != "" {
-		sw.Do(typeExternalListerNamespaceLister, m)
-	} else {
-		sw.Do(typeListerNamespaceLister, m)
-	}
+	sw.Do(typeListerNamespaceLister, m)
 
 	sw.Do(namespaceListerInterface, m)
 	sw.Do(namespaceListerStruct, m)

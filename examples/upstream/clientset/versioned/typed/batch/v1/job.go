@@ -21,53 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/batch/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
 )
 
-// JobsGetter has a method to return a JobInterface.
+// JobsClusterGetter has a method to return a JobClusterInterface.
 // A group's client should implement this interface.
-type JobsGetter interface {
-	Jobs(namespace string) JobInterface
+type JobsClusterGetter interface {
+	Jobs() JobClusterInterface
 }
 
-// JobInterface has methods to work with Job resources.
-type JobInterface interface {
-	Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error)
-	Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Job, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.JobList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Job, err error)
-	Apply(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error)
+// JobClusterInterface has methods to work with Job resources.
+type JobClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*batchv1.JobList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) JobNamespacer
 	JobExpansion
 }
 
-// jobs implements JobInterface
-type jobs struct {
-	*gentype.ClientWithListAndApply[*v1.Job, *v1.JobList, *batchv1.JobApplyConfiguration]
-}
-
-// newJobs returns a Jobs
-func newJobs(c *BatchV1Client, namespace string) *jobs {
-	return &jobs{
-		gentype.NewClientWithListAndApply[*v1.Job, *v1.JobList, *batchv1.JobApplyConfiguration](
-			"jobs",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Job { return &v1.Job{} },
-			func() *v1.JobList { return &v1.JobList{} }),
-	}
+type jobsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreambatchv1client.BatchV1Client]
 }

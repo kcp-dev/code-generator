@@ -22,41 +22,46 @@ import (
 	"context"
 	time "time"
 
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1informers "k8s.io/client-go/informers/v1/core"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/code-generator/examples/upstream/listers/core/v1"
 )
 
-// ResourceQuotaInformer provides access to a shared informer and lister for
+// ResourceQuotaClusterInformer provides access to a shared informer and lister for
 // ResourceQuotas.
-type ResourceQuotaInformer interface {
-	Informer() cache.SharedIndexInformer
+type ResourceQuotaClusterInformer interface {
+	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() v1.ResourceQuotaLister
+	Cluster(logicalcluster.Name) upstreamcorev1informers.ResourceQuotaInformer
 }
 
-type resourceQuotaInformer struct {
+type resourceQuotaClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewResourceQuotaInformer constructs a new informer for ResourceQuota type.
+// NewResourceQuotaClusterInformer constructs a new informer for ResourceQuota type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewResourceQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredResourceQuotaInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewResourceQuotaClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredResourceQuotaClusterInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredResourceQuotaInformer constructs a new informer for ResourceQuota type.
+// NewFilteredResourceQuotaClusterInformer constructs a new informer for ResourceQuota type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredResourceQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+func NewFilteredResourceQuotaClusterInformer(client versioned.ClusterInterface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+	return informers.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -77,8 +82,10 @@ func NewFilteredResourceQuotaInformer(client versioned.Interface, namespace stri
 	)
 }
 
-func (f *resourceQuotaInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredResourceQuotaInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *resourceQuotaClusterInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredResourceQuotaClusterInformer(client, f.namespace, resyncPeriod, cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+		f.tweakListOptions)
 }
 
 func (f *resourceQuotaInformer) Informer() cache.SharedIndexInformer {

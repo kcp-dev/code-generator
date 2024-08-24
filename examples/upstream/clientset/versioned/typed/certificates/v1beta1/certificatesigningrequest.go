@@ -21,53 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/certificates/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	certificatesv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcertificatesv1beta1client "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 )
 
-// CertificateSigningRequestsGetter has a method to return a CertificateSigningRequestInterface.
+// CertificateSigningRequestsClusterGetter has a method to return a CertificateSigningRequestClusterInterface.
 // A group's client should implement this interface.
-type CertificateSigningRequestsGetter interface {
-	CertificateSigningRequests() CertificateSigningRequestInterface
+type CertificateSigningRequestsClusterGetter interface {
+	CertificateSigningRequests() CertificateSigningRequestClusterInterface
 }
 
-// CertificateSigningRequestInterface has methods to work with CertificateSigningRequest resources.
-type CertificateSigningRequestInterface interface {
-	Create(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.CreateOptions) (*v1beta1.CertificateSigningRequest, error)
-	Update(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (*v1beta1.CertificateSigningRequest, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (*v1beta1.CertificateSigningRequest, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CertificateSigningRequest, error)
+// CertificateSigningRequestClusterInterface has methods to work with CertificateSigningRequest resources.
+type CertificateSigningRequestClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CertificateSigningRequestList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CertificateSigningRequest, err error)
-	Apply(ctx context.Context, certificateSigningRequest *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CertificateSigningRequest, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, certificateSigningRequest *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CertificateSigningRequest, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	CertificateSigningRequestExpansion
 }
 
-// certificateSigningRequests implements CertificateSigningRequestInterface
-type certificateSigningRequests struct {
-	*gentype.ClientWithListAndApply[*v1beta1.CertificateSigningRequest, *v1beta1.CertificateSigningRequestList, *certificatesv1beta1.CertificateSigningRequestApplyConfiguration]
-}
-
-// newCertificateSigningRequests returns a CertificateSigningRequests
-func newCertificateSigningRequests(c *CertificatesV1beta1Client) *certificateSigningRequests {
-	return &certificateSigningRequests{
-		gentype.NewClientWithListAndApply[*v1beta1.CertificateSigningRequest, *v1beta1.CertificateSigningRequestList, *certificatesv1beta1.CertificateSigningRequestApplyConfiguration](
-			"certificatesigningrequests",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.CertificateSigningRequest { return &v1beta1.CertificateSigningRequest{} },
-			func() *v1beta1.CertificateSigningRequestList { return &v1beta1.CertificateSigningRequestList{} }),
-	}
+type certificateSigningRequestsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcertificatesv1beta1client.CertificatesV1beta1Client]
 }

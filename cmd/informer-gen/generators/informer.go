@@ -44,6 +44,11 @@ type informerGenerator struct {
 	clientSetPackage          string
 	listersPackage            string
 	internalInterfacesPackage string
+
+	// SingleClusterListersPackagePath is the package path for the single cluster listers when using upstream listers.
+	singleClusterListersPackagePath string
+	// SingleClusterInformersPackagePath is the package path for the single cluster informers when using upstream informers.
+	singleClusterInformersPackagePath string
 }
 
 var _ generator.Generator = &informerGenerator{}
@@ -60,6 +65,24 @@ func (g *informerGenerator) Namers(c *generator.Context) namer.NameSystems {
 
 func (g *informerGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
+
+	// KCP specific
+	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
+	imports = append(imports, "kcpcache \"github.com/kcp-dev/apimachinery/v2/pkg/cache\"")
+
+	// Sorry :(
+	group := strings.ToLower(g.groupVersion.Group.String())
+	if group == "" {
+		group = "core"
+	}
+	if g.singleClusterListersPackagePath != "" {
+		imp := strings.ToLower(group+g.groupVersion.Version.String()+"listers \"") + g.singleClusterListersPackagePath + "/" + strings.ToLower(g.groupVersion.Version.String()) + "/" + strings.ToLower(group) + "\""
+		imports = append(imports, imp)
+	}
+	if g.singleClusterInformersPackagePath != "" {
+		imp := "upstream" + strings.ToLower(group) + g.groupVersion.Version.String() + "informers \"" + g.singleClusterInformersPackagePath + "/" + strings.ToLower(g.groupVersion.Version.String()) + "/" + strings.ToLower(group) + "\""
+		imports = append(imports, imp)
+	}
 	return
 }
 
@@ -70,11 +93,17 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 
 	listerPackage := fmt.Sprintf("%s/%s/%s", g.listersPackage, g.groupPkgName, strings.ToLower(g.groupVersion.Version.NonEmpty()))
 	clientSetInterface := c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "Interface"})
+	clientSetClusterInterface := c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "ClusterInterface"})
 	informerFor := "InformerFor"
 
 	tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 	if err != nil {
 		return err
+	}
+
+	group := strings.ToLower(g.groupVersion.Group.String())
+	if group == "" {
+		group = "core"
 	}
 
 	m := map[string]interface{}{
@@ -84,8 +113,10 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		"cacheMetaNamespaceIndexFunc":     c.Universe.Function(cacheMetaNamespaceIndexFunc),
 		"cacheNamespaceIndex":             c.Universe.Variable(cacheNamespaceIndex),
 		"cacheNewSharedIndexInformer":     c.Universe.Function(cacheNewSharedIndexInformer),
+		"kcpCacheNewSharedIndexInformer":  c.Universe.Function(kcpCacheNewSharedIndexInformer),
 		"cacheSharedIndexInformer":        c.Universe.Type(cacheSharedIndexInformer),
 		"clientSetInterface":              clientSetInterface,
+		"clientSetClusterInterface":       clientSetClusterInterface,
 		"group":                           namer.IC(g.groupGoName),
 		"informerFor":                     informerFor,
 		"interfacesTweakListOptionsFunc":  c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
@@ -101,13 +132,25 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		"v1ListOptions":                   c.Universe.Type(v1ListOptions),
 		"version":                         namer.IC(g.groupVersion.Version.String()),
 		"watchInterface":                  c.Universe.Type(watchInterface),
+		"upstreamInformers":               "upstream" + strings.ToLower(group) + strings.ToLower(g.groupVersion.Version.String()) + "informers." + t.Name.Name + "Informer",
 	}
 
-	sw.Do(typeInformerInterface, m)
-	sw.Do(typeInformerStruct, m)
-	sw.Do(typeInformerPublicConstructor, m)
-	sw.Do(typeFilteredInformerPublicConstructor, m)
-	sw.Do(typeInformerConstructor, m)
+	//sw.Do(typeInformerInterface, m)
+	if g.singleClusterInformersPackagePath != "" {
+		klog.Infof("Generating informer for %s with single cluster listers", t)
+		sw.Do(typeInformerClusterExternalInterface, m)
+	} else {
+		sw.Do(typeInformerClusterInterface, m)
+	}
+
+	//sw.Do(typeInformerStruct, m)
+	sw.Do(typeInformerClusterStruct, m)
+	//sw.Do(typeInformerPublicConstructor, m)
+	sw.Do(typeInformerClusterPublicConstructor, m)
+	//sw.Do(typeFilteredInformerPublicConstructor, m)
+	sw.Do(typeFilteredInformerClusterPublicConstructor, m)
+	//sw.Do(typeInformerConstructor, m)
+	sw.Do(typeClusterInformerConstructor, m)
 	sw.Do(typeInformerInformer, m)
 	sw.Do(typeInformerLister, m)
 
@@ -123,8 +166,36 @@ type $.type|public$Informer interface {
 }
 `
 
+var typeInformerClusterExternalInterface = `
+// $.type|public$ClusterInformer provides access to a shared informer and lister for
+// $.type|publicPlural$.
+type $.type|public$ClusterInformer interface {
+	Informer() kcpcache.ScopeableSharedIndexInformer
+	Lister() $.lister|raw$
+	Cluster(logicalcluster.Name) $.upstreamInformers$
+}
+`
+
+var typeInformerClusterInterface = `
+// $.type|public$ClusterInformer provides access to a shared informer and lister for
+// $.type|publicPlural$.
+type $.type|public$ClusterInformer interface {
+	Informer() kcpcache.ScopeableSharedIndexInformer
+	Lister() $.lister|raw$
+	Cluster(logicalcluster.Name) $.type|public$Informer
+}
+`
+
 var typeInformerStruct = `
 type $.type|private$Informer struct {
+	factory $.interfacesSharedInformerFactory|raw$
+	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
+	$if .namespaced$namespace string$end$
+}
+`
+
+var typeInformerClusterStruct = `
+type $.type|private$ClusterInformer struct {
 	factory $.interfacesSharedInformerFactory|raw$
 	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
 	$if .namespaced$namespace string$end$
@@ -135,8 +206,17 @@ var typeInformerPublicConstructor = `
 // New$.type|public$Informer constructs a new informer for $.type|public$ type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func New$.type|public$Informer(client $.clientSetInterface|raw$$if .namespaced$, namespace string$end$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
+func New$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
 	return NewFiltered$.type|public$Informer(client$if .namespaced$, namespace$end$, resyncPeriod, indexers, nil)
+}
+`
+
+var typeInformerClusterPublicConstructor = `
+// New$.type|public$ClusterInformer constructs a new informer for $.type|public$ type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func New$.type|public$ClusterInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
+	return NewFiltered$.type|public$ClusterInformer(client$if .namespaced$, namespace$end$, resyncPeriod, indexers, nil)
 }
 `
 
@@ -167,9 +247,44 @@ func NewFiltered$.type|public$Informer(client $.clientSetInterface|raw$$if .name
 }
 `
 
+var typeFilteredInformerClusterPublicConstructor = `
+// NewFiltered$.type|public$ClusterInformer constructs a new informer for $.type|public$ type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFiltered$.type|public$ClusterInformer(client $.clientSetClusterInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) $.cacheSharedIndexInformer|raw$ {
+	return $.kcpCacheNewSharedIndexInformer|raw$(
+		&$.cacheListWatch|raw${
+			ListFunc: func(options $.v1ListOptions|raw$) ($.runtimeObject|raw$, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.$.group$$.version$().$.type|publicPlural$($if .namespaced$namespace$end$).List(context.TODO(), options)
+			},
+			WatchFunc: func(options $.v1ListOptions|raw$) ($.watchInterface|raw$, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.$.group$$.version$().$.type|publicPlural$($if .namespaced$namespace$end$).Watch(context.TODO(), options)
+			},
+		},
+		&$.type|raw${},
+		resyncPeriod,
+		indexers,
+	)
+}
+`
+
 var typeInformerConstructor = `
 func (f *$.type|private$Informer) defaultInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$ {
 	return NewFiltered$.type|public$Informer(client$if .namespaced$, f.namespace$end$, resyncPeriod, $.cacheIndexers|raw${$.cacheNamespaceIndex|raw$: $.cacheMetaNamespaceIndexFunc|raw$}, f.tweakListOptions)
+}
+`
+
+var typeClusterInformerConstructor = `
+func (f *$.type|private$ClusterInformer) defaultInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$ {
+	return NewFiltered$.type|public$ClusterInformer(client$if .namespaced$, f.namespace$end$, resyncPeriod, $.cacheIndexers|raw${
+		$.cacheNamespaceIndex|raw$: $.cacheMetaNamespaceIndexFunc|raw$},
+		f.tweakListOptions)
 }
 `
 

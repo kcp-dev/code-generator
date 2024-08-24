@@ -21,53 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// PersistentVolumeClaimsGetter has a method to return a PersistentVolumeClaimInterface.
+// PersistentVolumeClaimsClusterGetter has a method to return a PersistentVolumeClaimClusterInterface.
 // A group's client should implement this interface.
-type PersistentVolumeClaimsGetter interface {
-	PersistentVolumeClaims(namespace string) PersistentVolumeClaimInterface
+type PersistentVolumeClaimsClusterGetter interface {
+	PersistentVolumeClaims() PersistentVolumeClaimClusterInterface
 }
 
-// PersistentVolumeClaimInterface has methods to work with PersistentVolumeClaim resources.
-type PersistentVolumeClaimInterface interface {
-	Create(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.CreateOptions) (*v1.PersistentVolumeClaim, error)
-	Update(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*v1.PersistentVolumeClaim, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*v1.PersistentVolumeClaim, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.PersistentVolumeClaim, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.PersistentVolumeClaimList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PersistentVolumeClaim, err error)
-	Apply(ctx context.Context, persistentVolumeClaim *corev1.PersistentVolumeClaimApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolumeClaim, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, persistentVolumeClaim *corev1.PersistentVolumeClaimApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolumeClaim, err error)
+// PersistentVolumeClaimClusterInterface has methods to work with PersistentVolumeClaim resources.
+type PersistentVolumeClaimClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.PersistentVolumeClaimList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) PersistentVolumeClaimNamespacer
 	PersistentVolumeClaimExpansion
 }
 
-// persistentVolumeClaims implements PersistentVolumeClaimInterface
-type persistentVolumeClaims struct {
-	*gentype.ClientWithListAndApply[*v1.PersistentVolumeClaim, *v1.PersistentVolumeClaimList, *corev1.PersistentVolumeClaimApplyConfiguration]
-}
-
-// newPersistentVolumeClaims returns a PersistentVolumeClaims
-func newPersistentVolumeClaims(c *CoreV1Client, namespace string) *persistentVolumeClaims {
-	return &persistentVolumeClaims{
-		gentype.NewClientWithListAndApply[*v1.PersistentVolumeClaim, *v1.PersistentVolumeClaimList, *corev1.PersistentVolumeClaimApplyConfiguration](
-			"persistentvolumeclaims",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.PersistentVolumeClaim { return &v1.PersistentVolumeClaim{} },
-			func() *v1.PersistentVolumeClaimList { return &v1.PersistentVolumeClaimList{} }),
-	}
+type persistentVolumeClaimsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

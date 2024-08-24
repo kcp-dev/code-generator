@@ -39,8 +39,6 @@ type expansionGenerator struct {
 	outputPackage string
 	version       string
 	group         string
-	// SingleClusterListersPackagePath is the package path for the single cluster listers when using upstream listers.
-	singleClusterListersPackagePath string
 	// staticExpansionsListers is a map of type names to the lister interface they expand.
 	staticExpansionsListers []string
 }
@@ -51,12 +49,6 @@ func (g *expansionGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
 	imports = append(imports, "kcpcache \"github.com/kcp-dev/apimachinery/v2/pkg/cache\"")
 	imports = append(imports, "k8s.io/api/core/v1")
-
-	if g.singleClusterListersPackagePath != "" {
-		// Sorry :(
-		imp := strings.ToLower(g.group+g.version+"listers \"") + g.singleClusterListersPackagePath + "/" + strings.ToLower(g.group) + "/" + strings.ToLower(g.version) + "\""
-		imports = append(imports, imp)
-	}
 	return
 }
 
@@ -88,11 +80,7 @@ func (g *expansionGenerator) GenerateType(c *generator.Context, t *types.Type, w
 	} else {
 		// default expansion behavior
 		sw.Do(expansionInterfaceTemplate, m)
-		if g.singleClusterListersPackagePath == "" {
-			sw.Do(expansionClusterInterfaceTemplate, m)
-		} else {
-			sw.Do(expansionClusterExternalInterfaceTemplate, m)
-		}
+		sw.Do(expansionClusterInterfaceTemplate, m)
 
 		if !tags.NonNamespaced {
 			sw.Do(namespacedExpansionInterfaceTemplate, m)

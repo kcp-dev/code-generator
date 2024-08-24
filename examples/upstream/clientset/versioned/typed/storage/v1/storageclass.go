@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	storagev1 "k8s.io/api/storage/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1client "k8s.io/client-go/kubernetes/typed/storage/v1"
 )
 
-// StorageClassesGetter has a method to return a StorageClassInterface.
+// StorageClassesClusterGetter has a method to return a StorageClassClusterInterface.
 // A group's client should implement this interface.
-type StorageClassesGetter interface {
-	StorageClasses() StorageClassInterface
+type StorageClassesClusterGetter interface {
+	StorageClasses() StorageClassClusterInterface
 }
 
-// StorageClassInterface has methods to work with StorageClass resources.
-type StorageClassInterface interface {
-	Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (*v1.StorageClass, error)
-	Update(ctx context.Context, storageClass *v1.StorageClass, opts metav1.UpdateOptions) (*v1.StorageClass, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.StorageClass, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.StorageClassList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.StorageClass, err error)
-	Apply(ctx context.Context, storageClass *storagev1.StorageClassApplyConfiguration, opts metav1.ApplyOptions) (result *v1.StorageClass, err error)
+// StorageClassClusterInterface has methods to work with StorageClass resources.
+type StorageClassClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*storagev1.StorageClassList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	StorageClassExpansion
 }
 
-// storageClasses implements StorageClassInterface
-type storageClasses struct {
-	*gentype.ClientWithListAndApply[*v1.StorageClass, *v1.StorageClassList, *storagev1.StorageClassApplyConfiguration]
-}
-
-// newStorageClasses returns a StorageClasses
-func newStorageClasses(c *StorageV1Client) *storageClasses {
-	return &storageClasses{
-		gentype.NewClientWithListAndApply[*v1.StorageClass, *v1.StorageClassList, *storagev1.StorageClassApplyConfiguration](
-			"storageclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.StorageClass { return &v1.StorageClass{} },
-			func() *v1.StorageClassList { return &v1.StorageClassList{} }),
-	}
+type storageClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1client.StorageV1Client]
 }

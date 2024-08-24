@@ -35,6 +35,9 @@ type Args struct {
 	// PluralExceptions define a list of pluralizer exceptions in Type:PluralType format.
 	// The default list is "Endpoints:Endpoints"
 	PluralExceptions []string
+
+	// +optional
+	SingleClusterInformersPackagePath string
 }
 
 // New returns default arguments for the generator.
@@ -62,6 +65,8 @@ func (args *Args) AddFlags(fs *pflag.FlagSet) {
 		"if true, omit the intermediate \"internalversion\" and \"externalversions\" subdirectories")
 	fs.StringSliceVar(&args.PluralExceptions, "plural-exceptions", args.PluralExceptions,
 		"list of comma separated plural exception definitions in Type:PluralizedType format")
+	fs.StringVar(&args.SingleClusterInformersPackagePath, "single-cluster-informers-package-path", args.SingleClusterInformersPackagePath,
+		"the Go import-path for the package containing the single-cluster informers when generating cluster-scoped informers using upstream package")
 }
 
 // Validate checks the given arguments.

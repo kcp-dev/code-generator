@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// ConfigMapsGetter has a method to return a ConfigMapInterface.
+// ConfigMapsClusterGetter has a method to return a ConfigMapClusterInterface.
 // A group's client should implement this interface.
-type ConfigMapsGetter interface {
-	ConfigMaps(namespace string) ConfigMapInterface
+type ConfigMapsClusterGetter interface {
+	ConfigMaps() ConfigMapClusterInterface
 }
 
-// ConfigMapInterface has methods to work with ConfigMap resources.
-type ConfigMapInterface interface {
-	Create(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (*v1.ConfigMap, error)
-	Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (*v1.ConfigMap, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ConfigMap, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ConfigMapList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConfigMap, err error)
-	Apply(ctx context.Context, configMap *corev1.ConfigMapApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ConfigMap, err error)
+// ConfigMapClusterInterface has methods to work with ConfigMap resources.
+type ConfigMapClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.ConfigMapList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) ConfigMapNamespacer
 	ConfigMapExpansion
 }
 
-// configMaps implements ConfigMapInterface
-type configMaps struct {
-	*gentype.ClientWithListAndApply[*v1.ConfigMap, *v1.ConfigMapList, *corev1.ConfigMapApplyConfiguration]
-}
-
-// newConfigMaps returns a ConfigMaps
-func newConfigMaps(c *CoreV1Client, namespace string) *configMaps {
-	return &configMaps{
-		gentype.NewClientWithListAndApply[*v1.ConfigMap, *v1.ConfigMapList, *corev1.ConfigMapApplyConfiguration](
-			"configmaps",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.ConfigMap { return &v1.ConfigMap{} },
-			func() *v1.ConfigMapList { return &v1.ConfigMapList{} }),
-	}
+type configMapsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

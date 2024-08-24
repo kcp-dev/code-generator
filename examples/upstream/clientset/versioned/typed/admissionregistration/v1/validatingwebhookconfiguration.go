@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/admissionregistration/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	admissionregistrationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamadmissionregistrationv1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 )
 
-// ValidatingWebhookConfigurationsGetter has a method to return a ValidatingWebhookConfigurationInterface.
+// ValidatingWebhookConfigurationsClusterGetter has a method to return a ValidatingWebhookConfigurationClusterInterface.
 // A group's client should implement this interface.
-type ValidatingWebhookConfigurationsGetter interface {
-	ValidatingWebhookConfigurations() ValidatingWebhookConfigurationInterface
+type ValidatingWebhookConfigurationsClusterGetter interface {
+	ValidatingWebhookConfigurations() ValidatingWebhookConfigurationClusterInterface
 }
 
-// ValidatingWebhookConfigurationInterface has methods to work with ValidatingWebhookConfiguration resources.
-type ValidatingWebhookConfigurationInterface interface {
-	Create(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.CreateOptions) (*v1.ValidatingWebhookConfiguration, error)
-	Update(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (*v1.ValidatingWebhookConfiguration, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ValidatingWebhookConfiguration, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ValidatingWebhookConfigurationList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingWebhookConfiguration, err error)
-	Apply(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingWebhookConfiguration, err error)
+// ValidatingWebhookConfigurationClusterInterface has methods to work with ValidatingWebhookConfiguration resources.
+type ValidatingWebhookConfigurationClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*admissionregistrationv1.ValidatingWebhookConfigurationList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ValidatingWebhookConfigurationExpansion
 }
 
-// validatingWebhookConfigurations implements ValidatingWebhookConfigurationInterface
-type validatingWebhookConfigurations struct {
-	*gentype.ClientWithListAndApply[*v1.ValidatingWebhookConfiguration, *v1.ValidatingWebhookConfigurationList, *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration]
-}
-
-// newValidatingWebhookConfigurations returns a ValidatingWebhookConfigurations
-func newValidatingWebhookConfigurations(c *AdmissionregistrationV1Client) *validatingWebhookConfigurations {
-	return &validatingWebhookConfigurations{
-		gentype.NewClientWithListAndApply[*v1.ValidatingWebhookConfiguration, *v1.ValidatingWebhookConfigurationList, *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration](
-			"validatingwebhookconfigurations",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.ValidatingWebhookConfiguration { return &v1.ValidatingWebhookConfiguration{} },
-			func() *v1.ValidatingWebhookConfigurationList { return &v1.ValidatingWebhookConfigurationList{} }),
-	}
+type validatingWebhookConfigurationsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1client.AdmissionregistrationV1Client]
 }

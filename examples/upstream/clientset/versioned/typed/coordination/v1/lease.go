@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/coordination/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	coordinationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/coordination/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcoordinationv1client "k8s.io/client-go/kubernetes/typed/coordination/v1"
 )
 
-// LeasesGetter has a method to return a LeaseInterface.
+// LeasesClusterGetter has a method to return a LeaseClusterInterface.
 // A group's client should implement this interface.
-type LeasesGetter interface {
-	Leases(namespace string) LeaseInterface
+type LeasesClusterGetter interface {
+	Leases() LeaseClusterInterface
 }
 
-// LeaseInterface has methods to work with Lease resources.
-type LeaseInterface interface {
-	Create(ctx context.Context, lease *v1.Lease, opts metav1.CreateOptions) (*v1.Lease, error)
-	Update(ctx context.Context, lease *v1.Lease, opts metav1.UpdateOptions) (*v1.Lease, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Lease, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.LeaseList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Lease, err error)
-	Apply(ctx context.Context, lease *coordinationv1.LeaseApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Lease, err error)
+// LeaseClusterInterface has methods to work with Lease resources.
+type LeaseClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*coordinationv1.LeaseList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) LeaseNamespacer
 	LeaseExpansion
 }
 
-// leases implements LeaseInterface
-type leases struct {
-	*gentype.ClientWithListAndApply[*v1.Lease, *v1.LeaseList, *coordinationv1.LeaseApplyConfiguration]
-}
-
-// newLeases returns a Leases
-func newLeases(c *CoordinationV1Client, namespace string) *leases {
-	return &leases{
-		gentype.NewClientWithListAndApply[*v1.Lease, *v1.LeaseList, *coordinationv1.LeaseApplyConfiguration](
-			"leases",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Lease { return &v1.Lease{} },
-			func() *v1.LeaseList { return &v1.LeaseList{} }),
-	}
+type leasesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcoordinationv1client.CoordinationV1Client]
 }

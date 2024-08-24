@@ -21,53 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	networkingv1 "k8s.io/api/networking/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	networkingv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamnetworkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 )
 
-// IngressesGetter has a method to return a IngressInterface.
+// IngressesClusterGetter has a method to return a IngressClusterInterface.
 // A group's client should implement this interface.
-type IngressesGetter interface {
-	Ingresses(namespace string) IngressInterface
+type IngressesClusterGetter interface {
+	Ingresses() IngressClusterInterface
 }
 
-// IngressInterface has methods to work with Ingress resources.
-type IngressInterface interface {
-	Create(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (*v1.Ingress, error)
-	Update(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Ingress, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.IngressList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Ingress, err error)
-	Apply(ctx context.Context, ingress *networkingv1.IngressApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Ingress, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, ingress *networkingv1.IngressApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Ingress, err error)
+// IngressClusterInterface has methods to work with Ingress resources.
+type IngressClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*networkingv1.IngressList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) IngressNamespacer
 	IngressExpansion
 }
 
-// ingresses implements IngressInterface
-type ingresses struct {
-	*gentype.ClientWithListAndApply[*v1.Ingress, *v1.IngressList, *networkingv1.IngressApplyConfiguration]
-}
-
-// newIngresses returns a Ingresses
-func newIngresses(c *NetworkingV1Client, namespace string) *ingresses {
-	return &ingresses{
-		gentype.NewClientWithListAndApply[*v1.Ingress, *v1.IngressList, *networkingv1.IngressApplyConfiguration](
-			"ingresses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Ingress { return &v1.Ingress{} },
-			func() *v1.IngressList { return &v1.IngressList{} }),
-	}
+type ingressesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamnetworkingv1client.NetworkingV1Client]
 }

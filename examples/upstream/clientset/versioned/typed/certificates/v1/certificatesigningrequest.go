@@ -21,69 +21,29 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/certificates/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	certificatesv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcertificatesv1client "k8s.io/client-go/kubernetes/typed/certificates/v1"
 )
 
-// CertificateSigningRequestsGetter has a method to return a CertificateSigningRequestInterface.
+// CertificateSigningRequestsClusterGetter has a method to return a CertificateSigningRequestClusterInterface.
 // A group's client should implement this interface.
-type CertificateSigningRequestsGetter interface {
-	CertificateSigningRequests() CertificateSigningRequestInterface
+type CertificateSigningRequestsClusterGetter interface {
+	CertificateSigningRequests() CertificateSigningRequestClusterInterface
 }
 
-// CertificateSigningRequestInterface has methods to work with CertificateSigningRequest resources.
-type CertificateSigningRequestInterface interface {
-	Create(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.CreateOptions) (*v1.CertificateSigningRequest, error)
-	Update(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.CertificateSigningRequest, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.CertificateSigningRequestList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CertificateSigningRequest, err error)
-	Apply(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error)
-	UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error)
+// CertificateSigningRequestClusterInterface has methods to work with CertificateSigningRequest resources.
+type CertificateSigningRequestClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*certificatesv1.CertificateSigningRequestList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 
 	CertificateSigningRequestExpansion
 }
 
-// certificateSigningRequests implements CertificateSigningRequestInterface
-type certificateSigningRequests struct {
-	*gentype.ClientWithListAndApply[*v1.CertificateSigningRequest, *v1.CertificateSigningRequestList, *certificatesv1.CertificateSigningRequestApplyConfiguration]
-}
-
-// newCertificateSigningRequests returns a CertificateSigningRequests
-func newCertificateSigningRequests(c *CertificatesV1Client) *certificateSigningRequests {
-	return &certificateSigningRequests{
-		gentype.NewClientWithListAndApply[*v1.CertificateSigningRequest, *v1.CertificateSigningRequestList, *certificatesv1.CertificateSigningRequestApplyConfiguration](
-			"certificatesigningrequests",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.CertificateSigningRequest { return &v1.CertificateSigningRequest{} },
-			func() *v1.CertificateSigningRequestList { return &v1.CertificateSigningRequestList{} }),
-	}
-}
-
-// UpdateApproval takes the top resource name and the representation of a certificateSigningRequest and updates it. Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *certificateSigningRequests) UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
-	result = &v1.CertificateSigningRequest{}
-	err = c.GetClient().Put().
-		Resource("certificatesigningrequests").
-		Name(certificateSigningRequestName).
-		SubResource("approval").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(certificateSigningRequest).
-		Do(ctx).
-		Into(result)
-	return
+type certificateSigningRequestsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcertificatesv1client.CertificatesV1Client]
 }

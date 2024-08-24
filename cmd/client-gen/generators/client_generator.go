@@ -128,7 +128,7 @@ func DefaultNameSystem() string {
 	return "public"
 }
 
-func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, apiPath string, inputPkg string, applyBuilderPkg string, boilerplate []byte) generator.Target {
+func targetForGroup(args *args.Args, gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, apiPath string, inputPkg string, applyBuilderPkg string, boilerplate []byte) generator.Target {
 	subdir := []string{"typed", strings.ToLower(groupPkgName), strings.ToLower(gv.Version.NonEmpty())}
 	gvDir := filepath.Join(clientsetDir, filepath.Join(subdir...))
 	gvPkg := path.Join(clientsetPkg, path.Join(subdir...))
@@ -153,15 +153,16 @@ func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: strings.ToLower(c.Namers["private"].Name(t)) + ".go",
 					},
-					outputPackage:             gvPkg,
-					inputPackage:              inputPkg,
-					clientsetPackage:          clientsetPkg,
-					applyConfigurationPackage: applyBuilderPkg,
-					group:                     gv.Group.NonEmpty(),
-					version:                   gv.Version.String(),
-					groupGoName:               groupGoName,
-					typeToMatch:               t,
-					imports:                   generator.NewImportTracker(),
+					outputPackage:                        gvPkg,
+					inputPackage:                         inputPkg,
+					clientsetPackage:                     clientsetPkg,
+					applyConfigurationPackage:            applyBuilderPkg,
+					group:                                gv.Group.NonEmpty(),
+					version:                              gv.Version.String(),
+					groupGoName:                          groupGoName,
+					typeToMatch:                          t,
+					imports:                              generator.NewImportTracker(),
+					singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
 				})
 			}
 
@@ -211,10 +212,11 @@ func targetForClientset(args *args.Args, clientsetDir, clientsetPkg string, grou
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: "clientset.go",
 					},
-					groups:           args.Groups,
-					groupGoNames:     groupGoNames,
-					clientsetPackage: clientsetPkg,
-					imports:          generator.NewImportTracker(),
+					groups:                               args.Groups,
+					groupGoNames:                         groupGoNames,
+					clientsetPackage:                     clientsetPkg,
+					imports:                              generator.NewImportTracker(),
+					singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
 				},
 			}
 			return generators
@@ -422,6 +424,7 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 			inputPath := gvPackages[gv]
 			targetList = append(targetList,
 				targetForGroup(
+					args,
 					gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg,
 					group.PackageName, groupGoNames[gv], args.ClientsetAPIPath,
 					inputPath, args.ApplyConfigurationPackage, boilerplate))

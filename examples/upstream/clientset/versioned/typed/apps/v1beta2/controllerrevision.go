@@ -21,49 +21,28 @@ package v1beta2
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 )
 
-// ControllerRevisionsGetter has a method to return a ControllerRevisionInterface.
+// ControllerRevisionsClusterGetter has a method to return a ControllerRevisionClusterInterface.
 // A group's client should implement this interface.
-type ControllerRevisionsGetter interface {
-	ControllerRevisions(namespace string) ControllerRevisionInterface
+type ControllerRevisionsClusterGetter interface {
+	ControllerRevisions() ControllerRevisionClusterInterface
 }
 
-// ControllerRevisionInterface has methods to work with ControllerRevision resources.
-type ControllerRevisionInterface interface {
-	Create(ctx context.Context, controllerRevision *v1beta2.ControllerRevision, opts v1.CreateOptions) (*v1beta2.ControllerRevision, error)
-	Update(ctx context.Context, controllerRevision *v1beta2.ControllerRevision, opts v1.UpdateOptions) (*v1beta2.ControllerRevision, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.ControllerRevision, error)
+// ControllerRevisionClusterInterface has methods to work with ControllerRevision resources.
+type ControllerRevisionClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta2.ControllerRevisionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.ControllerRevision, err error)
-	Apply(ctx context.Context, controllerRevision *appsv1beta2.ControllerRevisionApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.ControllerRevision, err error)
+	Cluster(logicalcluster.Path) ControllerRevisionNamespacer
 	ControllerRevisionExpansion
 }
 
-// controllerRevisions implements ControllerRevisionInterface
-type controllerRevisions struct {
-	*gentype.ClientWithListAndApply[*v1beta2.ControllerRevision, *v1beta2.ControllerRevisionList, *appsv1beta2.ControllerRevisionApplyConfiguration]
-}
-
-// newControllerRevisions returns a ControllerRevisions
-func newControllerRevisions(c *AppsV1beta2Client, namespace string) *controllerRevisions {
-	return &controllerRevisions{
-		gentype.NewClientWithListAndApply[*v1beta2.ControllerRevision, *v1beta2.ControllerRevisionList, *appsv1beta2.ControllerRevisionApplyConfiguration](
-			"controllerrevisions",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta2.ControllerRevision { return &v1beta2.ControllerRevision{} },
-			func() *v1beta2.ControllerRevisionList { return &v1beta2.ControllerRevisionList{} }),
-	}
+type controllerRevisionsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
 }

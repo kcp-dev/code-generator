@@ -19,35 +19,21 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "k8s.io/api/imagepolicy/v1alpha1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamimagepolicyv1alpha1client "k8s.io/client-go/kubernetes/typed/imagepolicy/v1alpha1"
 )
 
-// ImageReviewsGetter has a method to return a ImageReviewInterface.
+// ImageReviewsClusterGetter has a method to return a ImageReviewClusterInterface.
 // A group's client should implement this interface.
-type ImageReviewsGetter interface {
-	ImageReviews() ImageReviewInterface
+type ImageReviewsClusterGetter interface {
+	ImageReviews() ImageReviewClusterInterface
 }
 
-// ImageReviewInterface has methods to work with ImageReview resources.
-type ImageReviewInterface interface {
+// ImageReviewClusterInterface has methods to work with ImageReview resources.
+type ImageReviewClusterInterface interface {
 	ImageReviewExpansion
 }
 
-// imageReviews implements ImageReviewInterface
-type imageReviews struct {
-	*gentype.Client[*v1alpha1.ImageReview]
-}
-
-// newImageReviews returns a ImageReviews
-func newImageReviews(c *ImagepolicyV1alpha1Client) *imageReviews {
-	return &imageReviews{
-		gentype.NewClient[*v1alpha1.ImageReview](
-			"imagereviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.ImageReview { return &v1alpha1.ImageReview{} }),
-	}
+type imageReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamimagepolicyv1alpha1client.ImagepolicyV1alpha1Client]
 }

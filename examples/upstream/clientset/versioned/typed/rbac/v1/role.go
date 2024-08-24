@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	rbacv1 "k8s.io/api/rbac/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	rbacv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamrbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 )
 
-// RolesGetter has a method to return a RoleInterface.
+// RolesClusterGetter has a method to return a RoleClusterInterface.
 // A group's client should implement this interface.
-type RolesGetter interface {
-	Roles(namespace string) RoleInterface
+type RolesClusterGetter interface {
+	Roles() RoleClusterInterface
 }
 
-// RoleInterface has methods to work with Role resources.
-type RoleInterface interface {
-	Create(ctx context.Context, role *v1.Role, opts metav1.CreateOptions) (*v1.Role, error)
-	Update(ctx context.Context, role *v1.Role, opts metav1.UpdateOptions) (*v1.Role, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Role, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.RoleList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Role, err error)
-	Apply(ctx context.Context, role *rbacv1.RoleApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Role, err error)
+// RoleClusterInterface has methods to work with Role resources.
+type RoleClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*rbacv1.RoleList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) RoleNamespacer
 	RoleExpansion
 }
 
-// roles implements RoleInterface
-type roles struct {
-	*gentype.ClientWithListAndApply[*v1.Role, *v1.RoleList, *rbacv1.RoleApplyConfiguration]
-}
-
-// newRoles returns a Roles
-func newRoles(c *RbacV1Client, namespace string) *roles {
-	return &roles{
-		gentype.NewClientWithListAndApply[*v1.Role, *v1.RoleList, *rbacv1.RoleApplyConfiguration](
-			"roles",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Role { return &v1.Role{} },
-			func() *v1.RoleList { return &v1.RoleList{} }),
-	}
+type rolesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamrbacv1client.RbacV1Client]
 }

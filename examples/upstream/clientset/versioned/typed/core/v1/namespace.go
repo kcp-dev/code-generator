@@ -21,52 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// NamespacesGetter has a method to return a NamespaceInterface.
+// NamespacesClusterGetter has a method to return a NamespaceClusterInterface.
 // A group's client should implement this interface.
-type NamespacesGetter interface {
-	Namespaces() NamespaceInterface
+type NamespacesClusterGetter interface {
+	Namespaces() NamespaceClusterInterface
 }
 
-// NamespaceInterface has methods to work with Namespace resources.
-type NamespaceInterface interface {
-	Create(ctx context.Context, namespace *v1.Namespace, opts metav1.CreateOptions) (*v1.Namespace, error)
-	Update(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (*v1.Namespace, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (*v1.Namespace, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Namespace, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.NamespaceList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Namespace, err error)
-	Apply(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error)
+// NamespaceClusterInterface has methods to work with Namespace resources.
+type NamespaceClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.NamespaceList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	NamespaceExpansion
 }
 
-// namespaces implements NamespaceInterface
-type namespaces struct {
-	*gentype.ClientWithListAndApply[*v1.Namespace, *v1.NamespaceList, *corev1.NamespaceApplyConfiguration]
-}
-
-// newNamespaces returns a Namespaces
-func newNamespaces(c *CoreV1Client) *namespaces {
-	return &namespaces{
-		gentype.NewClientWithListAndApply[*v1.Namespace, *v1.NamespaceList, *corev1.NamespaceApplyConfiguration](
-			"namespaces",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.Namespace { return &v1.Namespace{} },
-			func() *v1.NamespaceList { return &v1.NamespaceList{} }),
-	}
+type namespacesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

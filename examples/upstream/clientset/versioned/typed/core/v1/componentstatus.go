@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// ComponentStatusesGetter has a method to return a ComponentStatusInterface.
+// ComponentStatusesClusterGetter has a method to return a ComponentStatusClusterInterface.
 // A group's client should implement this interface.
-type ComponentStatusesGetter interface {
-	ComponentStatuses() ComponentStatusInterface
+type ComponentStatusesClusterGetter interface {
+	ComponentStatuses() ComponentStatusClusterInterface
 }
 
-// ComponentStatusInterface has methods to work with ComponentStatus resources.
-type ComponentStatusInterface interface {
-	Create(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.CreateOptions) (*v1.ComponentStatus, error)
-	Update(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.UpdateOptions) (*v1.ComponentStatus, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ComponentStatus, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ComponentStatusList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ComponentStatus, err error)
-	Apply(ctx context.Context, componentStatus *corev1.ComponentStatusApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ComponentStatus, err error)
+// ComponentStatusClusterInterface has methods to work with ComponentStatus resources.
+type ComponentStatusClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.ComponentStatusList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ComponentStatusExpansion
 }
 
-// componentStatuses implements ComponentStatusInterface
-type componentStatuses struct {
-	*gentype.ClientWithListAndApply[*v1.ComponentStatus, *v1.ComponentStatusList, *corev1.ComponentStatusApplyConfiguration]
-}
-
-// newComponentStatuses returns a ComponentStatuses
-func newComponentStatuses(c *CoreV1Client) *componentStatuses {
-	return &componentStatuses{
-		gentype.NewClientWithListAndApply[*v1.ComponentStatus, *v1.ComponentStatusList, *corev1.ComponentStatusApplyConfiguration](
-			"componentstatuses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.ComponentStatus { return &v1.ComponentStatus{} },
-			func() *v1.ComponentStatusList { return &v1.ComponentStatusList{} }),
-	}
+type componentStatusesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

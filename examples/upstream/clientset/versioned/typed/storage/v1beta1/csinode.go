@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 )
 
-// CSINodesGetter has a method to return a CSINodeInterface.
+// CSINodesClusterGetter has a method to return a CSINodeClusterInterface.
 // A group's client should implement this interface.
-type CSINodesGetter interface {
-	CSINodes() CSINodeInterface
+type CSINodesClusterGetter interface {
+	CSINodes() CSINodeClusterInterface
 }
 
-// CSINodeInterface has methods to work with CSINode resources.
-type CSINodeInterface interface {
-	Create(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.CreateOptions) (*v1beta1.CSINode, error)
-	Update(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.UpdateOptions) (*v1beta1.CSINode, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CSINode, error)
+// CSINodeClusterInterface has methods to work with CSINode resources.
+type CSINodeClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CSINodeList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSINode, err error)
-	Apply(ctx context.Context, cSINode *storagev1beta1.CSINodeApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CSINode, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	CSINodeExpansion
 }
 
-// cSINodes implements CSINodeInterface
-type cSINodes struct {
-	*gentype.ClientWithListAndApply[*v1beta1.CSINode, *v1beta1.CSINodeList, *storagev1beta1.CSINodeApplyConfiguration]
-}
-
-// newCSINodes returns a CSINodes
-func newCSINodes(c *StorageV1beta1Client) *cSINodes {
-	return &cSINodes{
-		gentype.NewClientWithListAndApply[*v1beta1.CSINode, *v1beta1.CSINodeList, *storagev1beta1.CSINodeApplyConfiguration](
-			"csinodes",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.CSINode { return &v1beta1.CSINode{} },
-			func() *v1beta1.CSINodeList { return &v1beta1.CSINodeList{} }),
-	}
+type cSINodesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
 }

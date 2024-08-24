@@ -20,114 +20,30 @@ package v1beta2
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 )
 
-// StatefulSetsGetter has a method to return a StatefulSetInterface.
+// StatefulSetsClusterGetter has a method to return a StatefulSetClusterInterface.
 // A group's client should implement this interface.
-type StatefulSetsGetter interface {
-	StatefulSets(namespace string) StatefulSetInterface
+type StatefulSetsClusterGetter interface {
+	StatefulSets() StatefulSetClusterInterface
 }
 
-// StatefulSetInterface has methods to work with StatefulSet resources.
-type StatefulSetInterface interface {
-	Create(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.CreateOptions) (*v1beta2.StatefulSet, error)
-	Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (*v1beta2.StatefulSet, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (*v1beta2.StatefulSet, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.StatefulSet, error)
+// StatefulSetClusterInterface has methods to work with StatefulSet resources.
+type StatefulSetClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta2.StatefulSetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.StatefulSet, err error)
-	Apply(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error)
-	GetScale(ctx context.Context, statefulSetName string, options v1.GetOptions) (*v1beta2.Scale, error)
-	UpdateScale(ctx context.Context, statefulSetName string, scale *v1beta2.Scale, opts v1.UpdateOptions) (*v1beta2.Scale, error)
-	ApplyScale(ctx context.Context, statefulSetName string, scale *appsv1beta2.ScaleApplyConfiguration, opts v1.ApplyOptions) (*v1beta2.Scale, error)
+	Cluster(logicalcluster.Path) StatefulSetNamespacer
 
 	StatefulSetExpansion
 }
 
-// statefulSets implements StatefulSetInterface
-type statefulSets struct {
-	*gentype.ClientWithListAndApply[*v1beta2.StatefulSet, *v1beta2.StatefulSetList, *appsv1beta2.StatefulSetApplyConfiguration]
-}
-
-// newStatefulSets returns a StatefulSets
-func newStatefulSets(c *AppsV1beta2Client, namespace string) *statefulSets {
-	return &statefulSets{
-		gentype.NewClientWithListAndApply[*v1beta2.StatefulSet, *v1beta2.StatefulSetList, *appsv1beta2.StatefulSetApplyConfiguration](
-			"statefulsets",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta2.StatefulSet { return &v1beta2.StatefulSet{} },
-			func() *v1beta2.StatefulSetList { return &v1beta2.StatefulSetList{} }),
-	}
-}
-
-// GetScale takes name of the statefulSet, and returns the corresponding v1beta2.Scale object, and an error if there is any.
-func (c *statefulSets) GetScale(ctx context.Context, statefulSetName string, options v1.GetOptions) (result *v1beta2.Scale, err error) {
-	result = &v1beta2.Scale{}
-	err = c.GetClient().Get().
-		Namespace(c.GetNamespace()).
-		Resource("statefulsets").
-		Name(statefulSetName).
-		SubResource("scale").
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateScale takes the top resource name and the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *statefulSets) UpdateScale(ctx context.Context, statefulSetName string, scale *v1beta2.Scale, opts v1.UpdateOptions) (result *v1beta2.Scale, err error) {
-	result = &v1beta2.Scale{}
-	err = c.GetClient().Put().
-		Namespace(c.GetNamespace()).
-		Resource("statefulsets").
-		Name(statefulSetName).
-		SubResource("scale").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(scale).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// ApplyScale takes top resource name and the apply declarative configuration for scale,
-// applies it and returns the applied scale, and an error, if there is any.
-func (c *statefulSets) ApplyScale(ctx context.Context, statefulSetName string, scale *appsv1beta2.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.Scale, err error) {
-	if scale == nil {
-		return nil, fmt.Errorf("scale provided to ApplyScale must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(scale)
-	if err != nil {
-		return nil, err
-	}
-
-	result = &v1beta2.Scale{}
-	err = c.GetClient().Patch(types.ApplyPatchType).
-		Namespace(c.GetNamespace()).
-		Resource("statefulsets").
-		Name(statefulSetName).
-		SubResource("scale").
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
+type statefulSetsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
 }

@@ -21,49 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	rbacv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamrbacv1alpha1client "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 )
 
-// RoleBindingsGetter has a method to return a RoleBindingInterface.
+// RoleBindingsClusterGetter has a method to return a RoleBindingClusterInterface.
 // A group's client should implement this interface.
-type RoleBindingsGetter interface {
-	RoleBindings(namespace string) RoleBindingInterface
+type RoleBindingsClusterGetter interface {
+	RoleBindings() RoleBindingClusterInterface
 }
 
-// RoleBindingInterface has methods to work with RoleBinding resources.
-type RoleBindingInterface interface {
-	Create(ctx context.Context, roleBinding *v1alpha1.RoleBinding, opts v1.CreateOptions) (*v1alpha1.RoleBinding, error)
-	Update(ctx context.Context, roleBinding *v1alpha1.RoleBinding, opts v1.UpdateOptions) (*v1alpha1.RoleBinding, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.RoleBinding, error)
+// RoleBindingClusterInterface has methods to work with RoleBinding resources.
+type RoleBindingClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.RoleBindingList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.RoleBinding, err error)
-	Apply(ctx context.Context, roleBinding *rbacv1alpha1.RoleBindingApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.RoleBinding, err error)
+	Cluster(logicalcluster.Path) RoleBindingNamespacer
 	RoleBindingExpansion
 }
 
-// roleBindings implements RoleBindingInterface
-type roleBindings struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.RoleBinding, *v1alpha1.RoleBindingList, *rbacv1alpha1.RoleBindingApplyConfiguration]
-}
-
-// newRoleBindings returns a RoleBindings
-func newRoleBindings(c *RbacV1alpha1Client, namespace string) *roleBindings {
-	return &roleBindings{
-		gentype.NewClientWithListAndApply[*v1alpha1.RoleBinding, *v1alpha1.RoleBindingList, *rbacv1alpha1.RoleBindingApplyConfiguration](
-			"rolebindings",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1alpha1.RoleBinding { return &v1alpha1.RoleBinding{} },
-			func() *v1alpha1.RoleBindingList { return &v1alpha1.RoleBindingList{} }),
-	}
+type roleBindingsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamrbacv1alpha1client.RbacV1alpha1Client]
 }

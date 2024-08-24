@@ -42,6 +42,8 @@ type genClientForType struct {
 	groupGoName               string
 	typeToMatch               *types.Type
 	imports                   namer.ImportTracker
+
+	singleClusterTypedClientsPackagePath string
 }
 
 var _ generator.Generator = &genClientForType{}
@@ -60,7 +62,13 @@ func (g *genClientForType) Namers(c *generator.Context) namer.NameSystems {
 }
 
 func (g *genClientForType) Imports(c *generator.Context) (imports []string) {
-	return g.imports.ImportLines()
+	imports = g.imports.ImportLines()
+	imports = append(imports, "kcpclient \"github.com/kcp-dev/apimachinery/v2/pkg/client\"")
+
+	if len(g.singleClusterTypedClientsPackagePath) > 0 {
+		imports = append(imports, "upstream"+strings.ToLower(g.groupGoName+g.version+"client \""+g.singleClusterTypedClientsPackagePath+"/"+g.groupGoName+"/"+g.version+"\""))
+	}
+	return
 }
 
 // Ideally, we'd like genStatus to return true if there is a subresource path
@@ -180,6 +188,8 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 		"ClientWithList":                                    c.Universe.Type(types.Name{Package: "k8s.io/client-go/gentype", Name: "ClientWithList"}),
 		"ClientWithApply":                                   c.Universe.Type(types.Name{Package: "k8s.io/client-go/gentype", Name: "ClientWithApply"}),
 		"ClientWithListAndApply":                            c.Universe.Type(types.Name{Package: "k8s.io/client-go/gentype", Name: "ClientWithListAndApply"}),
+		"kcpClientCacheType":                                g.groupGoName + namer.IC(g.version) + "Client",
+		"kcpExternalClientCacheType":                        "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + g.groupGoName + namer.IC(g.version) + "Client",
 	}
 
 	if generateApply {
@@ -188,14 +198,12 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 		m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
 	}
 
-	sw.Do(getterComment, m)
-	if tags.NonNamespaced {
-		sw.Do(getterNonNamespaced, m)
-	} else {
-		sw.Do(getterNamespaced, m)
-	}
+	sw.Do(getterClusterComment, m)
 
-	sw.Do(interfaceTemplate1, m)
+	sw.Do(getterCluster, m)
+
+	//sw.Do(interfaceTemplate1, m)
+	sw.Do(interfaceClusterTemplate1, m)
 	if !tags.NoVerbs {
 		if !genStatus(t) {
 			tags.SkipVerbs = append(tags.SkipVerbs, "updateStatus")
@@ -206,137 +214,16 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 			interfaceSuffix = "\n"
 		}
 		sw.Do("\n"+generateInterface(defaultVerbTemplates, tags)+interfaceSuffix, m)
-		// add extended verbs into interface
-		for _, v := range extendedMethods {
-			sw.Do(v.template+interfaceSuffix, v.args)
-		}
-
 	}
+
 	sw.Do(interfaceTemplate4, m)
-
-	structNamespaced := namespaced
-	if tags.NonNamespaced {
-		structNamespaced = nonNamespaced
-	}
-
-	if tags.NoVerbs {
-		sw.Do(structType[noList|noApply], m)
-		sw.Do(newStruct[structNamespaced|noList|noApply], m)
-
-		return sw.Error()
-	}
-
-	listableOrAppliable := noList | noApply
-
-	if tags.HasVerb("list") {
-		listableOrAppliable |= withList
-	}
-
-	if tags.HasVerb("apply") && generateApply {
-		listableOrAppliable |= withApply
-	}
-
-	sw.Do(structType[listableOrAppliable], m)
-	sw.Do(newStruct[structNamespaced|listableOrAppliable], m)
-
-	// generate expansion methods
-	for _, e := range tags.Extensions {
-		if e.HasVerb("apply") && !generateApply {
-			continue
-		}
-		inputType := *t
-		resultType := *t
-		inputGVString := typeGVString
-		if len(e.InputTypeOverride) > 0 {
-			if name, pkg := e.Input(); len(pkg) > 0 {
-				_, inputGVString = util.ParsePathGroupVersion(pkg)
-				newType := c.Universe.Type(types.Name{Package: pkg, Name: name})
-				inputType = *newType
-			} else {
-				inputType.Name.Name = e.InputTypeOverride
-			}
-		}
-		if len(e.ResultTypeOverride) > 0 {
-			if name, pkg := e.Result(); len(pkg) > 0 {
-				newType := c.Universe.Type(types.Name{Package: pkg, Name: name})
-				resultType = *newType
-			} else {
-				resultType.Name.Name = e.ResultTypeOverride
-			}
-		}
-		m["inputType"] = &inputType
-		m["resultType"] = &resultType
-		m["subresourcePath"] = e.SubResourcePath
-		if e.HasVerb("apply") {
-			m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, inputGVString), inputType.Name.Name+"ApplyConfiguration")
-		}
-
-		if e.HasVerb("get") {
-			if e.IsSubresource() {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, getSubresourceTemplate), m)
-			} else {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, getTemplate), m)
-			}
-		}
-
-		if e.HasVerb("list") {
-			if e.IsSubresource() {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, listSubresourceTemplate), m)
-			} else {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, listTemplate), m)
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, privateListTemplate), m)
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, watchListTemplate), m)
-			}
-		}
-
-		// TODO: Figure out schemantic for watching a sub-resource.
-		if e.HasVerb("watch") {
-			sw.Do(adjustTemplate(e.VerbName, e.VerbType, watchTemplate), m)
-		}
-
-		if e.HasVerb("create") {
-			if e.IsSubresource() {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, createSubresourceTemplate), m)
-			} else {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, createTemplate), m)
-			}
-		}
-
-		if e.HasVerb("update") {
-			if e.IsSubresource() {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, updateSubresourceTemplate), m)
-			} else {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, updateTemplate), m)
-			}
-		}
-
-		// TODO: Figure out schemantic for deleting a sub-resource (what arguments
-		// are passed, does it need two names? etc.
-		if e.HasVerb("delete") {
-			sw.Do(adjustTemplate(e.VerbName, e.VerbType, deleteTemplate), m)
-		}
-
-		if e.HasVerb("patch") {
-			sw.Do(adjustTemplate(e.VerbName, e.VerbType, patchTemplate), m)
-		}
-
-		if e.HasVerb("apply") {
-			if e.IsSubresource() {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, applySubresourceTemplate), m)
-			} else {
-				sw.Do(adjustTemplate(e.VerbName, e.VerbType, applyTemplate), m)
-			}
-		}
+	if g.singleClusterTypedClientsPackagePath != "" {
+		sw.Do(clusteredExternalInterface, m)
+	} else {
+		sw.Do(clusteredInterface, m)
 	}
 
 	return sw.Error()
-}
-
-// adjustTemplate adjust the origin verb template using the expansion name.
-// TODO: Make the verbs in templates parametrized so the strings.Replace() is
-// not needed.
-func adjustTemplate(name, verbType, template string) string {
-	return strings.ReplaceAll(template, " "+titler.String(verbType), " "+name)
 }
 
 func generateInterface(defaultVerbTemplates map[string]string, tags util.Tags) string {
@@ -352,34 +239,18 @@ func generateInterface(defaultVerbTemplates map[string]string, tags util.Tags) s
 
 func buildSubresourceDefaultVerbTemplates(generateApply bool) map[string]string {
 	m := map[string]string{
-		"create": `Create(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (*$.resultType|raw$, error)`,
-		"list":   `List(ctx context.Context, $.type|private$Name string, opts $.ListOptions|raw$) (*$.resultType|raw$List, error)`,
-		"update": `Update(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (*$.resultType|raw$, error)`,
-		"get":    `Get(ctx context.Context, $.type|private$Name string, options $.GetOptions|raw$) (*$.resultType|raw$, error)`,
+		"list": `List(ctx context.Context, $.type|private$Name string, opts $.ListOptions|raw$) (*$.resultType|raw$List, error)`,
+		"get":  `Get(ctx context.Context, $.type|private$Name string, options $.GetOptions|raw$) (*$.resultType|raw$, error)`,
 	}
-	if generateApply {
-		m["apply"] = `Apply(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (*$.resultType|raw$, error)`
-	}
+
 	return m
 }
 
 func buildDefaultVerbTemplates(generateApply bool) map[string]string {
 	m := map[string]string{
-		"create": `Create(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (*$.resultType|raw$, error)`,
-		"update": `Update(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (*$.resultType|raw$, error)`,
-		"updateStatus": `// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-UpdateStatus(ctx context.Context, $.inputType|private$ *$.type|raw$, opts $.UpdateOptions|raw$) (*$.type|raw$, error)`,
-		"delete":           `Delete(ctx context.Context, name string, opts $.DeleteOptions|raw$) error`,
-		"deleteCollection": `DeleteCollection(ctx context.Context, opts $.DeleteOptions|raw$, listOpts $.ListOptions|raw$) error`,
-		"get":              `Get(ctx context.Context, name string, opts $.GetOptions|raw$) (*$.resultType|raw$, error)`,
-		"list":             `List(ctx context.Context, opts $.ListOptions|raw$) (*$.resultType|raw$List, error)`,
-		"watch":            `Watch(ctx context.Context, opts $.ListOptions|raw$) ($.watchInterface|raw$, error)`,
-		"patch":            `Patch(ctx context.Context, name string, pt $.PatchType|raw$, data []byte, opts $.PatchOptions|raw$, subresources ...string) (result *$.resultType|raw$, err error)`,
-	}
-	if generateApply {
-		m["apply"] = `Apply(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error)`
-		m["applyStatus"] = `// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-ApplyStatus(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error)`
+		"list":    `List(ctx context.Context, opts $.ListOptions|raw$) (*$.resultType|raw$List, error)`,
+		"watch":   `Watch(ctx context.Context, opts $.ListOptions|raw$) ($.watchInterface|raw$, error)`,
+		"cluster": `Cluster(logicalcluster.Path) $if .namespaced$$.type|public$Namespacer$else$upstreamNodeMagic$end$`,
 	}
 	return m
 }
@@ -387,6 +258,10 @@ ApplyStatus(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, 
 // group client will implement this interface.
 var getterComment = `
 // $.type|publicPlural$Getter has a method to return a $.type|public$Interface.
+// A group's client should implement this interface.`
+
+var getterClusterComment = `
+// $.type|publicPlural$ClusterGetter has a method to return a $.type|public$ClusterInterface.
 // A group's client should implement this interface.`
 
 var getterNamespaced = `
@@ -401,29 +276,26 @@ type $.type|publicPlural$Getter interface {
 }
 `
 
+var getterCluster = `
+type $.type|publicPlural$ClusterGetter interface {
+	$.type|publicPlural$() $.type|public$ClusterInterface
+}
+`
+
 // this type's interface, typed client will implement this interface.
 var interfaceTemplate1 = `
 // $.type|public$Interface has methods to work with $.type|public$ resources.
 type $.type|public$Interface interface {`
 
+// this type's interface, typed client will implement this interface.
+var interfaceClusterTemplate1 = `
+// $.type|public$ClusterInterface has methods to work with $.type|public$ resources.
+type $.type|public$ClusterInterface interface {`
+
 var interfaceTemplate4 = `
 	$.type|public$Expansion
 }
 `
-
-// struct and constructor variants
-const (
-	// The following values are bits in a bitmask.
-	// The values which can be set indicate namespace support, list support, and apply support;
-	// to make the declarations easier to read (like a truth table), corresponding zero-values
-	// are also declared.
-	namespaced    = 0
-	noList        = 0
-	noApply       = 0
-	nonNamespaced = 1 << iota
-	withList
-	withApply
-)
 
 // The following string slices are similar to maps, but with combinable keys used as indices.
 // Each entry defines whether it supports lists and/or apply, and if namespacedness matters,
@@ -436,147 +308,17 @@ const (
 // the non-namespaced variants are offset by 1.
 // Go enforces index unicity in these kinds of declarations.
 
-// struct declarations
-// Namespacedness does not matter
-var structType = []string{
-	noList | noApply: `
-	// $.type|privatePlural$ implements $.type|public$Interface
-	type $.type|privatePlural$ struct {
-		*$.Client|raw$[*$.resultType|raw$]
-	}
-	`,
-	withList | noApply: `
-	// $.type|privatePlural$ implements $.type|public$Interface
-	type $.type|privatePlural$ struct {
-		*$.ClientWithList|raw$[*$.resultType|raw$, *$.resultType|raw$List]
-	}
-	`,
-	noList | withApply: `
-	// $.type|privatePlural$ implements $.type|public$Interface
-	type $.type|privatePlural$ struct {
-		*$.ClientWithApply|raw$[*$.resultType|raw$, *$.inputApplyConfig|raw$]
-	}
-	`,
-	withList | withApply: `
-	// $.type|privatePlural$ implements $.type|public$Interface
-	type $.type|privatePlural$ struct {
-		*$.ClientWithListAndApply|raw$[*$.resultType|raw$, *$.resultType|raw$List, *$.inputApplyConfig|raw$]
-	}
-	`,
+var clusteredInterface = `
+type $.type|privatePlural$ClusterInterface struct {
+	clientCache kcpclient.Cache[*$.kcpClientCacheType$]
 }
+`
 
-// Constructors for the struct, in all variants
-// Namespacedness matters
-var newStruct = []string{
-	namespaced | noList | noApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, namespace string) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClient[*$.resultType|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				namespace,
-				func() *$.resultType|raw$ { return &$.resultType|raw${} }),
-		}
-	}
-	`,
-	namespaced | noList | withApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, namespace string) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithApply[*$.resultType|raw$, *$.inputApplyConfig|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				namespace,
-				func() *$.resultType|raw$ { return &$.resultType|raw${} }),
-		}
-	}
-	`,
-	namespaced | withList | noApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, namespace string) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithList[*$.resultType|raw$, *$.resultType|raw$List](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				namespace,
-				func() *$.resultType|raw$ { return &$.resultType|raw${} },
-				func() *$.resultType|raw$List { return &$.resultType|raw$List{} }),
-		}
-	}
-	`,
-	namespaced | withList | withApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, namespace string) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithListAndApply[*$.resultType|raw$, *$.resultType|raw$List, *$.inputApplyConfig|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				namespace,
-				func() *$.resultType|raw$ { return &$.resultType|raw${} },
-				func() *$.resultType|raw$List { return &$.resultType|raw$List{} }),
-		}
-	}
-	`,
-	nonNamespaced | noList | noApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClient[*$.resultType|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				"",
-				func() *$.resultType|raw$ { return &$.resultType|raw${} }),
-		}
-	}
-	`,
-	nonNamespaced | noList | withApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithApply[*$.resultType|raw$, *$.inputApplyConfig|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				"",
-				func() *$.resultType|raw$ { return &$.resultType|raw${} }),
-		}
-	}
-	`,
-	nonNamespaced | withList | noApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithList[*$.resultType|raw$, *$.resultType|raw$List](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				"",
-				func() *$.resultType|raw$ { return &$.resultType|raw${} },
-				func() *$.resultType|raw$List { return &$.resultType|raw$List{} }),
-		}
-	}
-	`,
-	nonNamespaced | withList | withApply: `
-	// new$.type|publicPlural$ returns a $.type|publicPlural$
-	func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client) *$.type|privatePlural$ {
-		return &$.type|privatePlural${
-			gentype.NewClientWithListAndApply[*$.resultType|raw$, *$.resultType|raw$List, *$.inputApplyConfig|raw$](
-				"$.type|resource$",
-				c.RESTClient(),
-				$.schemeParameterCodec|raw$,
-				"",
-				func() *$.resultType|raw$ { return &$.resultType|raw${} },
-				func() *$.resultType|raw$List { return &$.resultType|raw$List{} }),
-		}
-	}
-	`,
+var clusteredExternalInterface = `
+type $.type|privatePlural$ClusterInterface struct {
+	clientCache kcpclient.Cache[*$.kcpExternalClientCacheType$]
 }
+`
 
 var listTemplate = `
 // List takes label and field selectors, and returns the list of $.resultType|publicPlural$ that match those selectors.

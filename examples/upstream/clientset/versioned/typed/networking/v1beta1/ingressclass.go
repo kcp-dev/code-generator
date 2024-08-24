@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	networkingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamnetworkingv1beta1client "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 )
 
-// IngressClassesGetter has a method to return a IngressClassInterface.
+// IngressClassesClusterGetter has a method to return a IngressClassClusterInterface.
 // A group's client should implement this interface.
-type IngressClassesGetter interface {
-	IngressClasses() IngressClassInterface
+type IngressClassesClusterGetter interface {
+	IngressClasses() IngressClassClusterInterface
 }
 
-// IngressClassInterface has methods to work with IngressClass resources.
-type IngressClassInterface interface {
-	Create(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.CreateOptions) (*v1beta1.IngressClass, error)
-	Update(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.UpdateOptions) (*v1beta1.IngressClass, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.IngressClass, error)
+// IngressClassClusterInterface has methods to work with IngressClass resources.
+type IngressClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.IngressClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IngressClass, err error)
-	Apply(ctx context.Context, ingressClass *networkingv1beta1.IngressClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IngressClass, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	IngressClassExpansion
 }
 
-// ingressClasses implements IngressClassInterface
-type ingressClasses struct {
-	*gentype.ClientWithListAndApply[*v1beta1.IngressClass, *v1beta1.IngressClassList, *networkingv1beta1.IngressClassApplyConfiguration]
-}
-
-// newIngressClasses returns a IngressClasses
-func newIngressClasses(c *NetworkingV1beta1Client) *ingressClasses {
-	return &ingressClasses{
-		gentype.NewClientWithListAndApply[*v1beta1.IngressClass, *v1beta1.IngressClassList, *networkingv1beta1.IngressClassApplyConfiguration](
-			"ingressclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.IngressClass { return &v1beta1.IngressClass{} },
-			func() *v1beta1.IngressClassList { return &v1beta1.IngressClassList{} }),
-	}
+type ingressClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamnetworkingv1beta1client.NetworkingV1beta1Client]
 }

@@ -21,53 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/admissionregistration/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	admissionregistrationv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamadmissionregistrationv1alpha1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
 )
 
-// ValidatingAdmissionPoliciesGetter has a method to return a ValidatingAdmissionPolicyInterface.
+// ValidatingAdmissionPoliciesClusterGetter has a method to return a ValidatingAdmissionPolicyClusterInterface.
 // A group's client should implement this interface.
-type ValidatingAdmissionPoliciesGetter interface {
-	ValidatingAdmissionPolicies() ValidatingAdmissionPolicyInterface
+type ValidatingAdmissionPoliciesClusterGetter interface {
+	ValidatingAdmissionPolicies() ValidatingAdmissionPolicyClusterInterface
 }
 
-// ValidatingAdmissionPolicyInterface has methods to work with ValidatingAdmissionPolicy resources.
-type ValidatingAdmissionPolicyInterface interface {
-	Create(ctx context.Context, validatingAdmissionPolicy *v1alpha1.ValidatingAdmissionPolicy, opts v1.CreateOptions) (*v1alpha1.ValidatingAdmissionPolicy, error)
-	Update(ctx context.Context, validatingAdmissionPolicy *v1alpha1.ValidatingAdmissionPolicy, opts v1.UpdateOptions) (*v1alpha1.ValidatingAdmissionPolicy, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, validatingAdmissionPolicy *v1alpha1.ValidatingAdmissionPolicy, opts v1.UpdateOptions) (*v1alpha1.ValidatingAdmissionPolicy, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ValidatingAdmissionPolicy, error)
+// ValidatingAdmissionPolicyClusterInterface has methods to work with ValidatingAdmissionPolicy resources.
+type ValidatingAdmissionPolicyClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ValidatingAdmissionPolicyList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ValidatingAdmissionPolicy, err error)
-	Apply(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1alpha1.ValidatingAdmissionPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ValidatingAdmissionPolicy, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1alpha1.ValidatingAdmissionPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ValidatingAdmissionPolicy, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ValidatingAdmissionPolicyExpansion
 }
 
-// validatingAdmissionPolicies implements ValidatingAdmissionPolicyInterface
-type validatingAdmissionPolicies struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.ValidatingAdmissionPolicy, *v1alpha1.ValidatingAdmissionPolicyList, *admissionregistrationv1alpha1.ValidatingAdmissionPolicyApplyConfiguration]
-}
-
-// newValidatingAdmissionPolicies returns a ValidatingAdmissionPolicies
-func newValidatingAdmissionPolicies(c *AdmissionregistrationV1alpha1Client) *validatingAdmissionPolicies {
-	return &validatingAdmissionPolicies{
-		gentype.NewClientWithListAndApply[*v1alpha1.ValidatingAdmissionPolicy, *v1alpha1.ValidatingAdmissionPolicyList, *admissionregistrationv1alpha1.ValidatingAdmissionPolicyApplyConfiguration](
-			"validatingadmissionpolicies",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.ValidatingAdmissionPolicy { return &v1alpha1.ValidatingAdmissionPolicy{} },
-			func() *v1alpha1.ValidatingAdmissionPolicyList { return &v1alpha1.ValidatingAdmissionPolicyList{} }),
-	}
+type validatingAdmissionPoliciesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1alpha1client.AdmissionregistrationV1alpha1Client]
 }

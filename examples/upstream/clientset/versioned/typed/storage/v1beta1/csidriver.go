@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 )
 
-// CSIDriversGetter has a method to return a CSIDriverInterface.
+// CSIDriversClusterGetter has a method to return a CSIDriverClusterInterface.
 // A group's client should implement this interface.
-type CSIDriversGetter interface {
-	CSIDrivers() CSIDriverInterface
+type CSIDriversClusterGetter interface {
+	CSIDrivers() CSIDriverClusterInterface
 }
 
-// CSIDriverInterface has methods to work with CSIDriver resources.
-type CSIDriverInterface interface {
-	Create(ctx context.Context, cSIDriver *v1beta1.CSIDriver, opts v1.CreateOptions) (*v1beta1.CSIDriver, error)
-	Update(ctx context.Context, cSIDriver *v1beta1.CSIDriver, opts v1.UpdateOptions) (*v1beta1.CSIDriver, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CSIDriver, error)
+// CSIDriverClusterInterface has methods to work with CSIDriver resources.
+type CSIDriverClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CSIDriverList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSIDriver, err error)
-	Apply(ctx context.Context, cSIDriver *storagev1beta1.CSIDriverApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CSIDriver, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	CSIDriverExpansion
 }
 
-// cSIDrivers implements CSIDriverInterface
-type cSIDrivers struct {
-	*gentype.ClientWithListAndApply[*v1beta1.CSIDriver, *v1beta1.CSIDriverList, *storagev1beta1.CSIDriverApplyConfiguration]
-}
-
-// newCSIDrivers returns a CSIDrivers
-func newCSIDrivers(c *StorageV1beta1Client) *cSIDrivers {
-	return &cSIDrivers{
-		gentype.NewClientWithListAndApply[*v1beta1.CSIDriver, *v1beta1.CSIDriverList, *storagev1beta1.CSIDriverApplyConfiguration](
-			"csidrivers",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.CSIDriver { return &v1beta1.CSIDriver{} },
-			func() *v1beta1.CSIDriverList { return &v1beta1.CSIDriverList{} }),
-	}
+type cSIDriversClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
 }

@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// EventsGetter has a method to return a EventInterface.
+// EventsClusterGetter has a method to return a EventClusterInterface.
 // A group's client should implement this interface.
-type EventsGetter interface {
-	Events(namespace string) EventInterface
+type EventsClusterGetter interface {
+	Events() EventClusterInterface
 }
 
-// EventInterface has methods to work with Event resources.
-type EventInterface interface {
-	Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error)
-	Update(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Event, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.EventList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Event, err error)
-	Apply(ctx context.Context, event *corev1.EventApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Event, err error)
+// EventClusterInterface has methods to work with Event resources.
+type EventClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*corev1.EventList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) EventNamespacer
 	EventExpansion
 }
 
-// events implements EventInterface
-type events struct {
-	*gentype.ClientWithListAndApply[*v1.Event, *v1.EventList, *corev1.EventApplyConfiguration]
-}
-
-// newEvents returns a Events
-func newEvents(c *CoreV1Client, namespace string) *events {
-	return &events{
-		gentype.NewClientWithListAndApply[*v1.Event, *v1.EventList, *corev1.EventApplyConfiguration](
-			"events",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.Event { return &v1.Event{} },
-			func() *v1.EventList { return &v1.EventList{} }),
-	}
+type eventsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }

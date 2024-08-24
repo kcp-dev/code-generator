@@ -21,53 +21,28 @@ package v2
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	autoscalingv2 "k8s.io/code-generator/examples/upstream/applyconfiguration/autoscaling/v2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamautoscalingv2client "k8s.io/client-go/kubernetes/typed/autoscaling/v2"
 )
 
-// HorizontalPodAutoscalersGetter has a method to return a HorizontalPodAutoscalerInterface.
+// HorizontalPodAutoscalersClusterGetter has a method to return a HorizontalPodAutoscalerClusterInterface.
 // A group's client should implement this interface.
-type HorizontalPodAutoscalersGetter interface {
-	HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerInterface
+type HorizontalPodAutoscalersClusterGetter interface {
+	HorizontalPodAutoscalers() HorizontalPodAutoscalerClusterInterface
 }
 
-// HorizontalPodAutoscalerInterface has methods to work with HorizontalPodAutoscaler resources.
-type HorizontalPodAutoscalerInterface interface {
-	Create(ctx context.Context, horizontalPodAutoscaler *v2.HorizontalPodAutoscaler, opts v1.CreateOptions) (*v2.HorizontalPodAutoscaler, error)
-	Update(ctx context.Context, horizontalPodAutoscaler *v2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*v2.HorizontalPodAutoscaler, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, horizontalPodAutoscaler *v2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*v2.HorizontalPodAutoscaler, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v2.HorizontalPodAutoscaler, error)
+// HorizontalPodAutoscalerClusterInterface has methods to work with HorizontalPodAutoscaler resources.
+type HorizontalPodAutoscalerClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v2.HorizontalPodAutoscalerList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v2.HorizontalPodAutoscaler, err error)
-	Apply(ctx context.Context, horizontalPodAutoscaler *autoscalingv2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2.HorizontalPodAutoscaler, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, horizontalPodAutoscaler *autoscalingv2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2.HorizontalPodAutoscaler, err error)
+	Cluster(logicalcluster.Path) HorizontalPodAutoscalerNamespacer
 	HorizontalPodAutoscalerExpansion
 }
 
-// horizontalPodAutoscalers implements HorizontalPodAutoscalerInterface
-type horizontalPodAutoscalers struct {
-	*gentype.ClientWithListAndApply[*v2.HorizontalPodAutoscaler, *v2.HorizontalPodAutoscalerList, *autoscalingv2.HorizontalPodAutoscalerApplyConfiguration]
-}
-
-// newHorizontalPodAutoscalers returns a HorizontalPodAutoscalers
-func newHorizontalPodAutoscalers(c *AutoscalingV2Client, namespace string) *horizontalPodAutoscalers {
-	return &horizontalPodAutoscalers{
-		gentype.NewClientWithListAndApply[*v2.HorizontalPodAutoscaler, *v2.HorizontalPodAutoscalerList, *autoscalingv2.HorizontalPodAutoscalerApplyConfiguration](
-			"horizontalpodautoscalers",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v2.HorizontalPodAutoscaler { return &v2.HorizontalPodAutoscaler{} },
-			func() *v2.HorizontalPodAutoscalerList { return &v2.HorizontalPodAutoscalerList{} }),
-	}
+type horizontalPodAutoscalersClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamautoscalingv2client.AutoscalingV2Client]
 }

@@ -21,49 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	schedulingv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/scheduling/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamschedulingv1alpha1client "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
 )
 
-// PriorityClassesGetter has a method to return a PriorityClassInterface.
+// PriorityClassesClusterGetter has a method to return a PriorityClassClusterInterface.
 // A group's client should implement this interface.
-type PriorityClassesGetter interface {
-	PriorityClasses() PriorityClassInterface
+type PriorityClassesClusterGetter interface {
+	PriorityClasses() PriorityClassClusterInterface
 }
 
-// PriorityClassInterface has methods to work with PriorityClass resources.
-type PriorityClassInterface interface {
-	Create(ctx context.Context, priorityClass *v1alpha1.PriorityClass, opts v1.CreateOptions) (*v1alpha1.PriorityClass, error)
-	Update(ctx context.Context, priorityClass *v1alpha1.PriorityClass, opts v1.UpdateOptions) (*v1alpha1.PriorityClass, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.PriorityClass, error)
+// PriorityClassClusterInterface has methods to work with PriorityClass resources.
+type PriorityClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.PriorityClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.PriorityClass, err error)
-	Apply(ctx context.Context, priorityClass *schedulingv1alpha1.PriorityClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.PriorityClass, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	PriorityClassExpansion
 }
 
-// priorityClasses implements PriorityClassInterface
-type priorityClasses struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.PriorityClass, *v1alpha1.PriorityClassList, *schedulingv1alpha1.PriorityClassApplyConfiguration]
-}
-
-// newPriorityClasses returns a PriorityClasses
-func newPriorityClasses(c *SchedulingV1alpha1Client) *priorityClasses {
-	return &priorityClasses{
-		gentype.NewClientWithListAndApply[*v1alpha1.PriorityClass, *v1alpha1.PriorityClassList, *schedulingv1alpha1.PriorityClassApplyConfiguration](
-			"priorityclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.PriorityClass { return &v1alpha1.PriorityClass{} },
-			func() *v1alpha1.PriorityClassList { return &v1alpha1.PriorityClassList{} }),
-	}
+type priorityClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamschedulingv1alpha1client.SchedulingV1alpha1Client]
 }

@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/admissionregistration/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	admissionregistrationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamadmissionregistrationv1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 )
 
-// MutatingWebhookConfigurationsGetter has a method to return a MutatingWebhookConfigurationInterface.
+// MutatingWebhookConfigurationsClusterGetter has a method to return a MutatingWebhookConfigurationClusterInterface.
 // A group's client should implement this interface.
-type MutatingWebhookConfigurationsGetter interface {
-	MutatingWebhookConfigurations() MutatingWebhookConfigurationInterface
+type MutatingWebhookConfigurationsClusterGetter interface {
+	MutatingWebhookConfigurations() MutatingWebhookConfigurationClusterInterface
 }
 
-// MutatingWebhookConfigurationInterface has methods to work with MutatingWebhookConfiguration resources.
-type MutatingWebhookConfigurationInterface interface {
-	Create(ctx context.Context, mutatingWebhookConfiguration *v1.MutatingWebhookConfiguration, opts metav1.CreateOptions) (*v1.MutatingWebhookConfiguration, error)
-	Update(ctx context.Context, mutatingWebhookConfiguration *v1.MutatingWebhookConfiguration, opts metav1.UpdateOptions) (*v1.MutatingWebhookConfiguration, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.MutatingWebhookConfiguration, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.MutatingWebhookConfigurationList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.MutatingWebhookConfiguration, err error)
-	Apply(ctx context.Context, mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (result *v1.MutatingWebhookConfiguration, err error)
+// MutatingWebhookConfigurationClusterInterface has methods to work with MutatingWebhookConfiguration resources.
+type MutatingWebhookConfigurationClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*admissionregistrationv1.MutatingWebhookConfigurationList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	MutatingWebhookConfigurationExpansion
 }
 
-// mutatingWebhookConfigurations implements MutatingWebhookConfigurationInterface
-type mutatingWebhookConfigurations struct {
-	*gentype.ClientWithListAndApply[*v1.MutatingWebhookConfiguration, *v1.MutatingWebhookConfigurationList, *admissionregistrationv1.MutatingWebhookConfigurationApplyConfiguration]
-}
-
-// newMutatingWebhookConfigurations returns a MutatingWebhookConfigurations
-func newMutatingWebhookConfigurations(c *AdmissionregistrationV1Client) *mutatingWebhookConfigurations {
-	return &mutatingWebhookConfigurations{
-		gentype.NewClientWithListAndApply[*v1.MutatingWebhookConfiguration, *v1.MutatingWebhookConfigurationList, *admissionregistrationv1.MutatingWebhookConfigurationApplyConfiguration](
-			"mutatingwebhookconfigurations",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.MutatingWebhookConfiguration { return &v1.MutatingWebhookConfiguration{} },
-			func() *v1.MutatingWebhookConfigurationList { return &v1.MutatingWebhookConfigurationList{} }),
-	}
+type mutatingWebhookConfigurationsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1client.AdmissionregistrationV1Client]
 }

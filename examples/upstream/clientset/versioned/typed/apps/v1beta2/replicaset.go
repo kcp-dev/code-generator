@@ -21,53 +21,28 @@ package v1beta2
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 )
 
-// ReplicaSetsGetter has a method to return a ReplicaSetInterface.
+// ReplicaSetsClusterGetter has a method to return a ReplicaSetClusterInterface.
 // A group's client should implement this interface.
-type ReplicaSetsGetter interface {
-	ReplicaSets(namespace string) ReplicaSetInterface
+type ReplicaSetsClusterGetter interface {
+	ReplicaSets() ReplicaSetClusterInterface
 }
 
-// ReplicaSetInterface has methods to work with ReplicaSet resources.
-type ReplicaSetInterface interface {
-	Create(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.CreateOptions) (*v1beta2.ReplicaSet, error)
-	Update(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (*v1beta2.ReplicaSet, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (*v1beta2.ReplicaSet, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.ReplicaSet, error)
+// ReplicaSetClusterInterface has methods to work with ReplicaSet resources.
+type ReplicaSetClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta2.ReplicaSetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.ReplicaSet, err error)
-	Apply(ctx context.Context, replicaSet *appsv1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.ReplicaSet, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, replicaSet *appsv1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.ReplicaSet, err error)
+	Cluster(logicalcluster.Path) ReplicaSetNamespacer
 	ReplicaSetExpansion
 }
 
-// replicaSets implements ReplicaSetInterface
-type replicaSets struct {
-	*gentype.ClientWithListAndApply[*v1beta2.ReplicaSet, *v1beta2.ReplicaSetList, *appsv1beta2.ReplicaSetApplyConfiguration]
-}
-
-// newReplicaSets returns a ReplicaSets
-func newReplicaSets(c *AppsV1beta2Client, namespace string) *replicaSets {
-	return &replicaSets{
-		gentype.NewClientWithListAndApply[*v1beta2.ReplicaSet, *v1beta2.ReplicaSetList, *appsv1beta2.ReplicaSetApplyConfiguration](
-			"replicasets",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta2.ReplicaSet { return &v1beta2.ReplicaSet{} },
-			func() *v1beta2.ReplicaSetList { return &v1beta2.ReplicaSetList{} }),
-	}
+type replicaSetsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
 }

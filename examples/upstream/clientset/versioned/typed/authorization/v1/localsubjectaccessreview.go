@@ -19,39 +19,21 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
-	v1 "k8s.io/api/authorization/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamauthorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 )
 
-// LocalSubjectAccessReviewsGetter has a method to return a LocalSubjectAccessReviewInterface.
+// LocalSubjectAccessReviewsClusterGetter has a method to return a LocalSubjectAccessReviewClusterInterface.
 // A group's client should implement this interface.
-type LocalSubjectAccessReviewsGetter interface {
-	LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface
+type LocalSubjectAccessReviewsClusterGetter interface {
+	LocalSubjectAccessReviews() LocalSubjectAccessReviewClusterInterface
 }
 
-// LocalSubjectAccessReviewInterface has methods to work with LocalSubjectAccessReview resources.
-type LocalSubjectAccessReviewInterface interface {
-	Create(ctx context.Context, localSubjectAccessReview *v1.LocalSubjectAccessReview, opts metav1.CreateOptions) (*v1.LocalSubjectAccessReview, error)
+// LocalSubjectAccessReviewClusterInterface has methods to work with LocalSubjectAccessReview resources.
+type LocalSubjectAccessReviewClusterInterface interface {
 	LocalSubjectAccessReviewExpansion
 }
 
-// localSubjectAccessReviews implements LocalSubjectAccessReviewInterface
-type localSubjectAccessReviews struct {
-	*gentype.Client[*v1.LocalSubjectAccessReview]
-}
-
-// newLocalSubjectAccessReviews returns a LocalSubjectAccessReviews
-func newLocalSubjectAccessReviews(c *AuthorizationV1Client, namespace string) *localSubjectAccessReviews {
-	return &localSubjectAccessReviews{
-		gentype.NewClient[*v1.LocalSubjectAccessReview](
-			"localsubjectaccessreviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1.LocalSubjectAccessReview { return &v1.LocalSubjectAccessReview{} }),
-	}
+type localSubjectAccessReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamauthorizationv1client.AuthorizationV1Client]
 }

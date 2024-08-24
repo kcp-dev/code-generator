@@ -21,53 +21,28 @@ package v1beta2
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/flowcontrol/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	flowcontrolv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/flowcontrol/v1beta2"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamflowcontrolv1beta2client "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
 )
 
-// PriorityLevelConfigurationsGetter has a method to return a PriorityLevelConfigurationInterface.
+// PriorityLevelConfigurationsClusterGetter has a method to return a PriorityLevelConfigurationClusterInterface.
 // A group's client should implement this interface.
-type PriorityLevelConfigurationsGetter interface {
-	PriorityLevelConfigurations() PriorityLevelConfigurationInterface
+type PriorityLevelConfigurationsClusterGetter interface {
+	PriorityLevelConfigurations() PriorityLevelConfigurationClusterInterface
 }
 
-// PriorityLevelConfigurationInterface has methods to work with PriorityLevelConfiguration resources.
-type PriorityLevelConfigurationInterface interface {
-	Create(ctx context.Context, priorityLevelConfiguration *v1beta2.PriorityLevelConfiguration, opts v1.CreateOptions) (*v1beta2.PriorityLevelConfiguration, error)
-	Update(ctx context.Context, priorityLevelConfiguration *v1beta2.PriorityLevelConfiguration, opts v1.UpdateOptions) (*v1beta2.PriorityLevelConfiguration, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, priorityLevelConfiguration *v1beta2.PriorityLevelConfiguration, opts v1.UpdateOptions) (*v1beta2.PriorityLevelConfiguration, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.PriorityLevelConfiguration, error)
+// PriorityLevelConfigurationClusterInterface has methods to work with PriorityLevelConfiguration resources.
+type PriorityLevelConfigurationClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta2.PriorityLevelConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.PriorityLevelConfiguration, err error)
-	Apply(ctx context.Context, priorityLevelConfiguration *flowcontrolv1beta2.PriorityLevelConfigurationApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.PriorityLevelConfiguration, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, priorityLevelConfiguration *flowcontrolv1beta2.PriorityLevelConfigurationApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.PriorityLevelConfiguration, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	PriorityLevelConfigurationExpansion
 }
 
-// priorityLevelConfigurations implements PriorityLevelConfigurationInterface
-type priorityLevelConfigurations struct {
-	*gentype.ClientWithListAndApply[*v1beta2.PriorityLevelConfiguration, *v1beta2.PriorityLevelConfigurationList, *flowcontrolv1beta2.PriorityLevelConfigurationApplyConfiguration]
-}
-
-// newPriorityLevelConfigurations returns a PriorityLevelConfigurations
-func newPriorityLevelConfigurations(c *FlowcontrolV1beta2Client) *priorityLevelConfigurations {
-	return &priorityLevelConfigurations{
-		gentype.NewClientWithListAndApply[*v1beta2.PriorityLevelConfiguration, *v1beta2.PriorityLevelConfigurationList, *flowcontrolv1beta2.PriorityLevelConfigurationApplyConfiguration](
-			"prioritylevelconfigurations",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta2.PriorityLevelConfiguration { return &v1beta2.PriorityLevelConfiguration{} },
-			func() *v1beta2.PriorityLevelConfigurationList { return &v1beta2.PriorityLevelConfigurationList{} }),
-	}
+type priorityLevelConfigurationsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamflowcontrolv1beta2client.FlowcontrolV1beta2Client]
 }

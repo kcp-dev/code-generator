@@ -21,53 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/policy/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	policyv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/policy/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreampolicyv1beta1client "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 )
 
-// PodDisruptionBudgetsGetter has a method to return a PodDisruptionBudgetInterface.
+// PodDisruptionBudgetsClusterGetter has a method to return a PodDisruptionBudgetClusterInterface.
 // A group's client should implement this interface.
-type PodDisruptionBudgetsGetter interface {
-	PodDisruptionBudgets(namespace string) PodDisruptionBudgetInterface
+type PodDisruptionBudgetsClusterGetter interface {
+	PodDisruptionBudgets() PodDisruptionBudgetClusterInterface
 }
 
-// PodDisruptionBudgetInterface has methods to work with PodDisruptionBudget resources.
-type PodDisruptionBudgetInterface interface {
-	Create(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.CreateOptions) (*v1beta1.PodDisruptionBudget, error)
-	Update(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*v1beta1.PodDisruptionBudget, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*v1beta1.PodDisruptionBudget, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.PodDisruptionBudget, error)
+// PodDisruptionBudgetClusterInterface has methods to work with PodDisruptionBudget resources.
+type PodDisruptionBudgetClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.PodDisruptionBudgetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PodDisruptionBudget, err error)
-	Apply(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error)
+	Cluster(logicalcluster.Path) PodDisruptionBudgetNamespacer
 	PodDisruptionBudgetExpansion
 }
 
-// podDisruptionBudgets implements PodDisruptionBudgetInterface
-type podDisruptionBudgets struct {
-	*gentype.ClientWithListAndApply[*v1beta1.PodDisruptionBudget, *v1beta1.PodDisruptionBudgetList, *policyv1beta1.PodDisruptionBudgetApplyConfiguration]
-}
-
-// newPodDisruptionBudgets returns a PodDisruptionBudgets
-func newPodDisruptionBudgets(c *PolicyV1beta1Client, namespace string) *podDisruptionBudgets {
-	return &podDisruptionBudgets{
-		gentype.NewClientWithListAndApply[*v1beta1.PodDisruptionBudget, *v1beta1.PodDisruptionBudgetList, *policyv1beta1.PodDisruptionBudgetApplyConfiguration](
-			"poddisruptionbudgets",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1beta1.PodDisruptionBudget { return &v1beta1.PodDisruptionBudget{} },
-			func() *v1beta1.PodDisruptionBudgetList { return &v1beta1.PodDisruptionBudgetList{} }),
-	}
+type podDisruptionBudgetsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreampolicyv1beta1client.PolicyV1beta1Client]
 }

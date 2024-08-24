@@ -21,49 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/networking/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	networkingv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamnetworkingv1alpha1client "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 )
 
-// IPAddressesGetter has a method to return a IPAddressInterface.
+// IPAddressesClusterGetter has a method to return a IPAddressClusterInterface.
 // A group's client should implement this interface.
-type IPAddressesGetter interface {
-	IPAddresses() IPAddressInterface
+type IPAddressesClusterGetter interface {
+	IPAddresses() IPAddressClusterInterface
 }
 
-// IPAddressInterface has methods to work with IPAddress resources.
-type IPAddressInterface interface {
-	Create(ctx context.Context, iPAddress *v1alpha1.IPAddress, opts v1.CreateOptions) (*v1alpha1.IPAddress, error)
-	Update(ctx context.Context, iPAddress *v1alpha1.IPAddress, opts v1.UpdateOptions) (*v1alpha1.IPAddress, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.IPAddress, error)
+// IPAddressClusterInterface has methods to work with IPAddress resources.
+type IPAddressClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.IPAddressList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IPAddress, err error)
-	Apply(ctx context.Context, iPAddress *networkingv1alpha1.IPAddressApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.IPAddress, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	IPAddressExpansion
 }
 
-// iPAddresses implements IPAddressInterface
-type iPAddresses struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.IPAddress, *v1alpha1.IPAddressList, *networkingv1alpha1.IPAddressApplyConfiguration]
-}
-
-// newIPAddresses returns a IPAddresses
-func newIPAddresses(c *NetworkingV1alpha1Client) *iPAddresses {
-	return &iPAddresses{
-		gentype.NewClientWithListAndApply[*v1alpha1.IPAddress, *v1alpha1.IPAddressList, *networkingv1alpha1.IPAddressApplyConfiguration](
-			"ipaddresses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.IPAddress { return &v1alpha1.IPAddress{} },
-			func() *v1alpha1.IPAddressList { return &v1alpha1.IPAddressList{} }),
-	}
+type iPAddressesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamnetworkingv1alpha1client.NetworkingV1alpha1Client]
 }

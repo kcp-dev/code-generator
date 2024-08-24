@@ -19,39 +19,21 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
-	v1beta1 "k8s.io/api/authorization/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamauthorizationv1beta1client "k8s.io/client-go/kubernetes/typed/authorization/v1beta1"
 )
 
-// SelfSubjectAccessReviewsGetter has a method to return a SelfSubjectAccessReviewInterface.
+// SelfSubjectAccessReviewsClusterGetter has a method to return a SelfSubjectAccessReviewClusterInterface.
 // A group's client should implement this interface.
-type SelfSubjectAccessReviewsGetter interface {
-	SelfSubjectAccessReviews() SelfSubjectAccessReviewInterface
+type SelfSubjectAccessReviewsClusterGetter interface {
+	SelfSubjectAccessReviews() SelfSubjectAccessReviewClusterInterface
 }
 
-// SelfSubjectAccessReviewInterface has methods to work with SelfSubjectAccessReview resources.
-type SelfSubjectAccessReviewInterface interface {
-	Create(ctx context.Context, selfSubjectAccessReview *v1beta1.SelfSubjectAccessReview, opts v1.CreateOptions) (*v1beta1.SelfSubjectAccessReview, error)
+// SelfSubjectAccessReviewClusterInterface has methods to work with SelfSubjectAccessReview resources.
+type SelfSubjectAccessReviewClusterInterface interface {
 	SelfSubjectAccessReviewExpansion
 }
 
-// selfSubjectAccessReviews implements SelfSubjectAccessReviewInterface
-type selfSubjectAccessReviews struct {
-	*gentype.Client[*v1beta1.SelfSubjectAccessReview]
-}
-
-// newSelfSubjectAccessReviews returns a SelfSubjectAccessReviews
-func newSelfSubjectAccessReviews(c *AuthorizationV1beta1Client) *selfSubjectAccessReviews {
-	return &selfSubjectAccessReviews{
-		gentype.NewClient[*v1beta1.SelfSubjectAccessReview](
-			"selfsubjectaccessreviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.SelfSubjectAccessReview { return &v1beta1.SelfSubjectAccessReview{} }),
-	}
+type selfSubjectAccessReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamauthorizationv1beta1client.AuthorizationV1beta1Client]
 }

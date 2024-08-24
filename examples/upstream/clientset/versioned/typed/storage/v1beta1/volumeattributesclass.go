@@ -21,49 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 )
 
-// VolumeAttributesClassesGetter has a method to return a VolumeAttributesClassInterface.
+// VolumeAttributesClassesClusterGetter has a method to return a VolumeAttributesClassClusterInterface.
 // A group's client should implement this interface.
-type VolumeAttributesClassesGetter interface {
-	VolumeAttributesClasses() VolumeAttributesClassInterface
+type VolumeAttributesClassesClusterGetter interface {
+	VolumeAttributesClasses() VolumeAttributesClassClusterInterface
 }
 
-// VolumeAttributesClassInterface has methods to work with VolumeAttributesClass resources.
-type VolumeAttributesClassInterface interface {
-	Create(ctx context.Context, volumeAttributesClass *v1beta1.VolumeAttributesClass, opts v1.CreateOptions) (*v1beta1.VolumeAttributesClass, error)
-	Update(ctx context.Context, volumeAttributesClass *v1beta1.VolumeAttributesClass, opts v1.UpdateOptions) (*v1beta1.VolumeAttributesClass, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.VolumeAttributesClass, error)
+// VolumeAttributesClassClusterInterface has methods to work with VolumeAttributesClass resources.
+type VolumeAttributesClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.VolumeAttributesClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.VolumeAttributesClass, err error)
-	Apply(ctx context.Context, volumeAttributesClass *storagev1beta1.VolumeAttributesClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.VolumeAttributesClass, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	VolumeAttributesClassExpansion
 }
 
-// volumeAttributesClasses implements VolumeAttributesClassInterface
-type volumeAttributesClasses struct {
-	*gentype.ClientWithListAndApply[*v1beta1.VolumeAttributesClass, *v1beta1.VolumeAttributesClassList, *storagev1beta1.VolumeAttributesClassApplyConfiguration]
-}
-
-// newVolumeAttributesClasses returns a VolumeAttributesClasses
-func newVolumeAttributesClasses(c *StorageV1beta1Client) *volumeAttributesClasses {
-	return &volumeAttributesClasses{
-		gentype.NewClientWithListAndApply[*v1beta1.VolumeAttributesClass, *v1beta1.VolumeAttributesClassList, *storagev1beta1.VolumeAttributesClassApplyConfiguration](
-			"volumeattributesclasses",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.VolumeAttributesClass { return &v1beta1.VolumeAttributesClass{} },
-			func() *v1beta1.VolumeAttributesClassList { return &v1beta1.VolumeAttributesClassList{} }),
-	}
+type volumeAttributesClassesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
 }

@@ -19,39 +19,21 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
-	v1 "k8s.io/api/authorization/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gentype "k8s.io/client-go/gentype"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	upstreamauthorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 )
 
-// SubjectAccessReviewsGetter has a method to return a SubjectAccessReviewInterface.
+// SubjectAccessReviewsClusterGetter has a method to return a SubjectAccessReviewClusterInterface.
 // A group's client should implement this interface.
-type SubjectAccessReviewsGetter interface {
-	SubjectAccessReviews() SubjectAccessReviewInterface
+type SubjectAccessReviewsClusterGetter interface {
+	SubjectAccessReviews() SubjectAccessReviewClusterInterface
 }
 
-// SubjectAccessReviewInterface has methods to work with SubjectAccessReview resources.
-type SubjectAccessReviewInterface interface {
-	Create(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.CreateOptions) (*v1.SubjectAccessReview, error)
+// SubjectAccessReviewClusterInterface has methods to work with SubjectAccessReview resources.
+type SubjectAccessReviewClusterInterface interface {
 	SubjectAccessReviewExpansion
 }
 
-// subjectAccessReviews implements SubjectAccessReviewInterface
-type subjectAccessReviews struct {
-	*gentype.Client[*v1.SubjectAccessReview]
-}
-
-// newSubjectAccessReviews returns a SubjectAccessReviews
-func newSubjectAccessReviews(c *AuthorizationV1Client) *subjectAccessReviews {
-	return &subjectAccessReviews{
-		gentype.NewClient[*v1.SubjectAccessReview](
-			"subjectaccessreviews",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.SubjectAccessReview { return &v1.SubjectAccessReview{} }),
-	}
+type subjectAccessReviewsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamauthorizationv1client.AuthorizationV1Client]
 }

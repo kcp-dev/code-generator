@@ -21,53 +21,28 @@ package v1beta1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 )
 
-// VolumeAttachmentsGetter has a method to return a VolumeAttachmentInterface.
+// VolumeAttachmentsClusterGetter has a method to return a VolumeAttachmentClusterInterface.
 // A group's client should implement this interface.
-type VolumeAttachmentsGetter interface {
-	VolumeAttachments() VolumeAttachmentInterface
+type VolumeAttachmentsClusterGetter interface {
+	VolumeAttachments() VolumeAttachmentClusterInterface
 }
 
-// VolumeAttachmentInterface has methods to work with VolumeAttachment resources.
-type VolumeAttachmentInterface interface {
-	Create(ctx context.Context, volumeAttachment *v1beta1.VolumeAttachment, opts v1.CreateOptions) (*v1beta1.VolumeAttachment, error)
-	Update(ctx context.Context, volumeAttachment *v1beta1.VolumeAttachment, opts v1.UpdateOptions) (*v1beta1.VolumeAttachment, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, volumeAttachment *v1beta1.VolumeAttachment, opts v1.UpdateOptions) (*v1beta1.VolumeAttachment, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.VolumeAttachment, error)
+// VolumeAttachmentClusterInterface has methods to work with VolumeAttachment resources.
+type VolumeAttachmentClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.VolumeAttachmentList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.VolumeAttachment, err error)
-	Apply(ctx context.Context, volumeAttachment *storagev1beta1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.VolumeAttachment, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, volumeAttachment *storagev1beta1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.VolumeAttachment, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	VolumeAttachmentExpansion
 }
 
-// volumeAttachments implements VolumeAttachmentInterface
-type volumeAttachments struct {
-	*gentype.ClientWithListAndApply[*v1beta1.VolumeAttachment, *v1beta1.VolumeAttachmentList, *storagev1beta1.VolumeAttachmentApplyConfiguration]
-}
-
-// newVolumeAttachments returns a VolumeAttachments
-func newVolumeAttachments(c *StorageV1beta1Client) *volumeAttachments {
-	return &volumeAttachments{
-		gentype.NewClientWithListAndApply[*v1beta1.VolumeAttachment, *v1beta1.VolumeAttachmentList, *storagev1beta1.VolumeAttachmentApplyConfiguration](
-			"volumeattachments",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1beta1.VolumeAttachment { return &v1beta1.VolumeAttachment{} },
-			func() *v1beta1.VolumeAttachmentList { return &v1beta1.VolumeAttachmentList{} }),
-	}
+type volumeAttachmentsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
 }

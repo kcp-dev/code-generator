@@ -21,53 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	apiserverinternalv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apiserverinternal/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreaminternalv1alpha1client "k8s.io/client-go/kubernetes/typed/internal/v1alpha1"
 )
 
-// StorageVersionsGetter has a method to return a StorageVersionInterface.
+// StorageVersionsClusterGetter has a method to return a StorageVersionClusterInterface.
 // A group's client should implement this interface.
-type StorageVersionsGetter interface {
-	StorageVersions() StorageVersionInterface
+type StorageVersionsClusterGetter interface {
+	StorageVersions() StorageVersionClusterInterface
 }
 
-// StorageVersionInterface has methods to work with StorageVersion resources.
-type StorageVersionInterface interface {
-	Create(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.CreateOptions) (*v1alpha1.StorageVersion, error)
-	Update(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (*v1alpha1.StorageVersion, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (*v1alpha1.StorageVersion, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.StorageVersion, error)
+// StorageVersionClusterInterface has methods to work with StorageVersion resources.
+type StorageVersionClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.StorageVersionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersion, err error)
-	Apply(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	StorageVersionExpansion
 }
 
-// storageVersions implements StorageVersionInterface
-type storageVersions struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.StorageVersion, *v1alpha1.StorageVersionList, *apiserverinternalv1alpha1.StorageVersionApplyConfiguration]
-}
-
-// newStorageVersions returns a StorageVersions
-func newStorageVersions(c *InternalV1alpha1Client) *storageVersions {
-	return &storageVersions{
-		gentype.NewClientWithListAndApply[*v1alpha1.StorageVersion, *v1alpha1.StorageVersionList, *apiserverinternalv1alpha1.StorageVersionApplyConfiguration](
-			"storageversions",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.StorageVersion { return &v1alpha1.StorageVersion{} },
-			func() *v1alpha1.StorageVersionList { return &v1alpha1.StorageVersionList{} }),
-	}
+type storageVersionsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreaminternalv1alpha1client.InternalV1alpha1Client]
 }

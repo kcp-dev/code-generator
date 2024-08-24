@@ -21,49 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	storagev1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamstoragev1alpha1client "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 )
 
-// CSIStorageCapacitiesGetter has a method to return a CSIStorageCapacityInterface.
+// CSIStorageCapacitiesClusterGetter has a method to return a CSIStorageCapacityClusterInterface.
 // A group's client should implement this interface.
-type CSIStorageCapacitiesGetter interface {
-	CSIStorageCapacities(namespace string) CSIStorageCapacityInterface
+type CSIStorageCapacitiesClusterGetter interface {
+	CSIStorageCapacities() CSIStorageCapacityClusterInterface
 }
 
-// CSIStorageCapacityInterface has methods to work with CSIStorageCapacity resources.
-type CSIStorageCapacityInterface interface {
-	Create(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacity, opts v1.CreateOptions) (*v1alpha1.CSIStorageCapacity, error)
-	Update(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacity, opts v1.UpdateOptions) (*v1alpha1.CSIStorageCapacity, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.CSIStorageCapacity, error)
+// CSIStorageCapacityClusterInterface has methods to work with CSIStorageCapacity resources.
+type CSIStorageCapacityClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.CSIStorageCapacityList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.CSIStorageCapacity, err error)
-	Apply(ctx context.Context, cSIStorageCapacity *storagev1alpha1.CSIStorageCapacityApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.CSIStorageCapacity, err error)
+	Cluster(logicalcluster.Path) CSIStorageCapacityNamespacer
 	CSIStorageCapacityExpansion
 }
 
-// cSIStorageCapacities implements CSIStorageCapacityInterface
-type cSIStorageCapacities struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.CSIStorageCapacity, *v1alpha1.CSIStorageCapacityList, *storagev1alpha1.CSIStorageCapacityApplyConfiguration]
-}
-
-// newCSIStorageCapacities returns a CSIStorageCapacities
-func newCSIStorageCapacities(c *StorageV1alpha1Client, namespace string) *cSIStorageCapacities {
-	return &cSIStorageCapacities{
-		gentype.NewClientWithListAndApply[*v1alpha1.CSIStorageCapacity, *v1alpha1.CSIStorageCapacityList, *storagev1alpha1.CSIStorageCapacityApplyConfiguration](
-			"csistoragecapacities",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			namespace,
-			func() *v1alpha1.CSIStorageCapacity { return &v1alpha1.CSIStorageCapacity{} },
-			func() *v1alpha1.CSIStorageCapacityList { return &v1alpha1.CSIStorageCapacityList{} }),
-	}
+type cSIStorageCapacitiesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1alpha1client.StorageV1alpha1Client]
 }

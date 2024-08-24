@@ -21,49 +21,28 @@ package v1
 import (
 	"context"
 
-	v1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	rbacv1 "k8s.io/api/rbac/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	rbacv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamrbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 )
 
-// ClusterRoleBindingsGetter has a method to return a ClusterRoleBindingInterface.
+// ClusterRoleBindingsClusterGetter has a method to return a ClusterRoleBindingClusterInterface.
 // A group's client should implement this interface.
-type ClusterRoleBindingsGetter interface {
-	ClusterRoleBindings() ClusterRoleBindingInterface
+type ClusterRoleBindingsClusterGetter interface {
+	ClusterRoleBindings() ClusterRoleBindingClusterInterface
 }
 
-// ClusterRoleBindingInterface has methods to work with ClusterRoleBinding resources.
-type ClusterRoleBindingInterface interface {
-	Create(ctx context.Context, clusterRoleBinding *v1.ClusterRoleBinding, opts metav1.CreateOptions) (*v1.ClusterRoleBinding, error)
-	Update(ctx context.Context, clusterRoleBinding *v1.ClusterRoleBinding, opts metav1.UpdateOptions) (*v1.ClusterRoleBinding, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ClusterRoleBinding, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterRoleBindingList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ClusterRoleBinding, err error)
-	Apply(ctx context.Context, clusterRoleBinding *rbacv1.ClusterRoleBindingApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ClusterRoleBinding, err error)
+// ClusterRoleBindingClusterInterface has methods to work with ClusterRoleBinding resources.
+type ClusterRoleBindingClusterInterface interface {
+	List(ctx context.Context, opts v1.ListOptions) (*rbacv1.ClusterRoleBindingList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ClusterRoleBindingExpansion
 }
 
-// clusterRoleBindings implements ClusterRoleBindingInterface
-type clusterRoleBindings struct {
-	*gentype.ClientWithListAndApply[*v1.ClusterRoleBinding, *v1.ClusterRoleBindingList, *rbacv1.ClusterRoleBindingApplyConfiguration]
-}
-
-// newClusterRoleBindings returns a ClusterRoleBindings
-func newClusterRoleBindings(c *RbacV1Client) *clusterRoleBindings {
-	return &clusterRoleBindings{
-		gentype.NewClientWithListAndApply[*v1.ClusterRoleBinding, *v1.ClusterRoleBindingList, *rbacv1.ClusterRoleBindingApplyConfiguration](
-			"clusterrolebindings",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1.ClusterRoleBinding { return &v1.ClusterRoleBinding{} },
-			func() *v1.ClusterRoleBindingList { return &v1.ClusterRoleBindingList{} }),
-	}
+type clusterRoleBindingsClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamrbacv1client.RbacV1Client]
 }

@@ -21,49 +21,28 @@ package v1alpha1
 import (
 	"context"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/certificates/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	gentype "k8s.io/client-go/gentype"
-	certificatesv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1alpha1"
-	scheme "k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
+	upstreamcertificatesv1alpha1client "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
 )
 
-// ClusterTrustBundlesGetter has a method to return a ClusterTrustBundleInterface.
+// ClusterTrustBundlesClusterGetter has a method to return a ClusterTrustBundleClusterInterface.
 // A group's client should implement this interface.
-type ClusterTrustBundlesGetter interface {
-	ClusterTrustBundles() ClusterTrustBundleInterface
+type ClusterTrustBundlesClusterGetter interface {
+	ClusterTrustBundles() ClusterTrustBundleClusterInterface
 }
 
-// ClusterTrustBundleInterface has methods to work with ClusterTrustBundle resources.
-type ClusterTrustBundleInterface interface {
-	Create(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts v1.CreateOptions) (*v1alpha1.ClusterTrustBundle, error)
-	Update(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts v1.UpdateOptions) (*v1alpha1.ClusterTrustBundle, error)
-	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ClusterTrustBundle, error)
+// ClusterTrustBundleClusterInterface has methods to work with ClusterTrustBundle resources.
+type ClusterTrustBundleClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterTrustBundleList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterTrustBundle, err error)
-	Apply(ctx context.Context, clusterTrustBundle *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterTrustBundle, err error)
+	Cluster(logicalcluster.Path) upstreamNodeMagic
 	ClusterTrustBundleExpansion
 }
 
-// clusterTrustBundles implements ClusterTrustBundleInterface
-type clusterTrustBundles struct {
-	*gentype.ClientWithListAndApply[*v1alpha1.ClusterTrustBundle, *v1alpha1.ClusterTrustBundleList, *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration]
-}
-
-// newClusterTrustBundles returns a ClusterTrustBundles
-func newClusterTrustBundles(c *CertificatesV1alpha1Client) *clusterTrustBundles {
-	return &clusterTrustBundles{
-		gentype.NewClientWithListAndApply[*v1alpha1.ClusterTrustBundle, *v1alpha1.ClusterTrustBundleList, *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration](
-			"clustertrustbundles",
-			c.RESTClient(),
-			scheme.ParameterCodec,
-			"",
-			func() *v1alpha1.ClusterTrustBundle { return &v1alpha1.ClusterTrustBundle{} },
-			func() *v1alpha1.ClusterTrustBundleList { return &v1alpha1.ClusterTrustBundleList{} }),
-	}
+type clusterTrustBundlesClusterInterface struct {
+	clientCache kcpclient.Cache[*upstreamcertificatesv1alpha1client.CertificatesV1alpha1Client]
 }

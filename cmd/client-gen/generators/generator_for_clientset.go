@@ -36,6 +36,8 @@ type genClientset struct {
 	clientsetPackage   string // must be a Go import-path
 	imports            namer.ImportTracker
 	clientsetGenerated bool
+
+	singleClusterTypedClientsPackagePath string
 }
 
 var _ generator.Generator = &genClientset{}
@@ -134,7 +136,7 @@ func (c *Clientset) Discovery() $.DiscoveryInterface|raw$ {
 
 var newClientsetForConfigTemplate = `
 // NewForConfig creates a new Clientset for the given config.
-// If config's RateLimiter is not set and QPS and Burst are acceptable, 
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfig will generate a rate-limiter in configShallowCopy.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
