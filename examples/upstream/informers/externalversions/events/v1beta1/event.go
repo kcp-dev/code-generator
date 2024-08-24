@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamevents.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/events.k8s.io"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	eventsv1beta1 "k8s.io/api/events/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	"github.com/kcp-dev/logicalcluster/v3"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/events/v1beta1"
 	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	upstreamevents.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/events.k8s.io"
+	eventsv1beta1 "k8s.io/api/events/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/events/v1beta1"
 )
 
 
@@ -47,14 +47,13 @@ type EventClusterInformer interface {
 type eventClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewEventClusterInformer constructs a new informer for Event type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewEventClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredEventClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredEventClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredEventClusterInformer constructs a new informer for Event type.

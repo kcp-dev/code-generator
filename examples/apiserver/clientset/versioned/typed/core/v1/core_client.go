@@ -28,7 +28,7 @@ import (
 	"k8s.io/code-generator/examples/apiserver/clientset/versioned/scheme"
 )
 
-type CoreV1Interface interface {
+type CoreV1ClusterInterface interface {
 	CoreV1ClusterScoper
 	TestTypesClusterGetter
 }

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha1 "k8s.io/api/admissionregistration/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	admissionregistrationv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1alpha1"
 )
 
-// FakeValidatingAdmissionPolicyBindings implements ValidatingAdmissionPolicyBindingInterface
-type FakeValidatingAdmissionPolicyBindings struct {
-	Fake *FakeAdmissionregistrationV1alpha1
+// validatingAdmissionPolicyBindingsClusterClient implements validatingAdmissionPolicyBindingInterface
+type validatingAdmissionPolicyBindingsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var validatingadmissionpolicybindingsResource = v1alpha1.SchemeGroupVersion.WithResource("validatingadmissionpolicybindings")
@@ -42,18 +43,16 @@ var validatingadmissionpolicybindingsResource = v1alpha1.SchemeGroupVersion.With
 var validatingadmissionpolicybindingsKind = v1alpha1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicyBinding")
 
 // Get takes name of the validatingAdmissionPolicyBinding, and returns the corresponding validatingAdmissionPolicyBinding object, and an error if there is any.
-func (c *FakeValidatingAdmissionPolicyBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
-	emptyResult := &v1alpha1.ValidatingAdmissionPolicyBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(validatingadmissionpolicybindingsResource, name, options), emptyResult)
+func (c *validatingAdmissionPolicyBindingsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingadmissionpolicybindingsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.ValidatingAdmissionPolicyBinding{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.ValidatingAdmissionPolicyBinding), err
 }
 
 // List takes label and field selectors, and returns the list of ValidatingAdmissionPolicyBindings that match those selectors.
-func (c *FakeValidatingAdmissionPolicyBindings) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ValidatingAdmissionPolicyBindingList, err error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ValidatingAdmissionPolicyBindingList, err error) {
 	emptyResult := &v1alpha1.ValidatingAdmissionPolicyBindingList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(validatingadmissionpolicybindingsResource, validatingadmissionpolicybindingsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeValidatingAdmissionPolicyBindings) List(ctx context.Context, opts v
 }
 
 // Watch returns a watch.Interface that watches the requested validatingAdmissionPolicyBindings.
-func (c *FakeValidatingAdmissionPolicyBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingadmissionpolicybindingsResource, opts))
 }
 
 // Create takes the representation of a validatingAdmissionPolicyBinding and creates it.  Returns the server's representation of the validatingAdmissionPolicyBinding, and an error, if there is any.
-func (c *FakeValidatingAdmissionPolicyBindings) Create(ctx context.Context, validatingAdmissionPolicyBinding *v1alpha1.ValidatingAdmissionPolicyBinding, opts v1.CreateOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Create(ctx context.Context, validatingAdmissionPolicyBinding *v1alpha1.ValidatingAdmissionPolicyBinding, opts v1.CreateOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
 	emptyResult := &v1alpha1.ValidatingAdmissionPolicyBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(validatingadmissionpolicybindingsResource, validatingAdmissionPolicyBinding, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeValidatingAdmissionPolicyBindings) Create(ctx context.Context, vali
 }
 
 // Update takes the representation of a validatingAdmissionPolicyBinding and updates it. Returns the server's representation of the validatingAdmissionPolicyBinding, and an error, if there is any.
-func (c *FakeValidatingAdmissionPolicyBindings) Update(ctx context.Context, validatingAdmissionPolicyBinding *v1alpha1.ValidatingAdmissionPolicyBinding, opts v1.UpdateOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Update(ctx context.Context, validatingAdmissionPolicyBinding *v1alpha1.ValidatingAdmissionPolicyBinding, opts v1.UpdateOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
 	emptyResult := &v1alpha1.ValidatingAdmissionPolicyBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(validatingadmissionpolicybindingsResource, validatingAdmissionPolicyBinding, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeValidatingAdmissionPolicyBindings) Update(ctx context.Context, vali
 }
 
 // Delete takes name of the validatingAdmissionPolicyBinding and deletes it. Returns an error if one occurs.
-func (c *FakeValidatingAdmissionPolicyBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(validatingadmissionpolicybindingsResource, name, opts), &v1alpha1.ValidatingAdmissionPolicyBinding{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeValidatingAdmissionPolicyBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *validatingAdmissionPolicyBindingsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(validatingadmissionpolicybindingsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ValidatingAdmissionPolicyBindingList{})
@@ -118,7 +117,7 @@ func (c *FakeValidatingAdmissionPolicyBindings) DeleteCollection(ctx context.Con
 }
 
 // Patch applies the patch and returns the patched validatingAdmissionPolicyBinding.
-func (c *FakeValidatingAdmissionPolicyBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
 	emptyResult := &v1alpha1.ValidatingAdmissionPolicyBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpolicybindingsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeValidatingAdmissionPolicyBindings) Patch(ctx context.Context, name 
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied validatingAdmissionPolicyBinding.
-func (c *FakeValidatingAdmissionPolicyBindings) Apply(ctx context.Context, validatingAdmissionPolicyBinding *admissionregistrationv1alpha1.ValidatingAdmissionPolicyBindingApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
+func (c *validatingAdmissionPolicyBindingsClusterClient) Apply(ctx context.Context, validatingAdmissionPolicyBinding *admissionregistrationv1alpha1.ValidatingAdmissionPolicyBindingApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ValidatingAdmissionPolicyBinding, err error) {
 	if validatingAdmissionPolicyBinding == nil {
 		return nil, fmt.Errorf("validatingAdmissionPolicyBinding provided to Apply must not be nil")
 	}

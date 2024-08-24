@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	cache "k8s.io/client-go/tools/cache"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamdiscovery.k8s.iov1informers "k8s.io/client-go/informers/v1/discovery.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	v1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
-	upstreamdiscovery.k8s.iov1informers "k8s.io/client-go/informers/v1/discovery.k8s.io"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 
 
@@ -47,14 +47,13 @@ type EndpointSliceClusterInformer interface {
 type endpointSliceClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewEndpointSliceClusterInformer constructs a new informer for EndpointSlice type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewEndpointSliceClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredEndpointSliceClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredEndpointSliceClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredEndpointSliceClusterInformer constructs a new informer for EndpointSlice type.

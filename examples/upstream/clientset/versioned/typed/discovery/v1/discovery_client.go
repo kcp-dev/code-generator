@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type DiscoveryV1Interface interface {
+type DiscoveryV1ClusterInterface interface {
 	DiscoveryV1ClusterScoper
 	EndpointSlicesClusterGetter
 }

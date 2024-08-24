@@ -68,6 +68,7 @@ func (g *genClientForType) Imports(c *generator.Context) (imports []string) {
 	if len(g.singleClusterTypedClientsPackagePath) > 0 {
 		imports = append(imports, "upstream"+strings.ToLower(g.groupGoName+g.version+"client \""+g.singleClusterTypedClientsPackagePath+"/"+g.groupGoName+"/"+g.version+"\""))
 	}
+	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
 	imports = append(imports, "metav1 \"k8s.io/apimachinery/pkg/apis/meta/v1\"")
 	return
 }

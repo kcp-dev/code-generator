@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type ImagepolicyV1alpha1Interface interface {
+type ImagepolicyV1alpha1ClusterInterface interface {
 	ImagepolicyV1alpha1ClusterScoper
 	ImageReviewsClusterGetter
 }

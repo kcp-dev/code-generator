@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type AppsV1Interface interface {
+type AppsV1ClusterInterface interface {
 	AppsV1ClusterScoper
 	ControllerRevisionsClusterGetter
 	DaemonSetsClusterGetter

@@ -47,14 +47,13 @@ type PodTemplateClusterInformer interface {
 type podTemplateClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewPodTemplateClusterInformer constructs a new informer for PodTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewPodTemplateClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPodTemplateClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredPodTemplateClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredPodTemplateClusterInformer constructs a new informer for PodTemplate type.

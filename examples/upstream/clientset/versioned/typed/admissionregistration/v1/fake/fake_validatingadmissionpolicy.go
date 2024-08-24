@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	admissionregistrationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1"
 )
 
-// FakeValidatingAdmissionPolicies implements ValidatingAdmissionPolicyInterface
-type FakeValidatingAdmissionPolicies struct {
-	Fake *FakeAdmissionregistrationV1
+// validatingAdmissionPoliciesClusterClient implements validatingAdmissionPolicyInterface
+type validatingAdmissionPoliciesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var validatingadmissionpoliciesResource = v1.SchemeGroupVersion.WithResource("validatingadmissionpolicies")
@@ -42,18 +43,16 @@ var validatingadmissionpoliciesResource = v1.SchemeGroupVersion.WithResource("va
 var validatingadmissionpoliciesKind = v1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicy")
 
 // Get takes name of the validatingAdmissionPolicy, and returns the corresponding validatingAdmissionPolicy object, and an error if there is any.
-func (c *FakeValidatingAdmissionPolicies) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
-	emptyResult := &v1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(validatingadmissionpoliciesResource, name, options), emptyResult)
+func (c *validatingAdmissionPoliciesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingadmissionpoliciesResource, c.ClusterPath, c.Namespace, name), &v1.ValidatingAdmissionPolicy{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ValidatingAdmissionPolicy), err
 }
 
 // List takes label and field selectors, and returns the list of ValidatingAdmissionPolicies that match those selectors.
-func (c *FakeValidatingAdmissionPolicies) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingAdmissionPolicyList, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingAdmissionPolicyList, err error) {
 	emptyResult := &v1.ValidatingAdmissionPolicyList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(validatingadmissionpoliciesResource, validatingadmissionpoliciesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeValidatingAdmissionPolicies) List(ctx context.Context, opts metav1.
 }
 
 // Watch returns a watch.Interface that watches the requested validatingAdmissionPolicies.
-func (c *FakeValidatingAdmissionPolicies) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *validatingAdmissionPoliciesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingadmissionpoliciesResource, opts))
 }
 
 // Create takes the representation of a validatingAdmissionPolicy and creates it.  Returns the server's representation of the validatingAdmissionPolicy, and an error, if there is any.
-func (c *FakeValidatingAdmissionPolicies) Create(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.CreateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) Create(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.CreateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
 	emptyResult := &v1.ValidatingAdmissionPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(validatingadmissionpoliciesResource, validatingAdmissionPolicy, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeValidatingAdmissionPolicies) Create(ctx context.Context, validating
 }
 
 // Update takes the representation of a validatingAdmissionPolicy and updates it. Returns the server's representation of the validatingAdmissionPolicy, and an error, if there is any.
-func (c *FakeValidatingAdmissionPolicies) Update(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.UpdateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) Update(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.UpdateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
 	emptyResult := &v1.ValidatingAdmissionPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(validatingadmissionpoliciesResource, validatingAdmissionPolicy, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeValidatingAdmissionPolicies) Update(ctx context.Context, validating
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeValidatingAdmissionPolicies) UpdateStatus(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.UpdateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) UpdateStatus(ctx context.Context, validatingAdmissionPolicy *v1.ValidatingAdmissionPolicy, opts metav1.UpdateOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
 	emptyResult := &v1.ValidatingAdmissionPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(validatingadmissionpoliciesResource, "status", validatingAdmissionPolicy, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeValidatingAdmissionPolicies) UpdateStatus(ctx context.Context, vali
 }
 
 // Delete takes name of the validatingAdmissionPolicy and deletes it. Returns an error if one occurs.
-func (c *FakeValidatingAdmissionPolicies) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *validatingAdmissionPoliciesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(validatingadmissionpoliciesResource, name, opts), &v1.ValidatingAdmissionPolicy{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeValidatingAdmissionPolicies) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *validatingAdmissionPoliciesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(validatingadmissionpoliciesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ValidatingAdmissionPolicyList{})
@@ -130,7 +129,7 @@ func (c *FakeValidatingAdmissionPolicies) DeleteCollection(ctx context.Context, 
 }
 
 // Patch applies the patch and returns the patched validatingAdmissionPolicy.
-func (c *FakeValidatingAdmissionPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingAdmissionPolicy, err error) {
 	emptyResult := &v1.ValidatingAdmissionPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpoliciesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeValidatingAdmissionPolicies) Patch(ctx context.Context, name string
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied validatingAdmissionPolicy.
-func (c *FakeValidatingAdmissionPolicies) Apply(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1.ValidatingAdmissionPolicyApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) Apply(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1.ValidatingAdmissionPolicyApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
 	if validatingAdmissionPolicy == nil {
 		return nil, fmt.Errorf("validatingAdmissionPolicy provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeValidatingAdmissionPolicies) Apply(ctx context.Context, validatingA
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeValidatingAdmissionPolicies) ApplyStatus(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1.ValidatingAdmissionPolicyApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
+func (c *validatingAdmissionPoliciesClusterClient) ApplyStatus(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1.ValidatingAdmissionPolicyApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingAdmissionPolicy, err error) {
 	if validatingAdmissionPolicy == nil {
 		return nil, fmt.Errorf("validatingAdmissionPolicy provided to Apply must not be nil")
 	}

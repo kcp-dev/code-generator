@@ -28,7 +28,7 @@ import (
 	"k8s.io/code-generator/examples/HyphenGroup/clientset/versioned/scheme"
 )
 
-type ExampleGroupV1Interface interface {
+type ExampleGroupV1ClusterInterface interface {
 	ExampleGroupV1ClusterScoper
 	ClusterTestTypesClusterGetter
 	TestTypesClusterGetter

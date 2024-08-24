@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	rbacv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1"
 )
 
-// FakeRoles implements RoleInterface
-type FakeRoles struct {
-	Fake *FakeRbacV1
-	ns   string
+// rolesClusterClient implements roleInterface
+type rolesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var rolesResource = v1.SchemeGroupVersion.WithResource("roles")
@@ -43,19 +43,16 @@ var rolesResource = v1.SchemeGroupVersion.WithResource("roles")
 var rolesKind = v1.SchemeGroupVersion.WithKind("Role")
 
 // Get takes name of the role, and returns the corresponding role object, and an error if there is any.
-func (c *FakeRoles) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Role, err error) {
-	emptyResult := &v1.Role{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(rolesResource, c.ns, name, options), emptyResult)
-
+func (c *rolesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Role, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(rolesResource, c.ClusterPath, c.Namespace, name), &v1.Role{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Role), err
 }
 
 // List takes label and field selectors, and returns the list of Roles that match those selectors.
-func (c *FakeRoles) List(ctx context.Context, opts metav1.ListOptions) (result *v1.RoleList, err error) {
+func (c *rolesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.RoleList, err error) {
 	emptyResult := &v1.RoleList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(rolesResource, rolesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeRoles) List(ctx context.Context, opts metav1.ListOptions) (result *
 }
 
 // Watch returns a watch.Interface that watches the requested roles.
-func (c *FakeRoles) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *rolesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(rolesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a role and creates it.  Returns the server's representation of the role, and an error, if there is any.
-func (c *FakeRoles) Create(ctx context.Context, role *v1.Role, opts metav1.CreateOptions) (result *v1.Role, err error) {
+func (c *rolesClusterClient) Create(ctx context.Context, role *v1.Role, opts metav1.CreateOptions) (result *v1.Role, err error) {
 	emptyResult := &v1.Role{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(rolesResource, c.ns, role, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeRoles) Create(ctx context.Context, role *v1.Role, opts metav1.Creat
 }
 
 // Update takes the representation of a role and updates it. Returns the server's representation of the role, and an error, if there is any.
-func (c *FakeRoles) Update(ctx context.Context, role *v1.Role, opts metav1.UpdateOptions) (result *v1.Role, err error) {
+func (c *rolesClusterClient) Update(ctx context.Context, role *v1.Role, opts metav1.UpdateOptions) (result *v1.Role, err error) {
 	emptyResult := &v1.Role{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(rolesResource, c.ns, role, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeRoles) Update(ctx context.Context, role *v1.Role, opts metav1.Updat
 }
 
 // Delete takes name of the role and deletes it. Returns an error if one occurs.
-func (c *FakeRoles) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *rolesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(rolesResource, c.ns, name, opts), &v1.Role{})
 
@@ -117,7 +114,7 @@ func (c *FakeRoles) Delete(ctx context.Context, name string, opts metav1.DeleteO
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeRoles) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *rolesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(rolesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.RoleList{})
@@ -125,7 +122,7 @@ func (c *FakeRoles) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 }
 
 // Patch applies the patch and returns the patched role.
-func (c *FakeRoles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Role, err error) {
+func (c *rolesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Role, err error) {
 	emptyResult := &v1.Role{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(rolesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeRoles) Patch(ctx context.Context, name string, pt types.PatchType, 
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied role.
-func (c *FakeRoles) Apply(ctx context.Context, role *rbacv1.RoleApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Role, err error) {
+func (c *rolesClusterClient) Apply(ctx context.Context, role *rbacv1.RoleApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Role, err error) {
 	if role == nil {
 		return nil, fmt.Errorf("role provided to Apply must not be nil")
 	}

@@ -47,14 +47,13 @@ type JobClusterInformer interface {
 type jobClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewJobClusterInformer constructs a new informer for Job type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewJobClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredJobClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredJobClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredJobClusterInformer constructs a new informer for Job type.

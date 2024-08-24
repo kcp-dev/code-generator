@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakeNodes implements NodeInterface
-type FakeNodes struct {
-	Fake *FakeCoreV1
+// nodesClusterClient implements nodeInterface
+type nodesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var nodesResource = v1.SchemeGroupVersion.WithResource("nodes")
@@ -42,18 +43,16 @@ var nodesResource = v1.SchemeGroupVersion.WithResource("nodes")
 var nodesKind = v1.SchemeGroupVersion.WithKind("Node")
 
 // Get takes name of the node, and returns the corresponding node object, and an error if there is any.
-func (c *FakeNodes) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Node, err error) {
-	emptyResult := &v1.Node{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(nodesResource, name, options), emptyResult)
+func (c *nodesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Node, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(nodesResource, c.ClusterPath, c.Namespace, name), &v1.Node{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Node), err
 }
 
 // List takes label and field selectors, and returns the list of Nodes that match those selectors.
-func (c *FakeNodes) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NodeList, err error) {
+func (c *nodesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NodeList, err error) {
 	emptyResult := &v1.NodeList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(nodesResource, nodesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeNodes) List(ctx context.Context, opts metav1.ListOptions) (result *
 }
 
 // Watch returns a watch.Interface that watches the requested nodes.
-func (c *FakeNodes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *nodesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(nodesResource, opts))
 }
 
 // Create takes the representation of a node and creates it.  Returns the server's representation of the node, and an error, if there is any.
-func (c *FakeNodes) Create(ctx context.Context, node *v1.Node, opts metav1.CreateOptions) (result *v1.Node, err error) {
+func (c *nodesClusterClient) Create(ctx context.Context, node *v1.Node, opts metav1.CreateOptions) (result *v1.Node, err error) {
 	emptyResult := &v1.Node{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(nodesResource, node, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeNodes) Create(ctx context.Context, node *v1.Node, opts metav1.Creat
 }
 
 // Update takes the representation of a node and updates it. Returns the server's representation of the node, and an error, if there is any.
-func (c *FakeNodes) Update(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
+func (c *nodesClusterClient) Update(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
 	emptyResult := &v1.Node{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(nodesResource, node, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeNodes) Update(ctx context.Context, node *v1.Node, opts metav1.Updat
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeNodes) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
+func (c *nodesClusterClient) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
 	emptyResult := &v1.Node{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(nodesResource, "status", node, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeNodes) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1
 }
 
 // Delete takes name of the node and deletes it. Returns an error if one occurs.
-func (c *FakeNodes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *nodesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(nodesResource, name, opts), &v1.Node{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNodes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *nodesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(nodesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.NodeList{})
@@ -130,7 +129,7 @@ func (c *FakeNodes) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 }
 
 // Patch applies the patch and returns the patched node.
-func (c *FakeNodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Node, err error) {
+func (c *nodesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Node, err error) {
 	emptyResult := &v1.Node{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(nodesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeNodes) Patch(ctx context.Context, name string, pt types.PatchType, 
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied node.
-func (c *FakeNodes) Apply(ctx context.Context, node *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Node, err error) {
+func (c *nodesClusterClient) Apply(ctx context.Context, node *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Node, err error) {
 	if node == nil {
 		return nil, fmt.Errorf("node provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeNodes) Apply(ctx context.Context, node *corev1.NodeApplyConfigurati
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeNodes) ApplyStatus(ctx context.Context, node *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Node, err error) {
+func (c *nodesClusterClient) ApplyStatus(ctx context.Context, node *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Node, err error) {
 	if node == nil {
 		return nil, fmt.Errorf("node provided to Apply must not be nil")
 	}

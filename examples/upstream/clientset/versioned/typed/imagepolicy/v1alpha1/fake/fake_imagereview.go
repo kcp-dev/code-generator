@@ -18,7 +18,11 @@ limitations under the License.
 
 package fake
 
-// FakeImageReviews implements ImageReviewInterface
-type FakeImageReviews struct {
-	Fake *FakeImagepolicyV1alpha1
+import (
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+)
+
+// imageReviewsClusterClient implements imageReviewInterface
+type imageReviewsClusterClient struct {
+	*kcptesting.Fake
 }

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	extensionsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/extensions/v1beta1"
 )
 
-// FakeNetworkPolicies implements NetworkPolicyInterface
-type FakeNetworkPolicies struct {
-	Fake *FakeExtensionsV1beta1
-	ns   string
+// networkPoliciesClusterClient implements networkPolicyInterface
+type networkPoliciesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var networkpoliciesResource = v1beta1.SchemeGroupVersion.WithResource("networkpolicies")
@@ -43,19 +43,16 @@ var networkpoliciesResource = v1beta1.SchemeGroupVersion.WithResource("networkpo
 var networkpoliciesKind = v1beta1.SchemeGroupVersion.WithKind("NetworkPolicy")
 
 // Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
-func (c *FakeNetworkPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.NetworkPolicy, err error) {
-	emptyResult := &v1beta1.NetworkPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(networkpoliciesResource, c.ns, name, options), emptyResult)
-
+func (c *networkPoliciesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.NetworkPolicy, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(networkpoliciesResource, c.ClusterPath, c.Namespace, name), &v1beta1.NetworkPolicy{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.NetworkPolicy), err
 }
 
 // List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
-func (c *FakeNetworkPolicies) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.NetworkPolicyList, err error) {
+func (c *networkPoliciesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.NetworkPolicyList, err error) {
 	emptyResult := &v1beta1.NetworkPolicyList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(networkpoliciesResource, networkpoliciesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeNetworkPolicies) List(ctx context.Context, opts v1.ListOptions) (re
 }
 
 // Watch returns a watch.Interface that watches the requested networkPolicies.
-func (c *FakeNetworkPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *networkPoliciesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(networkpoliciesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a networkPolicy and creates it.  Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *FakeNetworkPolicies) Create(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts v1.CreateOptions) (result *v1beta1.NetworkPolicy, err error) {
+func (c *networkPoliciesClusterClient) Create(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts v1.CreateOptions) (result *v1beta1.NetworkPolicy, err error) {
 	emptyResult := &v1beta1.NetworkPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(networkpoliciesResource, c.ns, networkPolicy, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeNetworkPolicies) Create(ctx context.Context, networkPolicy *v1beta1
 }
 
 // Update takes the representation of a networkPolicy and updates it. Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *FakeNetworkPolicies) Update(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts v1.UpdateOptions) (result *v1beta1.NetworkPolicy, err error) {
+func (c *networkPoliciesClusterClient) Update(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts v1.UpdateOptions) (result *v1beta1.NetworkPolicy, err error) {
 	emptyResult := &v1beta1.NetworkPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(networkpoliciesResource, c.ns, networkPolicy, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeNetworkPolicies) Update(ctx context.Context, networkPolicy *v1beta1
 }
 
 // Delete takes name of the networkPolicy and deletes it. Returns an error if one occurs.
-func (c *FakeNetworkPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *networkPoliciesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(networkpoliciesResource, c.ns, name, opts), &v1beta1.NetworkPolicy{})
 
@@ -117,7 +114,7 @@ func (c *FakeNetworkPolicies) Delete(ctx context.Context, name string, opts v1.D
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNetworkPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *networkPoliciesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(networkpoliciesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.NetworkPolicyList{})
@@ -125,7 +122,7 @@ func (c *FakeNetworkPolicies) DeleteCollection(ctx context.Context, opts v1.Dele
 }
 
 // Patch applies the patch and returns the patched networkPolicy.
-func (c *FakeNetworkPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.NetworkPolicy, err error) {
+func (c *networkPoliciesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.NetworkPolicy, err error) {
 	emptyResult := &v1beta1.NetworkPolicy{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(networkpoliciesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeNetworkPolicies) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied networkPolicy.
-func (c *FakeNetworkPolicies) Apply(ctx context.Context, networkPolicy *extensionsv1beta1.NetworkPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.NetworkPolicy, err error) {
+func (c *networkPoliciesClusterClient) Apply(ctx context.Context, networkPolicy *extensionsv1beta1.NetworkPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.NetworkPolicy, err error) {
 	if networkPolicy == nil {
 		return nil, fmt.Errorf("networkPolicy provided to Apply must not be nil")
 	}

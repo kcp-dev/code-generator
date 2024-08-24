@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/policy/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	policyv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/policy/v1beta1"
 )
 
-// FakePodDisruptionBudgets implements PodDisruptionBudgetInterface
-type FakePodDisruptionBudgets struct {
-	Fake *FakePolicyV1beta1
-	ns   string
+// podDisruptionBudgetsClusterClient implements podDisruptionBudgetInterface
+type podDisruptionBudgetsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var poddisruptionbudgetsResource = v1beta1.SchemeGroupVersion.WithResource("poddisruptionbudgets")
@@ -43,19 +43,16 @@ var poddisruptionbudgetsResource = v1beta1.SchemeGroupVersion.WithResource("podd
 var poddisruptionbudgetsKind = v1beta1.SchemeGroupVersion.WithKind("PodDisruptionBudget")
 
 // Get takes name of the podDisruptionBudget, and returns the corresponding podDisruptionBudget object, and an error if there is any.
-func (c *FakePodDisruptionBudgets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.PodDisruptionBudget, err error) {
-	emptyResult := &v1beta1.PodDisruptionBudget{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(poddisruptionbudgetsResource, c.ns, name, options), emptyResult)
-
+func (c *podDisruptionBudgetsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(poddisruptionbudgetsResource, c.ClusterPath, c.Namespace, name), &v1beta1.PodDisruptionBudget{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.PodDisruptionBudget), err
 }
 
 // List takes label and field selectors, and returns the list of PodDisruptionBudgets that match those selectors.
-func (c *FakePodDisruptionBudgets) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.PodDisruptionBudgetList, err error) {
+func (c *podDisruptionBudgetsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.PodDisruptionBudgetList, err error) {
 	emptyResult := &v1beta1.PodDisruptionBudgetList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(poddisruptionbudgetsResource, poddisruptionbudgetsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakePodDisruptionBudgets) List(ctx context.Context, opts v1.ListOptions
 }
 
 // Watch returns a watch.Interface that watches the requested podDisruptionBudgets.
-func (c *FakePodDisruptionBudgets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *podDisruptionBudgetsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(poddisruptionbudgetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a podDisruptionBudget and creates it.  Returns the server's representation of the podDisruptionBudget, and an error, if there is any.
-func (c *FakePodDisruptionBudgets) Create(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.CreateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) Create(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.CreateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
 	emptyResult := &v1beta1.PodDisruptionBudget{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(poddisruptionbudgetsResource, c.ns, podDisruptionBudget, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakePodDisruptionBudgets) Create(ctx context.Context, podDisruptionBudg
 }
 
 // Update takes the representation of a podDisruptionBudget and updates it. Returns the server's representation of the podDisruptionBudget, and an error, if there is any.
-func (c *FakePodDisruptionBudgets) Update(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) Update(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
 	emptyResult := &v1beta1.PodDisruptionBudget{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(poddisruptionbudgetsResource, c.ns, podDisruptionBudget, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakePodDisruptionBudgets) Update(ctx context.Context, podDisruptionBudg
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakePodDisruptionBudgets) UpdateStatus(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) UpdateStatus(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (result *v1beta1.PodDisruptionBudget, err error) {
 	emptyResult := &v1beta1.PodDisruptionBudget{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(poddisruptionbudgetsResource, "status", c.ns, podDisruptionBudget, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakePodDisruptionBudgets) UpdateStatus(ctx context.Context, podDisrupti
 }
 
 // Delete takes name of the podDisruptionBudget and deletes it. Returns an error if one occurs.
-func (c *FakePodDisruptionBudgets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *podDisruptionBudgetsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(poddisruptionbudgetsResource, c.ns, name, opts), &v1beta1.PodDisruptionBudget{})
 
@@ -130,7 +127,7 @@ func (c *FakePodDisruptionBudgets) Delete(ctx context.Context, name string, opts
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakePodDisruptionBudgets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *podDisruptionBudgetsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(poddisruptionbudgetsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.PodDisruptionBudgetList{})
@@ -138,7 +135,7 @@ func (c *FakePodDisruptionBudgets) DeleteCollection(ctx context.Context, opts v1
 }
 
 // Patch applies the patch and returns the patched podDisruptionBudget.
-func (c *FakePodDisruptionBudgets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PodDisruptionBudget, err error) {
 	emptyResult := &v1beta1.PodDisruptionBudget{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(poddisruptionbudgetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakePodDisruptionBudgets) Patch(ctx context.Context, name string, pt ty
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied podDisruptionBudget.
-func (c *FakePodDisruptionBudgets) Apply(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) Apply(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error) {
 	if podDisruptionBudget == nil {
 		return nil, fmt.Errorf("podDisruptionBudget provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakePodDisruptionBudgets) Apply(ctx context.Context, podDisruptionBudge
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakePodDisruptionBudgets) ApplyStatus(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error) {
+func (c *podDisruptionBudgetsClusterClient) ApplyStatus(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PodDisruptionBudget, err error) {
 	if podDisruptionBudget == nil {
 		return nil, fmt.Errorf("podDisruptionBudget provided to Apply must not be nil")
 	}

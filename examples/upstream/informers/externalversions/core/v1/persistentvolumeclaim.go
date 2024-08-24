@@ -47,14 +47,13 @@ type PersistentVolumeClaimClusterInformer interface {
 type persistentVolumeClaimClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewPersistentVolumeClaimClusterInformer constructs a new informer for PersistentVolumeClaim type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewPersistentVolumeClaimClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPersistentVolumeClaimClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredPersistentVolumeClaimClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredPersistentVolumeClaimClusterInformer constructs a new informer for PersistentVolumeClaim type.

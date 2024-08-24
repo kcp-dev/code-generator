@@ -66,6 +66,7 @@ func (g *genFakeForGroup) Imports(c *generator.Context) (imports []string) {
 	if len(g.types) != 0 {
 		imports = append(imports, fmt.Sprintf("%s \"%s\"", strings.ToLower(path.Base(g.realClientPackage)), g.realClientPackage))
 	}
+	imports = append(imports, "kcptesting \"github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing\"")
 	return imports
 }
 
@@ -73,6 +74,7 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	m := map[string]interface{}{
+		"type":                t,
 		"GroupGoName":         g.groupGoName,
 		"Version":             namer.IC(g.version),
 		"Fake":                c.Universe.Type(types.Name{Package: "k8s.io/client-go/testing", Name: "Fake"}),
@@ -103,8 +105,8 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 }
 
 var groupClientTemplate = `
-type Fake$.GroupGoName$$.Version$ struct {
-	*$.Fake|raw$
+type $.type|privatePlural$ClusterClient struct {
+	*kcptesting.Fake
 }
 `
 

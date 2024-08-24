@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
 )
 
-// FakeJobs implements JobInterface
-type FakeJobs struct {
-	Fake *FakeBatchV1
-	ns   string
+// jobsClusterClient implements jobInterface
+type jobsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var jobsResource = v1.SchemeGroupVersion.WithResource("jobs")
@@ -43,19 +43,16 @@ var jobsResource = v1.SchemeGroupVersion.WithResource("jobs")
 var jobsKind = v1.SchemeGroupVersion.WithKind("Job")
 
 // Get takes name of the job, and returns the corresponding job object, and an error if there is any.
-func (c *FakeJobs) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Job, err error) {
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(jobsResource, c.ns, name, options), emptyResult)
-
+func (c *jobsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Job, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(jobsResource, c.ClusterPath, c.Namespace, name), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
 // List takes label and field selectors, and returns the list of Jobs that match those selectors.
-func (c *FakeJobs) List(ctx context.Context, opts metav1.ListOptions) (result *v1.JobList, err error) {
+func (c *jobsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.JobList, err error) {
 	emptyResult := &v1.JobList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(jobsResource, jobsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeJobs) List(ctx context.Context, opts metav1.ListOptions) (result *v
 }
 
 // Watch returns a watch.Interface that watches the requested jobs.
-func (c *FakeJobs) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *jobsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(jobsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a job and creates it.  Returns the server's representation of the job, and an error, if there is any.
-func (c *FakeJobs) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (result *v1.Job, err error) {
+func (c *jobsClusterClient) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (result *v1.Job, err error) {
 	emptyResult := &v1.Job{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(jobsResource, c.ns, job, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeJobs) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOp
 }
 
 // Update takes the representation of a job and updates it. Returns the server's representation of the job, and an error, if there is any.
-func (c *FakeJobs) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
+func (c *jobsClusterClient) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
 	emptyResult := &v1.Job{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(jobsResource, c.ns, job, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeJobs) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOp
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeJobs) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
+func (c *jobsClusterClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
 	emptyResult := &v1.Job{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(jobsResource, "status", c.ns, job, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeJobs) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.Up
 }
 
 // Delete takes name of the job and deletes it. Returns an error if one occurs.
-func (c *FakeJobs) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *jobsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(jobsResource, c.ns, name, opts), &v1.Job{})
 
@@ -130,7 +127,7 @@ func (c *FakeJobs) Delete(ctx context.Context, name string, opts metav1.DeleteOp
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeJobs) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *jobsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(jobsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.JobList{})
@@ -138,7 +135,7 @@ func (c *FakeJobs) DeleteCollection(ctx context.Context, opts metav1.DeleteOptio
 }
 
 // Patch applies the patch and returns the patched job.
-func (c *FakeJobs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Job, err error) {
+func (c *jobsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Job, err error) {
 	emptyResult := &v1.Job{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(jobsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakeJobs) Patch(ctx context.Context, name string, pt types.PatchType, d
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied job.
-func (c *FakeJobs) Apply(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
+func (c *jobsClusterClient) Apply(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
 	if job == nil {
 		return nil, fmt.Errorf("job provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakeJobs) Apply(ctx context.Context, job *batchv1.JobApplyConfiguration
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeJobs) ApplyStatus(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
+func (c *jobsClusterClient) ApplyStatus(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
 	if job == nil {
 		return nil, fmt.Errorf("job provided to Apply must not be nil")
 	}

@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	"github.com/kcp-dev/logicalcluster/v3"
-	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
-	rbacv1 "k8s.io/api/rbac/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	v1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1"
 	time "time"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	rbacv1 "k8s.io/api/rbac/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
 )
 
 
@@ -47,7 +47,6 @@ type ClusterRoleClusterInformer interface {
 type clusterRoleClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewClusterRoleClusterInformer constructs a new informer for ClusterRole type.

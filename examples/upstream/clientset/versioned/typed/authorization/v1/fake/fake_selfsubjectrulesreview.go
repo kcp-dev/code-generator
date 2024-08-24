@@ -21,14 +21,15 @@ package fake
 import (
 	"context"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testing "k8s.io/client-go/testing"
 )
 
-// FakeSelfSubjectRulesReviews implements SelfSubjectRulesReviewInterface
-type FakeSelfSubjectRulesReviews struct {
-	Fake *FakeAuthorizationV1
+// selfSubjectRulesReviewsClusterClient implements selfSubjectRulesReviewInterface
+type selfSubjectRulesReviewsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var selfsubjectrulesreviewsResource = v1.SchemeGroupVersion.WithResource("selfsubjectrulesreviews")
@@ -36,7 +37,7 @@ var selfsubjectrulesreviewsResource = v1.SchemeGroupVersion.WithResource("selfsu
 var selfsubjectrulesreviewsKind = v1.SchemeGroupVersion.WithKind("SelfSubjectRulesReview")
 
 // Create takes the representation of a selfSubjectRulesReview and creates it.  Returns the server's representation of the selfSubjectRulesReview, and an error, if there is any.
-func (c *FakeSelfSubjectRulesReviews) Create(ctx context.Context, selfSubjectRulesReview *v1.SelfSubjectRulesReview, opts metav1.CreateOptions) (result *v1.SelfSubjectRulesReview, err error) {
+func (c *selfSubjectRulesReviewsClusterClient) Create(ctx context.Context, selfSubjectRulesReview *v1.SelfSubjectRulesReview, opts metav1.CreateOptions) (result *v1.SelfSubjectRulesReview, err error) {
 	emptyResult := &v1.SelfSubjectRulesReview{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(selfsubjectrulesreviewsResource, selfSubjectRulesReview, opts), emptyResult)

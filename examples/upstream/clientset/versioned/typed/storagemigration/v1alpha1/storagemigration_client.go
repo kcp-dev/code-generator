@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type StoragemigrationV1alpha1Interface interface {
+type StoragemigrationV1alpha1ClusterInterface interface {
 	StoragemigrationV1alpha1ClusterScoper
 	StorageVersionMigrationsClusterGetter
 }

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakePersistentVolumes implements PersistentVolumeInterface
-type FakePersistentVolumes struct {
-	Fake *FakeCoreV1
+// persistentVolumesClusterClient implements persistentVolumeInterface
+type persistentVolumesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var persistentvolumesResource = v1.SchemeGroupVersion.WithResource("persistentvolumes")
@@ -42,18 +43,16 @@ var persistentvolumesResource = v1.SchemeGroupVersion.WithResource("persistentvo
 var persistentvolumesKind = v1.SchemeGroupVersion.WithKind("PersistentVolume")
 
 // Get takes name of the persistentVolume, and returns the corresponding persistentVolume object, and an error if there is any.
-func (c *FakePersistentVolumes) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PersistentVolume, err error) {
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(persistentvolumesResource, name, options), emptyResult)
+func (c *persistentVolumesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PersistentVolume, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(persistentvolumesResource, c.ClusterPath, c.Namespace, name), &v1.PersistentVolume{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.PersistentVolume), err
 }
 
 // List takes label and field selectors, and returns the list of PersistentVolumes that match those selectors.
-func (c *FakePersistentVolumes) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PersistentVolumeList, err error) {
+func (c *persistentVolumesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PersistentVolumeList, err error) {
 	emptyResult := &v1.PersistentVolumeList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(persistentvolumesResource, persistentvolumesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakePersistentVolumes) List(ctx context.Context, opts metav1.ListOption
 }
 
 // Watch returns a watch.Interface that watches the requested persistentVolumes.
-func (c *FakePersistentVolumes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *persistentVolumesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(persistentvolumesResource, opts))
 }
 
 // Create takes the representation of a persistentVolume and creates it.  Returns the server's representation of the persistentVolume, and an error, if there is any.
-func (c *FakePersistentVolumes) Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (result *v1.PersistentVolume, err error) {
 	emptyResult := &v1.PersistentVolume{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(persistentvolumesResource, persistentVolume, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakePersistentVolumes) Create(ctx context.Context, persistentVolume *v1
 }
 
 // Update takes the representation of a persistentVolume and updates it. Returns the server's representation of the persistentVolume, and an error, if there is any.
-func (c *FakePersistentVolumes) Update(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) Update(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
 	emptyResult := &v1.PersistentVolume{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(persistentvolumesResource, persistentVolume, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakePersistentVolumes) Update(ctx context.Context, persistentVolume *v1
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakePersistentVolumes) UpdateStatus(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) UpdateStatus(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
 	emptyResult := &v1.PersistentVolume{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(persistentvolumesResource, "status", persistentVolume, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakePersistentVolumes) UpdateStatus(ctx context.Context, persistentVolu
 }
 
 // Delete takes name of the persistentVolume and deletes it. Returns an error if one occurs.
-func (c *FakePersistentVolumes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *persistentVolumesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(persistentvolumesResource, name, opts), &v1.PersistentVolume{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakePersistentVolumes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *persistentVolumesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(persistentvolumesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.PersistentVolumeList{})
@@ -130,7 +129,7 @@ func (c *FakePersistentVolumes) DeleteCollection(ctx context.Context, opts metav
 }
 
 // Patch applies the patch and returns the patched persistentVolume.
-func (c *FakePersistentVolumes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PersistentVolume, err error) {
 	emptyResult := &v1.PersistentVolume{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(persistentvolumesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakePersistentVolumes) Patch(ctx context.Context, name string, pt types
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied persistentVolume.
-func (c *FakePersistentVolumes) Apply(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) Apply(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
 	if persistentVolume == nil {
 		return nil, fmt.Errorf("persistentVolume provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakePersistentVolumes) Apply(ctx context.Context, persistentVolume *cor
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakePersistentVolumes) ApplyStatus(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
+func (c *persistentVolumesClusterClient) ApplyStatus(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
 	if persistentVolume == nil {
 		return nil, fmt.Errorf("persistentVolume provided to Apply must not be nil")
 	}

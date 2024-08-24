@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type EventsV1beta1Interface interface {
+type EventsV1beta1ClusterInterface interface {
 	EventsV1beta1ClusterScoper
 	EventsClusterGetter
 }

@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
-	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	upstreamscheduling.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/scheduling.k8s.io"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/scheduling/v1alpha1"
+	time "time"
+	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamscheduling.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/scheduling.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cache "k8s.io/client-go/tools/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 
@@ -47,7 +47,6 @@ type PriorityClassClusterInformer interface {
 type priorityClassClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewPriorityClassClusterInformer constructs a new informer for PriorityClass type.

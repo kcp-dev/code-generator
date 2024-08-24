@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
 )
 
-// FakeCSIStorageCapacities implements CSIStorageCapacityInterface
-type FakeCSIStorageCapacities struct {
-	Fake *FakeStorageV1beta1
-	ns   string
+// cSIStorageCapacitiesClusterClient implements cSIStorageCapacityInterface
+type cSIStorageCapacitiesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var csistoragecapacitiesResource = v1beta1.SchemeGroupVersion.WithResource("csistoragecapacities")
@@ -43,19 +43,16 @@ var csistoragecapacitiesResource = v1beta1.SchemeGroupVersion.WithResource("csis
 var csistoragecapacitiesKind = v1beta1.SchemeGroupVersion.WithKind("CSIStorageCapacity")
 
 // Get takes name of the cSIStorageCapacity, and returns the corresponding cSIStorageCapacity object, and an error if there is any.
-func (c *FakeCSIStorageCapacities) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CSIStorageCapacity, err error) {
-	emptyResult := &v1beta1.CSIStorageCapacity{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(csistoragecapacitiesResource, c.ns, name, options), emptyResult)
-
+func (c *cSIStorageCapacitiesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CSIStorageCapacity, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, name), &v1beta1.CSIStorageCapacity{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.CSIStorageCapacity), err
 }
 
 // List takes label and field selectors, and returns the list of CSIStorageCapacities that match those selectors.
-func (c *FakeCSIStorageCapacities) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CSIStorageCapacityList, err error) {
+func (c *cSIStorageCapacitiesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CSIStorageCapacityList, err error) {
 	emptyResult := &v1beta1.CSIStorageCapacityList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(csistoragecapacitiesResource, csistoragecapacitiesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeCSIStorageCapacities) List(ctx context.Context, opts v1.ListOptions
 }
 
 // Watch returns a watch.Interface that watches the requested cSIStorageCapacities.
-func (c *FakeCSIStorageCapacities) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *cSIStorageCapacitiesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(csistoragecapacitiesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a cSIStorageCapacity and creates it.  Returns the server's representation of the cSIStorageCapacity, and an error, if there is any.
-func (c *FakeCSIStorageCapacities) Create(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts v1.CreateOptions) (result *v1beta1.CSIStorageCapacity, err error) {
+func (c *cSIStorageCapacitiesClusterClient) Create(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts v1.CreateOptions) (result *v1beta1.CSIStorageCapacity, err error) {
 	emptyResult := &v1beta1.CSIStorageCapacity{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(csistoragecapacitiesResource, c.ns, cSIStorageCapacity, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeCSIStorageCapacities) Create(ctx context.Context, cSIStorageCapacit
 }
 
 // Update takes the representation of a cSIStorageCapacity and updates it. Returns the server's representation of the cSIStorageCapacity, and an error, if there is any.
-func (c *FakeCSIStorageCapacities) Update(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts v1.UpdateOptions) (result *v1beta1.CSIStorageCapacity, err error) {
+func (c *cSIStorageCapacitiesClusterClient) Update(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts v1.UpdateOptions) (result *v1beta1.CSIStorageCapacity, err error) {
 	emptyResult := &v1beta1.CSIStorageCapacity{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(csistoragecapacitiesResource, c.ns, cSIStorageCapacity, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeCSIStorageCapacities) Update(ctx context.Context, cSIStorageCapacit
 }
 
 // Delete takes name of the cSIStorageCapacity and deletes it. Returns an error if one occurs.
-func (c *FakeCSIStorageCapacities) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *cSIStorageCapacitiesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(csistoragecapacitiesResource, c.ns, name, opts), &v1beta1.CSIStorageCapacity{})
 
@@ -117,7 +114,7 @@ func (c *FakeCSIStorageCapacities) Delete(ctx context.Context, name string, opts
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeCSIStorageCapacities) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *cSIStorageCapacitiesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(csistoragecapacitiesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.CSIStorageCapacityList{})
@@ -125,7 +122,7 @@ func (c *FakeCSIStorageCapacities) DeleteCollection(ctx context.Context, opts v1
 }
 
 // Patch applies the patch and returns the patched cSIStorageCapacity.
-func (c *FakeCSIStorageCapacities) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSIStorageCapacity, err error) {
+func (c *cSIStorageCapacitiesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSIStorageCapacity, err error) {
 	emptyResult := &v1beta1.CSIStorageCapacity{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(csistoragecapacitiesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeCSIStorageCapacities) Patch(ctx context.Context, name string, pt ty
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied cSIStorageCapacity.
-func (c *FakeCSIStorageCapacities) Apply(ctx context.Context, cSIStorageCapacity *storagev1beta1.CSIStorageCapacityApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CSIStorageCapacity, err error) {
+func (c *cSIStorageCapacitiesClusterClient) Apply(ctx context.Context, cSIStorageCapacity *storagev1beta1.CSIStorageCapacityApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CSIStorageCapacity, err error) {
 	if cSIStorageCapacity == nil {
 		return nil, fmt.Errorf("cSIStorageCapacity provided to Apply must not be nil")
 	}

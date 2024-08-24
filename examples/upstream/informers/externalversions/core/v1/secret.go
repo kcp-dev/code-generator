@@ -47,14 +47,13 @@ type SecretClusterInformer interface {
 type secretClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewSecretClusterInformer constructs a new informer for Secret type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewSecretClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredSecretClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredSecretClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredSecretClusterInformer constructs a new informer for Secret type.

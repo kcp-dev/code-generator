@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	certificatesv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1"
 )
 
-// FakeCertificateSigningRequests implements CertificateSigningRequestInterface
-type FakeCertificateSigningRequests struct {
-	Fake *FakeCertificatesV1
+// certificateSigningRequestsClusterClient implements certificateSigningRequestInterface
+type certificateSigningRequestsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var certificatesigningrequestsResource = v1.SchemeGroupVersion.WithResource("certificatesigningrequests")
@@ -42,18 +43,16 @@ var certificatesigningrequestsResource = v1.SchemeGroupVersion.WithResource("cer
 var certificatesigningrequestsKind = v1.SchemeGroupVersion.WithKind("CertificateSigningRequest")
 
 // Get takes name of the certificateSigningRequest, and returns the corresponding certificateSigningRequest object, and an error if there is any.
-func (c *FakeCertificateSigningRequests) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CertificateSigningRequest, err error) {
-	emptyResult := &v1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(certificatesigningrequestsResource, name, options), emptyResult)
+func (c *certificateSigningRequestsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CertificateSigningRequest, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(certificatesigningrequestsResource, c.ClusterPath, c.Namespace, name), &v1.CertificateSigningRequest{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CertificateSigningRequest), err
 }
 
 // List takes label and field selectors, and returns the list of CertificateSigningRequests that match those selectors.
-func (c *FakeCertificateSigningRequests) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CertificateSigningRequestList, err error) {
+func (c *certificateSigningRequestsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CertificateSigningRequestList, err error) {
 	emptyResult := &v1.CertificateSigningRequestList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(certificatesigningrequestsResource, certificatesigningrequestsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeCertificateSigningRequests) List(ctx context.Context, opts metav1.L
 }
 
 // Watch returns a watch.Interface that watches the requested certificateSigningRequests.
-func (c *FakeCertificateSigningRequests) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *certificateSigningRequestsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(certificatesigningrequestsResource, opts))
 }
 
 // Create takes the representation of a certificateSigningRequest and creates it.  Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *FakeCertificateSigningRequests) Create(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.CreateOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) Create(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.CreateOptions) (result *v1.CertificateSigningRequest, err error) {
 	emptyResult := &v1.CertificateSigningRequest{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(certificatesigningrequestsResource, certificateSigningRequest, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeCertificateSigningRequests) Create(ctx context.Context, certificate
 }
 
 // Update takes the representation of a certificateSigningRequest and updates it. Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *FakeCertificateSigningRequests) Update(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) Update(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
 	emptyResult := &v1.CertificateSigningRequest{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(certificatesigningrequestsResource, certificateSigningRequest, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeCertificateSigningRequests) Update(ctx context.Context, certificate
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeCertificateSigningRequests) UpdateStatus(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) UpdateStatus(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
 	emptyResult := &v1.CertificateSigningRequest{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(certificatesigningrequestsResource, "status", certificateSigningRequest, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeCertificateSigningRequests) UpdateStatus(ctx context.Context, certi
 }
 
 // Delete takes name of the certificateSigningRequest and deletes it. Returns an error if one occurs.
-func (c *FakeCertificateSigningRequests) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *certificateSigningRequestsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(certificatesigningrequestsResource, name, opts), &v1.CertificateSigningRequest{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeCertificateSigningRequests) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *certificateSigningRequestsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(certificatesigningrequestsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.CertificateSigningRequestList{})
@@ -130,7 +129,7 @@ func (c *FakeCertificateSigningRequests) DeleteCollection(ctx context.Context, o
 }
 
 // Patch applies the patch and returns the patched certificateSigningRequest.
-func (c *FakeCertificateSigningRequests) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CertificateSigningRequest, err error) {
 	emptyResult := &v1.CertificateSigningRequest{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(certificatesigningrequestsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeCertificateSigningRequests) Patch(ctx context.Context, name string,
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied certificateSigningRequest.
-func (c *FakeCertificateSigningRequests) Apply(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) Apply(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error) {
 	if certificateSigningRequest == nil {
 		return nil, fmt.Errorf("certificateSigningRequest provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeCertificateSigningRequests) Apply(ctx context.Context, certificateS
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeCertificateSigningRequests) ApplyStatus(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) ApplyStatus(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CertificateSigningRequest, err error) {
 	if certificateSigningRequest == nil {
 		return nil, fmt.Errorf("certificateSigningRequest provided to Apply must not be nil")
 	}
@@ -186,7 +185,7 @@ func (c *FakeCertificateSigningRequests) ApplyStatus(ctx context.Context, certif
 }
 
 // UpdateApproval takes the representation of a certificateSigningRequest and updates it. Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *FakeCertificateSigningRequests) UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
+func (c *certificateSigningRequestsClusterClient) UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (result *v1.CertificateSigningRequest, err error) {
 	emptyResult := &v1.CertificateSigningRequest{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(certificatesigningrequestsResource, "approval", certificateSigningRequest, opts), emptyResult)

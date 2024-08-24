@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
+	time "time"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	"github.com/kcp-dev/logicalcluster/v3"
-	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 
@@ -47,14 +47,13 @@ type CSIStorageCapacityClusterInformer interface {
 type cSIStorageCapacityClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewCSIStorageCapacityClusterInformer constructs a new informer for CSIStorageCapacity type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewCSIStorageCapacityClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredCSIStorageCapacityClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredCSIStorageCapacityClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredCSIStorageCapacityClusterInformer constructs a new informer for CSIStorageCapacity type.

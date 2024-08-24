@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
 )
 
-// FakeDeviceClasses implements DeviceClassInterface
-type FakeDeviceClasses struct {
-	Fake *FakeResourceV1alpha3
+// deviceClassesClusterClient implements deviceClassInterface
+type deviceClassesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var deviceclassesResource = v1alpha3.SchemeGroupVersion.WithResource("deviceclasses")
@@ -42,18 +43,16 @@ var deviceclassesResource = v1alpha3.SchemeGroupVersion.WithResource("deviceclas
 var deviceclassesKind = v1alpha3.SchemeGroupVersion.WithKind("DeviceClass")
 
 // Get takes name of the deviceClass, and returns the corresponding deviceClass object, and an error if there is any.
-func (c *FakeDeviceClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha3.DeviceClass, err error) {
-	emptyResult := &v1alpha3.DeviceClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(deviceclassesResource, name, options), emptyResult)
+func (c *deviceClassesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha3.DeviceClass, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(deviceclassesResource, c.ClusterPath, c.Namespace, name), &v1alpha3.DeviceClass{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.DeviceClass), err
 }
 
 // List takes label and field selectors, and returns the list of DeviceClasses that match those selectors.
-func (c *FakeDeviceClasses) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.DeviceClassList, err error) {
+func (c *deviceClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.DeviceClassList, err error) {
 	emptyResult := &v1alpha3.DeviceClassList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(deviceclassesResource, deviceclassesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeDeviceClasses) List(ctx context.Context, opts v1.ListOptions) (resu
 }
 
 // Watch returns a watch.Interface that watches the requested deviceClasses.
-func (c *FakeDeviceClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *deviceClassesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(deviceclassesResource, opts))
 }
 
 // Create takes the representation of a deviceClass and creates it.  Returns the server's representation of the deviceClass, and an error, if there is any.
-func (c *FakeDeviceClasses) Create(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.CreateOptions) (result *v1alpha3.DeviceClass, err error) {
+func (c *deviceClassesClusterClient) Create(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.CreateOptions) (result *v1alpha3.DeviceClass, err error) {
 	emptyResult := &v1alpha3.DeviceClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(deviceclassesResource, deviceClass, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeDeviceClasses) Create(ctx context.Context, deviceClass *v1alpha3.De
 }
 
 // Update takes the representation of a deviceClass and updates it. Returns the server's representation of the deviceClass, and an error, if there is any.
-func (c *FakeDeviceClasses) Update(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.UpdateOptions) (result *v1alpha3.DeviceClass, err error) {
+func (c *deviceClassesClusterClient) Update(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts v1.UpdateOptions) (result *v1alpha3.DeviceClass, err error) {
 	emptyResult := &v1alpha3.DeviceClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(deviceclassesResource, deviceClass, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeDeviceClasses) Update(ctx context.Context, deviceClass *v1alpha3.De
 }
 
 // Delete takes name of the deviceClass and deletes it. Returns an error if one occurs.
-func (c *FakeDeviceClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *deviceClassesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(deviceclassesResource, name, opts), &v1alpha3.DeviceClass{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeDeviceClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *deviceClassesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(deviceclassesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha3.DeviceClassList{})
@@ -118,7 +117,7 @@ func (c *FakeDeviceClasses) DeleteCollection(ctx context.Context, opts v1.Delete
 }
 
 // Patch applies the patch and returns the patched deviceClass.
-func (c *FakeDeviceClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.DeviceClass, err error) {
+func (c *deviceClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.DeviceClass, err error) {
 	emptyResult := &v1alpha3.DeviceClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(deviceclassesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeDeviceClasses) Patch(ctx context.Context, name string, pt types.Pat
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied deviceClass.
-func (c *FakeDeviceClasses) Apply(ctx context.Context, deviceClass *resourcev1alpha3.DeviceClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.DeviceClass, err error) {
+func (c *deviceClassesClusterClient) Apply(ctx context.Context, deviceClass *resourcev1alpha3.DeviceClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.DeviceClass, err error) {
 	if deviceClass == nil {
 		return nil, fmt.Errorf("deviceClass provided to Apply must not be nil")
 	}

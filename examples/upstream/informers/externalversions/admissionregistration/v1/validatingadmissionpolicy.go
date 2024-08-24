@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kcp-dev/logicalcluster/v3"
+	cache "k8s.io/client-go/tools/cache"
+	v1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1"
 	upstreamadmissionregistration.k8s.iov1informers "k8s.io/client-go/informers/v1/admissionregistration.k8s.io"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	cache "k8s.io/client-go/tools/cache"
+	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1"
+	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 )
 
 
@@ -47,7 +47,6 @@ type ValidatingAdmissionPolicyClusterInformer interface {
 type validatingAdmissionPolicyClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewValidatingAdmissionPolicyClusterInformer constructs a new informer for ValidatingAdmissionPolicy type.

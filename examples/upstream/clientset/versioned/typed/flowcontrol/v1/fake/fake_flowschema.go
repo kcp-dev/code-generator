@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/flowcontrol/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	flowcontrolv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/flowcontrol/v1"
 )
 
-// FakeFlowSchemas implements FlowSchemaInterface
-type FakeFlowSchemas struct {
-	Fake *FakeFlowcontrolV1
+// flowSchemasClusterClient implements flowSchemaInterface
+type flowSchemasClusterClient struct {
+	*kcptesting.Fake
 }
 
 var flowschemasResource = v1.SchemeGroupVersion.WithResource("flowschemas")
@@ -42,18 +43,16 @@ var flowschemasResource = v1.SchemeGroupVersion.WithResource("flowschemas")
 var flowschemasKind = v1.SchemeGroupVersion.WithKind("FlowSchema")
 
 // Get takes name of the flowSchema, and returns the corresponding flowSchema object, and an error if there is any.
-func (c *FakeFlowSchemas) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.FlowSchema, err error) {
-	emptyResult := &v1.FlowSchema{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(flowschemasResource, name, options), emptyResult)
+func (c *flowSchemasClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.FlowSchema, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(flowschemasResource, c.ClusterPath, c.Namespace, name), &v1.FlowSchema{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.FlowSchema), err
 }
 
 // List takes label and field selectors, and returns the list of FlowSchemas that match those selectors.
-func (c *FakeFlowSchemas) List(ctx context.Context, opts metav1.ListOptions) (result *v1.FlowSchemaList, err error) {
+func (c *flowSchemasClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.FlowSchemaList, err error) {
 	emptyResult := &v1.FlowSchemaList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(flowschemasResource, flowschemasKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeFlowSchemas) List(ctx context.Context, opts metav1.ListOptions) (re
 }
 
 // Watch returns a watch.Interface that watches the requested flowSchemas.
-func (c *FakeFlowSchemas) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *flowSchemasClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(flowschemasResource, opts))
 }
 
 // Create takes the representation of a flowSchema and creates it.  Returns the server's representation of the flowSchema, and an error, if there is any.
-func (c *FakeFlowSchemas) Create(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.CreateOptions) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) Create(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.CreateOptions) (result *v1.FlowSchema, err error) {
 	emptyResult := &v1.FlowSchema{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(flowschemasResource, flowSchema, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeFlowSchemas) Create(ctx context.Context, flowSchema *v1.FlowSchema,
 }
 
 // Update takes the representation of a flowSchema and updates it. Returns the server's representation of the flowSchema, and an error, if there is any.
-func (c *FakeFlowSchemas) Update(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.UpdateOptions) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) Update(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.UpdateOptions) (result *v1.FlowSchema, err error) {
 	emptyResult := &v1.FlowSchema{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(flowschemasResource, flowSchema, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeFlowSchemas) Update(ctx context.Context, flowSchema *v1.FlowSchema,
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeFlowSchemas) UpdateStatus(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.UpdateOptions) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) UpdateStatus(ctx context.Context, flowSchema *v1.FlowSchema, opts metav1.UpdateOptions) (result *v1.FlowSchema, err error) {
 	emptyResult := &v1.FlowSchema{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(flowschemasResource, "status", flowSchema, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeFlowSchemas) UpdateStatus(ctx context.Context, flowSchema *v1.FlowS
 }
 
 // Delete takes name of the flowSchema and deletes it. Returns an error if one occurs.
-func (c *FakeFlowSchemas) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *flowSchemasClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(flowschemasResource, name, opts), &v1.FlowSchema{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeFlowSchemas) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *flowSchemasClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(flowschemasResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.FlowSchemaList{})
@@ -130,7 +129,7 @@ func (c *FakeFlowSchemas) DeleteCollection(ctx context.Context, opts metav1.Dele
 }
 
 // Patch applies the patch and returns the patched flowSchema.
-func (c *FakeFlowSchemas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.FlowSchema, err error) {
 	emptyResult := &v1.FlowSchema{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(flowschemasResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeFlowSchemas) Patch(ctx context.Context, name string, pt types.Patch
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied flowSchema.
-func (c *FakeFlowSchemas) Apply(ctx context.Context, flowSchema *flowcontrolv1.FlowSchemaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) Apply(ctx context.Context, flowSchema *flowcontrolv1.FlowSchemaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.FlowSchema, err error) {
 	if flowSchema == nil {
 		return nil, fmt.Errorf("flowSchema provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeFlowSchemas) Apply(ctx context.Context, flowSchema *flowcontrolv1.F
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeFlowSchemas) ApplyStatus(ctx context.Context, flowSchema *flowcontrolv1.FlowSchemaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.FlowSchema, err error) {
+func (c *flowSchemasClusterClient) ApplyStatus(ctx context.Context, flowSchema *flowcontrolv1.FlowSchemaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.FlowSchema, err error) {
 	if flowSchema == nil {
 		return nil, fmt.Errorf("flowSchema provided to Apply must not be nil")
 	}

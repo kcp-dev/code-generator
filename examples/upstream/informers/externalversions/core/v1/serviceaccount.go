@@ -47,14 +47,13 @@ type ServiceAccountClusterInformer interface {
 type serviceAccountClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewServiceAccountClusterInformer constructs a new informer for ServiceAccount type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewServiceAccountClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredServiceAccountClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredServiceAccountClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredServiceAccountClusterInformer constructs a new informer for ServiceAccount type.

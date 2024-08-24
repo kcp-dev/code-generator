@@ -47,14 +47,13 @@ type ReplicaSetClusterInformer interface {
 type replicaSetClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewReplicaSetClusterInformer constructs a new informer for ReplicaSet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewReplicaSetClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredReplicaSetClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredReplicaSetClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredReplicaSetClusterInformer constructs a new informer for ReplicaSet type.

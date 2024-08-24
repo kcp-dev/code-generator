@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type NetworkingV1beta1Interface interface {
+type NetworkingV1beta1ClusterInterface interface {
 	NetworkingV1beta1ClusterScoper
 	IPAddressesClusterGetter
 	IngressesClusterGetter

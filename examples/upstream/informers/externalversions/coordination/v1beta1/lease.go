@@ -20,17 +20,17 @@ limitations under the License.
 package v1beta1
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/coordination/v1beta1"
 	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamcoordination.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/coordination.k8s.io"
 )
@@ -47,14 +47,13 @@ type LeaseClusterInformer interface {
 type leaseClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewLeaseClusterInformer constructs a new informer for Lease type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewLeaseClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredLeaseClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredLeaseClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredLeaseClusterInformer constructs a new informer for Lease type.

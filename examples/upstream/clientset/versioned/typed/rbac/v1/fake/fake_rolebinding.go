@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	rbacv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1"
 )
 
-// FakeRoleBindings implements RoleBindingInterface
-type FakeRoleBindings struct {
-	Fake *FakeRbacV1
-	ns   string
+// roleBindingsClusterClient implements roleBindingInterface
+type roleBindingsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var rolebindingsResource = v1.SchemeGroupVersion.WithResource("rolebindings")
@@ -43,19 +43,16 @@ var rolebindingsResource = v1.SchemeGroupVersion.WithResource("rolebindings")
 var rolebindingsKind = v1.SchemeGroupVersion.WithKind("RoleBinding")
 
 // Get takes name of the roleBinding, and returns the corresponding roleBinding object, and an error if there is any.
-func (c *FakeRoleBindings) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.RoleBinding, err error) {
-	emptyResult := &v1.RoleBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(rolebindingsResource, c.ns, name, options), emptyResult)
-
+func (c *roleBindingsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.RoleBinding, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(rolebindingsResource, c.ClusterPath, c.Namespace, name), &v1.RoleBinding{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.RoleBinding), err
 }
 
 // List takes label and field selectors, and returns the list of RoleBindings that match those selectors.
-func (c *FakeRoleBindings) List(ctx context.Context, opts metav1.ListOptions) (result *v1.RoleBindingList, err error) {
+func (c *roleBindingsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.RoleBindingList, err error) {
 	emptyResult := &v1.RoleBindingList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(rolebindingsResource, rolebindingsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeRoleBindings) List(ctx context.Context, opts metav1.ListOptions) (r
 }
 
 // Watch returns a watch.Interface that watches the requested roleBindings.
-func (c *FakeRoleBindings) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *roleBindingsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(rolebindingsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a roleBinding and creates it.  Returns the server's representation of the roleBinding, and an error, if there is any.
-func (c *FakeRoleBindings) Create(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.CreateOptions) (result *v1.RoleBinding, err error) {
+func (c *roleBindingsClusterClient) Create(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.CreateOptions) (result *v1.RoleBinding, err error) {
 	emptyResult := &v1.RoleBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(rolebindingsResource, c.ns, roleBinding, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeRoleBindings) Create(ctx context.Context, roleBinding *v1.RoleBindi
 }
 
 // Update takes the representation of a roleBinding and updates it. Returns the server's representation of the roleBinding, and an error, if there is any.
-func (c *FakeRoleBindings) Update(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.UpdateOptions) (result *v1.RoleBinding, err error) {
+func (c *roleBindingsClusterClient) Update(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.UpdateOptions) (result *v1.RoleBinding, err error) {
 	emptyResult := &v1.RoleBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(rolebindingsResource, c.ns, roleBinding, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeRoleBindings) Update(ctx context.Context, roleBinding *v1.RoleBindi
 }
 
 // Delete takes name of the roleBinding and deletes it. Returns an error if one occurs.
-func (c *FakeRoleBindings) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *roleBindingsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(rolebindingsResource, c.ns, name, opts), &v1.RoleBinding{})
 
@@ -117,7 +114,7 @@ func (c *FakeRoleBindings) Delete(ctx context.Context, name string, opts metav1.
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeRoleBindings) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *roleBindingsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(rolebindingsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.RoleBindingList{})
@@ -125,7 +122,7 @@ func (c *FakeRoleBindings) DeleteCollection(ctx context.Context, opts metav1.Del
 }
 
 // Patch applies the patch and returns the patched roleBinding.
-func (c *FakeRoleBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.RoleBinding, err error) {
+func (c *roleBindingsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.RoleBinding, err error) {
 	emptyResult := &v1.RoleBinding{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(rolebindingsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeRoleBindings) Patch(ctx context.Context, name string, pt types.Patc
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied roleBinding.
-func (c *FakeRoleBindings) Apply(ctx context.Context, roleBinding *rbacv1.RoleBindingApplyConfiguration, opts metav1.ApplyOptions) (result *v1.RoleBinding, err error) {
+func (c *roleBindingsClusterClient) Apply(ctx context.Context, roleBinding *rbacv1.RoleBindingApplyConfiguration, opts metav1.ApplyOptions) (result *v1.RoleBinding, err error) {
 	if roleBinding == nil {
 		return nil, fmt.Errorf("roleBinding provided to Apply must not be nil")
 	}

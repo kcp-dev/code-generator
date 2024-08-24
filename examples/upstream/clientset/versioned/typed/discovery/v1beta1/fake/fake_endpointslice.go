@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/discovery/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	discoveryv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/discovery/v1beta1"
 )
 
-// FakeEndpointSlices implements EndpointSliceInterface
-type FakeEndpointSlices struct {
-	Fake *FakeDiscoveryV1beta1
-	ns   string
+// endpointSlicesClusterClient implements endpointSliceInterface
+type endpointSlicesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var endpointslicesResource = v1beta1.SchemeGroupVersion.WithResource("endpointslices")
@@ -43,19 +43,16 @@ var endpointslicesResource = v1beta1.SchemeGroupVersion.WithResource("endpointsl
 var endpointslicesKind = v1beta1.SchemeGroupVersion.WithKind("EndpointSlice")
 
 // Get takes name of the endpointSlice, and returns the corresponding endpointSlice object, and an error if there is any.
-func (c *FakeEndpointSlices) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.EndpointSlice, err error) {
-	emptyResult := &v1beta1.EndpointSlice{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(endpointslicesResource, c.ns, name, options), emptyResult)
-
+func (c *endpointSlicesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.EndpointSlice, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(endpointslicesResource, c.ClusterPath, c.Namespace, name), &v1beta1.EndpointSlice{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.EndpointSlice), err
 }
 
 // List takes label and field selectors, and returns the list of EndpointSlices that match those selectors.
-func (c *FakeEndpointSlices) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EndpointSliceList, err error) {
+func (c *endpointSlicesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EndpointSliceList, err error) {
 	emptyResult := &v1beta1.EndpointSliceList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(endpointslicesResource, endpointslicesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeEndpointSlices) List(ctx context.Context, opts v1.ListOptions) (res
 }
 
 // Watch returns a watch.Interface that watches the requested endpointSlices.
-func (c *FakeEndpointSlices) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *endpointSlicesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(endpointslicesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a endpointSlice and creates it.  Returns the server's representation of the endpointSlice, and an error, if there is any.
-func (c *FakeEndpointSlices) Create(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.CreateOptions) (result *v1beta1.EndpointSlice, err error) {
+func (c *endpointSlicesClusterClient) Create(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.CreateOptions) (result *v1beta1.EndpointSlice, err error) {
 	emptyResult := &v1beta1.EndpointSlice{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(endpointslicesResource, c.ns, endpointSlice, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeEndpointSlices) Create(ctx context.Context, endpointSlice *v1beta1.
 }
 
 // Update takes the representation of a endpointSlice and updates it. Returns the server's representation of the endpointSlice, and an error, if there is any.
-func (c *FakeEndpointSlices) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.UpdateOptions) (result *v1beta1.EndpointSlice, err error) {
+func (c *endpointSlicesClusterClient) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.UpdateOptions) (result *v1beta1.EndpointSlice, err error) {
 	emptyResult := &v1beta1.EndpointSlice{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(endpointslicesResource, c.ns, endpointSlice, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeEndpointSlices) Update(ctx context.Context, endpointSlice *v1beta1.
 }
 
 // Delete takes name of the endpointSlice and deletes it. Returns an error if one occurs.
-func (c *FakeEndpointSlices) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *endpointSlicesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(endpointslicesResource, c.ns, name, opts), &v1beta1.EndpointSlice{})
 
@@ -117,7 +114,7 @@ func (c *FakeEndpointSlices) Delete(ctx context.Context, name string, opts v1.De
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeEndpointSlices) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *endpointSlicesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(endpointslicesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.EndpointSliceList{})
@@ -125,7 +122,7 @@ func (c *FakeEndpointSlices) DeleteCollection(ctx context.Context, opts v1.Delet
 }
 
 // Patch applies the patch and returns the patched endpointSlice.
-func (c *FakeEndpointSlices) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.EndpointSlice, err error) {
+func (c *endpointSlicesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.EndpointSlice, err error) {
 	emptyResult := &v1beta1.EndpointSlice{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(endpointslicesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeEndpointSlices) Patch(ctx context.Context, name string, pt types.Pa
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied endpointSlice.
-func (c *FakeEndpointSlices) Apply(ctx context.Context, endpointSlice *discoveryv1beta1.EndpointSliceApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.EndpointSlice, err error) {
+func (c *endpointSlicesClusterClient) Apply(ctx context.Context, endpointSlice *discoveryv1beta1.EndpointSliceApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.EndpointSlice, err error) {
 	if endpointSlice == nil {
 		return nil, fmt.Errorf("endpointSlice provided to Apply must not be nil")
 	}

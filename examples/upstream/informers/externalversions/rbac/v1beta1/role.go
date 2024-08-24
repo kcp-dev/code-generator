@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1beta1"
-	time "time"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/kcp-dev/logicalcluster/v3"
 	upstreamrbac.authorization.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/rbac.authorization.k8s.io"
-	watch "k8s.io/apimachinery/pkg/watch"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	time "time"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 
@@ -47,14 +47,13 @@ type RoleClusterInformer interface {
 type roleClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewRoleClusterInformer constructs a new informer for Role type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewRoleClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredRoleClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredRoleClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredRoleClusterInformer constructs a new informer for Role type.

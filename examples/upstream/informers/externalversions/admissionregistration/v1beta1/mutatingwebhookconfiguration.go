@@ -21,18 +21,18 @@ package v1beta1
 
 import (
 	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1beta1"
-	"github.com/kcp-dev/logicalcluster/v3"
+	cache "k8s.io/client-go/tools/cache"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamadmissionregistration.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/admissionregistration.k8s.io"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1beta1"
+	time "time"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	cache "k8s.io/client-go/tools/cache"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 
@@ -47,7 +47,6 @@ type MutatingWebhookConfigurationClusterInformer interface {
 type mutatingWebhookConfigurationClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewMutatingWebhookConfigurationClusterInformer constructs a new informer for MutatingWebhookConfiguration type.

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/networking/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	networkingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1beta1"
 )
 
-// FakeIngressClasses implements IngressClassInterface
-type FakeIngressClasses struct {
-	Fake *FakeNetworkingV1beta1
+// ingressClassesClusterClient implements ingressClassInterface
+type ingressClassesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var ingressclassesResource = v1beta1.SchemeGroupVersion.WithResource("ingressclasses")
@@ -42,18 +43,16 @@ var ingressclassesResource = v1beta1.SchemeGroupVersion.WithResource("ingresscla
 var ingressclassesKind = v1beta1.SchemeGroupVersion.WithKind("IngressClass")
 
 // Get takes name of the ingressClass, and returns the corresponding ingressClass object, and an error if there is any.
-func (c *FakeIngressClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.IngressClass, err error) {
-	emptyResult := &v1beta1.IngressClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(ingressclassesResource, name, options), emptyResult)
+func (c *ingressClassesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.IngressClass, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ingressclassesResource, c.ClusterPath, c.Namespace, name), &v1beta1.IngressClass{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.IngressClass), err
 }
 
 // List takes label and field selectors, and returns the list of IngressClasses that match those selectors.
-func (c *FakeIngressClasses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IngressClassList, err error) {
+func (c *ingressClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IngressClassList, err error) {
 	emptyResult := &v1beta1.IngressClassList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(ingressclassesResource, ingressclassesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeIngressClasses) List(ctx context.Context, opts v1.ListOptions) (res
 }
 
 // Watch returns a watch.Interface that watches the requested ingressClasses.
-func (c *FakeIngressClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *ingressClassesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(ingressclassesResource, opts))
 }
 
 // Create takes the representation of a ingressClass and creates it.  Returns the server's representation of the ingressClass, and an error, if there is any.
-func (c *FakeIngressClasses) Create(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.CreateOptions) (result *v1beta1.IngressClass, err error) {
+func (c *ingressClassesClusterClient) Create(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.CreateOptions) (result *v1beta1.IngressClass, err error) {
 	emptyResult := &v1beta1.IngressClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(ingressclassesResource, ingressClass, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeIngressClasses) Create(ctx context.Context, ingressClass *v1beta1.I
 }
 
 // Update takes the representation of a ingressClass and updates it. Returns the server's representation of the ingressClass, and an error, if there is any.
-func (c *FakeIngressClasses) Update(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.UpdateOptions) (result *v1beta1.IngressClass, err error) {
+func (c *ingressClassesClusterClient) Update(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.UpdateOptions) (result *v1beta1.IngressClass, err error) {
 	emptyResult := &v1beta1.IngressClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(ingressclassesResource, ingressClass, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeIngressClasses) Update(ctx context.Context, ingressClass *v1beta1.I
 }
 
 // Delete takes name of the ingressClass and deletes it. Returns an error if one occurs.
-func (c *FakeIngressClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *ingressClassesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(ingressclassesResource, name, opts), &v1beta1.IngressClass{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeIngressClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *ingressClassesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(ingressclassesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.IngressClassList{})
@@ -118,7 +117,7 @@ func (c *FakeIngressClasses) DeleteCollection(ctx context.Context, opts v1.Delet
 }
 
 // Patch applies the patch and returns the patched ingressClass.
-func (c *FakeIngressClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IngressClass, err error) {
+func (c *ingressClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IngressClass, err error) {
 	emptyResult := &v1beta1.IngressClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(ingressclassesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeIngressClasses) Patch(ctx context.Context, name string, pt types.Pa
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied ingressClass.
-func (c *FakeIngressClasses) Apply(ctx context.Context, ingressClass *networkingv1beta1.IngressClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IngressClass, err error) {
+func (c *ingressClassesClusterClient) Apply(ctx context.Context, ingressClass *networkingv1beta1.IngressClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IngressClass, err error) {
 	if ingressClass == nil {
 		return nil, fmt.Errorf("ingressClass provided to Apply must not be nil")
 	}

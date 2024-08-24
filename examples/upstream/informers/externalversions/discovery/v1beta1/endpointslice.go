@@ -21,17 +21,17 @@ package v1beta1
 
 import (
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1beta1"
-	time "time"
-	upstreamdiscovery.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/discovery.k8s.io"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamdiscovery.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/discovery.k8s.io"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 )
 
@@ -47,14 +47,13 @@ type EndpointSliceClusterInformer interface {
 type endpointSliceClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewEndpointSliceClusterInformer constructs a new informer for EndpointSlice type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewEndpointSliceClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredEndpointSliceClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredEndpointSliceClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredEndpointSliceClusterInformer constructs a new informer for EndpointSlice type.

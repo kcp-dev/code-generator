@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	v1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1"
 	time "time"
-	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
-	v1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1"
+	watch "k8s.io/apimachinery/pkg/watch"
+	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 
 
@@ -47,14 +47,13 @@ type RoleClusterInformer interface {
 type roleClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewRoleClusterInformer constructs a new informer for Role type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewRoleClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredRoleClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredRoleClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredRoleClusterInformer constructs a new informer for Role type.

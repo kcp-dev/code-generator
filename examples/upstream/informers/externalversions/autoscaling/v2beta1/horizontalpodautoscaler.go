@@ -47,14 +47,13 @@ type HorizontalPodAutoscalerClusterInformer interface {
 type horizontalPodAutoscalerClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewHorizontalPodAutoscalerClusterInformer constructs a new informer for HorizontalPodAutoscaler type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewHorizontalPodAutoscalerClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredHorizontalPodAutoscalerClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredHorizontalPodAutoscalerClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredHorizontalPodAutoscalerClusterInformer constructs a new informer for HorizontalPodAutoscaler type.

@@ -47,14 +47,13 @@ type DaemonSetClusterInformer interface {
 type daemonSetClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewDaemonSetClusterInformer constructs a new informer for DaemonSet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewDaemonSetClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredDaemonSetClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredDaemonSetClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredDaemonSetClusterInformer constructs a new informer for DaemonSet type.

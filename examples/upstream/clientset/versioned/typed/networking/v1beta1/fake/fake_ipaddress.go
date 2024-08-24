@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/networking/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	networkingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1beta1"
 )
 
-// FakeIPAddresses implements IPAddressInterface
-type FakeIPAddresses struct {
-	Fake *FakeNetworkingV1beta1
+// iPAddressesClusterClient implements iPAddressInterface
+type iPAddressesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var ipaddressesResource = v1beta1.SchemeGroupVersion.WithResource("ipaddresses")
@@ -42,18 +43,16 @@ var ipaddressesResource = v1beta1.SchemeGroupVersion.WithResource("ipaddresses")
 var ipaddressesKind = v1beta1.SchemeGroupVersion.WithKind("IPAddress")
 
 // Get takes name of the iPAddress, and returns the corresponding iPAddress object, and an error if there is any.
-func (c *FakeIPAddresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.IPAddress, err error) {
-	emptyResult := &v1beta1.IPAddress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(ipaddressesResource, name, options), emptyResult)
+func (c *iPAddressesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.IPAddress, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ipaddressesResource, c.ClusterPath, c.Namespace, name), &v1beta1.IPAddress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.IPAddress), err
 }
 
 // List takes label and field selectors, and returns the list of IPAddresses that match those selectors.
-func (c *FakeIPAddresses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IPAddressList, err error) {
+func (c *iPAddressesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IPAddressList, err error) {
 	emptyResult := &v1beta1.IPAddressList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(ipaddressesResource, ipaddressesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeIPAddresses) List(ctx context.Context, opts v1.ListOptions) (result
 }
 
 // Watch returns a watch.Interface that watches the requested iPAddresses.
-func (c *FakeIPAddresses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *iPAddressesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(ipaddressesResource, opts))
 }
 
 // Create takes the representation of a iPAddress and creates it.  Returns the server's representation of the iPAddress, and an error, if there is any.
-func (c *FakeIPAddresses) Create(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.CreateOptions) (result *v1beta1.IPAddress, err error) {
+func (c *iPAddressesClusterClient) Create(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.CreateOptions) (result *v1beta1.IPAddress, err error) {
 	emptyResult := &v1beta1.IPAddress{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(ipaddressesResource, iPAddress, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeIPAddresses) Create(ctx context.Context, iPAddress *v1beta1.IPAddre
 }
 
 // Update takes the representation of a iPAddress and updates it. Returns the server's representation of the iPAddress, and an error, if there is any.
-func (c *FakeIPAddresses) Update(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.UpdateOptions) (result *v1beta1.IPAddress, err error) {
+func (c *iPAddressesClusterClient) Update(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.UpdateOptions) (result *v1beta1.IPAddress, err error) {
 	emptyResult := &v1beta1.IPAddress{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(ipaddressesResource, iPAddress, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeIPAddresses) Update(ctx context.Context, iPAddress *v1beta1.IPAddre
 }
 
 // Delete takes name of the iPAddress and deletes it. Returns an error if one occurs.
-func (c *FakeIPAddresses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *iPAddressesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(ipaddressesResource, name, opts), &v1beta1.IPAddress{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeIPAddresses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *iPAddressesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(ipaddressesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.IPAddressList{})
@@ -118,7 +117,7 @@ func (c *FakeIPAddresses) DeleteCollection(ctx context.Context, opts v1.DeleteOp
 }
 
 // Patch applies the patch and returns the patched iPAddress.
-func (c *FakeIPAddresses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IPAddress, err error) {
+func (c *iPAddressesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IPAddress, err error) {
 	emptyResult := &v1beta1.IPAddress{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(ipaddressesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeIPAddresses) Patch(ctx context.Context, name string, pt types.Patch
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied iPAddress.
-func (c *FakeIPAddresses) Apply(ctx context.Context, iPAddress *networkingv1beta1.IPAddressApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IPAddress, err error) {
+func (c *iPAddressesClusterClient) Apply(ctx context.Context, iPAddress *networkingv1beta1.IPAddressApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IPAddress, err error) {
 	if iPAddress == nil {
 		return nil, fmt.Errorf("iPAddress provided to Apply must not be nil")
 	}

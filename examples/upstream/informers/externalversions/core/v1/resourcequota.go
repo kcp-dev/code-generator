@@ -47,14 +47,13 @@ type ResourceQuotaClusterInformer interface {
 type resourceQuotaClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewResourceQuotaClusterInformer constructs a new informer for ResourceQuota type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewResourceQuotaClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredResourceQuotaClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredResourceQuotaClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredResourceQuotaClusterInformer constructs a new informer for ResourceQuota type.

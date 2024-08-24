@@ -19,13 +19,13 @@ limitations under the License.
 package fake
 
 import (
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	rest "k8s.io/client-go/rest"
-	testing "k8s.io/client-go/testing"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/certificates/v1beta1"
 )
 
-type FakeCertificatesV1beta1 struct {
-	*testing.Fake
+type cSIDriversClusterClient struct {
+	*kcptesting.Fake
 }
 
 func (c *FakeCertificatesV1beta1) CertificateSigningRequests() v1beta1.CertificateSigningRequestInterface {

@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type CoordinationV1alpha1Interface interface {
+type CoordinationV1alpha1ClusterInterface interface {
 	CoordinationV1alpha1ClusterScoper
 	LeaseCandidatesClusterGetter
 }

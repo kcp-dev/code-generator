@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type NodeV1alpha1Interface interface {
+type NodeV1alpha1ClusterInterface interface {
 	NodeV1alpha1ClusterScoper
 	RuntimeClassesClusterGetter
 }

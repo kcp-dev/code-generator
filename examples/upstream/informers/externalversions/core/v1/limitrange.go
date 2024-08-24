@@ -47,14 +47,13 @@ type LimitRangeClusterInformer interface {
 type limitRangeClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewLimitRangeClusterInformer constructs a new informer for LimitRange type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewLimitRangeClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredLimitRangeClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredLimitRangeClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredLimitRangeClusterInformer constructs a new informer for LimitRange type.

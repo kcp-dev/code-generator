@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type CoreV1Interface interface {
+type CoreV1ClusterInterface interface {
 	CoreV1ClusterScoper
 	ComponentStatusesClusterGetter
 	ConfigMapsClusterGetter

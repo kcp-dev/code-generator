@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	time "time"
-	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
-	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 
@@ -47,7 +47,6 @@ type CSIDriverClusterInformer interface {
 type cSIDriverClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewCSIDriverClusterInformer constructs a new informer for CSIDriver type.

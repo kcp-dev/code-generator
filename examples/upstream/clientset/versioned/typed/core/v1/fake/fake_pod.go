@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakePods implements PodInterface
-type FakePods struct {
-	Fake *FakeCoreV1
-	ns   string
+// podsClusterClient implements podInterface
+type podsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var podsResource = v1.SchemeGroupVersion.WithResource("pods")
@@ -43,19 +43,16 @@ var podsResource = v1.SchemeGroupVersion.WithResource("pods")
 var podsKind = v1.SchemeGroupVersion.WithKind("Pod")
 
 // Get takes name of the pod, and returns the corresponding pod object, and an error if there is any.
-func (c *FakePods) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Pod, err error) {
-	emptyResult := &v1.Pod{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(podsResource, c.ns, name, options), emptyResult)
-
+func (c *podsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Pod, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(podsResource, c.ClusterPath, c.Namespace, name), &v1.Pod{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Pod), err
 }
 
 // List takes label and field selectors, and returns the list of Pods that match those selectors.
-func (c *FakePods) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PodList, err error) {
+func (c *podsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PodList, err error) {
 	emptyResult := &v1.PodList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(podsResource, podsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakePods) List(ctx context.Context, opts metav1.ListOptions) (result *v
 }
 
 // Watch returns a watch.Interface that watches the requested pods.
-func (c *FakePods) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *podsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(podsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a pod and creates it.  Returns the server's representation of the pod, and an error, if there is any.
-func (c *FakePods) Create(ctx context.Context, pod *v1.Pod, opts metav1.CreateOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) Create(ctx context.Context, pod *v1.Pod, opts metav1.CreateOptions) (result *v1.Pod, err error) {
 	emptyResult := &v1.Pod{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(podsResource, c.ns, pod, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakePods) Create(ctx context.Context, pod *v1.Pod, opts metav1.CreateOp
 }
 
 // Update takes the representation of a pod and updates it. Returns the server's representation of the pod, and an error, if there is any.
-func (c *FakePods) Update(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) Update(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
 	emptyResult := &v1.Pod{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(podsResource, c.ns, pod, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakePods) Update(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOp
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakePods) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
 	emptyResult := &v1.Pod{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(podsResource, "status", c.ns, pod, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakePods) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.Up
 }
 
 // Delete takes name of the pod and deletes it. Returns an error if one occurs.
-func (c *FakePods) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *podsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(podsResource, c.ns, name, opts), &v1.Pod{})
 
@@ -130,7 +127,7 @@ func (c *FakePods) Delete(ctx context.Context, name string, opts metav1.DeleteOp
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakePods) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *podsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(podsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.PodList{})
@@ -138,7 +135,7 @@ func (c *FakePods) DeleteCollection(ctx context.Context, opts metav1.DeleteOptio
 }
 
 // Patch applies the patch and returns the patched pod.
-func (c *FakePods) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Pod, err error) {
+func (c *podsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Pod, err error) {
 	emptyResult := &v1.Pod{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(podsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakePods) Patch(ctx context.Context, name string, pt types.PatchType, d
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied pod.
-func (c *FakePods) Apply(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) Apply(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error) {
 	if pod == nil {
 		return nil, fmt.Errorf("pod provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakePods) Apply(ctx context.Context, pod *corev1.PodApplyConfiguration,
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakePods) ApplyStatus(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) ApplyStatus(ctx context.Context, pod *corev1.PodApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Pod, err error) {
 	if pod == nil {
 		return nil, fmt.Errorf("pod provided to Apply must not be nil")
 	}
@@ -197,7 +194,7 @@ func (c *FakePods) ApplyStatus(ctx context.Context, pod *corev1.PodApplyConfigur
 }
 
 // UpdateEphemeralContainers takes the representation of a pod and updates it. Returns the server's representation of the pod, and an error, if there is any.
-func (c *FakePods) UpdateEphemeralContainers(ctx context.Context, podName string, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
+func (c *podsClusterClient) UpdateEphemeralContainers(ctx context.Context, podName string, pod *v1.Pod, opts metav1.UpdateOptions) (result *v1.Pod, err error) {
 	emptyResult := &v1.Pod{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(podsResource, "ephemeralcontainers", c.ns, pod, opts), &v1.Pod{})

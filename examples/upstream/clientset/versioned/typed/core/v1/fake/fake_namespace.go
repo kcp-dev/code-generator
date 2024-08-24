@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakeNamespaces implements NamespaceInterface
-type FakeNamespaces struct {
-	Fake *FakeCoreV1
+// namespacesClusterClient implements namespaceInterface
+type namespacesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var namespacesResource = v1.SchemeGroupVersion.WithResource("namespaces")
@@ -42,18 +43,16 @@ var namespacesResource = v1.SchemeGroupVersion.WithResource("namespaces")
 var namespacesKind = v1.SchemeGroupVersion.WithKind("Namespace")
 
 // Get takes name of the namespace, and returns the corresponding namespace object, and an error if there is any.
-func (c *FakeNamespaces) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Namespace, err error) {
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(namespacesResource, name, options), emptyResult)
+func (c *namespacesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Namespace, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(namespacesResource, c.ClusterPath, c.Namespace, name), &v1.Namespace{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Namespace), err
 }
 
 // List takes label and field selectors, and returns the list of Namespaces that match those selectors.
-func (c *FakeNamespaces) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NamespaceList, err error) {
+func (c *namespacesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NamespaceList, err error) {
 	emptyResult := &v1.NamespaceList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(namespacesResource, namespacesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeNamespaces) List(ctx context.Context, opts metav1.ListOptions) (res
 }
 
 // Watch returns a watch.Interface that watches the requested namespaces.
-func (c *FakeNamespaces) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *namespacesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(namespacesResource, opts))
 }
 
 // Create takes the representation of a namespace and creates it.  Returns the server's representation of the namespace, and an error, if there is any.
-func (c *FakeNamespaces) Create(ctx context.Context, namespace *v1.Namespace, opts metav1.CreateOptions) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) Create(ctx context.Context, namespace *v1.Namespace, opts metav1.CreateOptions) (result *v1.Namespace, err error) {
 	emptyResult := &v1.Namespace{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(namespacesResource, namespace, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeNamespaces) Create(ctx context.Context, namespace *v1.Namespace, op
 }
 
 // Update takes the representation of a namespace and updates it. Returns the server's representation of the namespace, and an error, if there is any.
-func (c *FakeNamespaces) Update(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) Update(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
 	emptyResult := &v1.Namespace{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(namespacesResource, namespace, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeNamespaces) Update(ctx context.Context, namespace *v1.Namespace, op
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeNamespaces) UpdateStatus(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) UpdateStatus(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
 	emptyResult := &v1.Namespace{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(namespacesResource, "status", namespace, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeNamespaces) UpdateStatus(ctx context.Context, namespace *v1.Namespa
 }
 
 // Delete takes name of the namespace and deletes it. Returns an error if one occurs.
-func (c *FakeNamespaces) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *namespacesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(namespacesResource, name, opts), &v1.Namespace{})
 	return err
 }
 
 // Patch applies the patch and returns the patched namespace.
-func (c *FakeNamespaces) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Namespace, err error) {
 	emptyResult := &v1.Namespace{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(namespacesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -133,7 +132,7 @@ func (c *FakeNamespaces) Patch(ctx context.Context, name string, pt types.PatchT
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied namespace.
-func (c *FakeNamespaces) Apply(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) Apply(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
 	if namespace == nil {
 		return nil, fmt.Errorf("namespace provided to Apply must not be nil")
 	}
@@ -156,7 +155,7 @@ func (c *FakeNamespaces) Apply(ctx context.Context, namespace *corev1.NamespaceA
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeNamespaces) ApplyStatus(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
+func (c *namespacesClusterClient) ApplyStatus(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
 	if namespace == nil {
 		return nil, fmt.Errorf("namespace provided to Apply must not be nil")
 	}

@@ -19,13 +19,13 @@ limitations under the License.
 package fake
 
 import (
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	rest "k8s.io/client-go/rest"
-	testing "k8s.io/client-go/testing"
 	v1alpha3 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
 
-type FakeResourceV1alpha3 struct {
-	*testing.Fake
+type cSIDriversClusterClient struct {
+	*kcptesting.Fake
 }
 
 func (c *FakeResourceV1alpha3) DeviceClasses() v1alpha3.DeviceClassInterface {

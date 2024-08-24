@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	admissionregistrationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1"
 )
 
-// FakeValidatingWebhookConfigurations implements ValidatingWebhookConfigurationInterface
-type FakeValidatingWebhookConfigurations struct {
-	Fake *FakeAdmissionregistrationV1
+// validatingWebhookConfigurationsClusterClient implements validatingWebhookConfigurationInterface
+type validatingWebhookConfigurationsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var validatingwebhookconfigurationsResource = v1.SchemeGroupVersion.WithResource("validatingwebhookconfigurations")
@@ -42,18 +43,16 @@ var validatingwebhookconfigurationsResource = v1.SchemeGroupVersion.WithResource
 var validatingwebhookconfigurationsKind = v1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration")
 
 // Get takes name of the validatingWebhookConfiguration, and returns the corresponding validatingWebhookConfiguration object, and an error if there is any.
-func (c *FakeValidatingWebhookConfigurations) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
-	emptyResult := &v1.ValidatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(validatingwebhookconfigurationsResource, name, options), emptyResult)
+func (c *validatingWebhookConfigurationsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingwebhookconfigurationsResource, c.ClusterPath, c.Namespace, name), &v1.ValidatingWebhookConfiguration{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ValidatingWebhookConfiguration), err
 }
 
 // List takes label and field selectors, and returns the list of ValidatingWebhookConfigurations that match those selectors.
-func (c *FakeValidatingWebhookConfigurations) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingWebhookConfigurationList, err error) {
+func (c *validatingWebhookConfigurationsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingWebhookConfigurationList, err error) {
 	emptyResult := &v1.ValidatingWebhookConfigurationList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(validatingwebhookconfigurationsResource, validatingwebhookconfigurationsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeValidatingWebhookConfigurations) List(ctx context.Context, opts met
 }
 
 // Watch returns a watch.Interface that watches the requested validatingWebhookConfigurations.
-func (c *FakeValidatingWebhookConfigurations) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *validatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingwebhookconfigurationsResource, opts))
 }
 
 // Create takes the representation of a validatingWebhookConfiguration and creates it.  Returns the server's representation of the validatingWebhookConfiguration, and an error, if there is any.
-func (c *FakeValidatingWebhookConfigurations) Create(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.CreateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
+func (c *validatingWebhookConfigurationsClusterClient) Create(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.CreateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	emptyResult := &v1.ValidatingWebhookConfiguration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(validatingwebhookconfigurationsResource, validatingWebhookConfiguration, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeValidatingWebhookConfigurations) Create(ctx context.Context, valida
 }
 
 // Update takes the representation of a validatingWebhookConfiguration and updates it. Returns the server's representation of the validatingWebhookConfiguration, and an error, if there is any.
-func (c *FakeValidatingWebhookConfigurations) Update(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
+func (c *validatingWebhookConfigurationsClusterClient) Update(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	emptyResult := &v1.ValidatingWebhookConfiguration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(validatingwebhookconfigurationsResource, validatingWebhookConfiguration, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeValidatingWebhookConfigurations) Update(ctx context.Context, valida
 }
 
 // Delete takes name of the validatingWebhookConfiguration and deletes it. Returns an error if one occurs.
-func (c *FakeValidatingWebhookConfigurations) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *validatingWebhookConfigurationsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(validatingwebhookconfigurationsResource, name, opts), &v1.ValidatingWebhookConfiguration{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeValidatingWebhookConfigurations) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *validatingWebhookConfigurationsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(validatingwebhookconfigurationsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ValidatingWebhookConfigurationList{})
@@ -118,7 +117,7 @@ func (c *FakeValidatingWebhookConfigurations) DeleteCollection(ctx context.Conte
 }
 
 // Patch applies the patch and returns the patched validatingWebhookConfiguration.
-func (c *FakeValidatingWebhookConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingWebhookConfiguration, err error) {
+func (c *validatingWebhookConfigurationsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingWebhookConfiguration, err error) {
 	emptyResult := &v1.ValidatingWebhookConfiguration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingwebhookconfigurationsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeValidatingWebhookConfigurations) Patch(ctx context.Context, name st
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied validatingWebhookConfiguration.
-func (c *FakeValidatingWebhookConfigurations) Apply(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
+func (c *validatingWebhookConfigurationsClusterClient) Apply(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	if validatingWebhookConfiguration == nil {
 		return nil, fmt.Errorf("validatingWebhookConfiguration provided to Apply must not be nil")
 	}

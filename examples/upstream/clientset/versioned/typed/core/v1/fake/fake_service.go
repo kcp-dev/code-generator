@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakeServices implements ServiceInterface
-type FakeServices struct {
-	Fake *FakeCoreV1
-	ns   string
+// servicesClusterClient implements serviceInterface
+type servicesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var servicesResource = v1.SchemeGroupVersion.WithResource("services")
@@ -43,19 +43,16 @@ var servicesResource = v1.SchemeGroupVersion.WithResource("services")
 var servicesKind = v1.SchemeGroupVersion.WithKind("Service")
 
 // Get takes name of the service, and returns the corresponding service object, and an error if there is any.
-func (c *FakeServices) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Service, err error) {
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(servicesResource, c.ns, name, options), emptyResult)
-
+func (c *servicesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Service, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(servicesResource, c.ClusterPath, c.Namespace, name), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
 // List takes label and field selectors, and returns the list of Services that match those selectors.
-func (c *FakeServices) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ServiceList, err error) {
+func (c *servicesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ServiceList, err error) {
 	emptyResult := &v1.ServiceList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(servicesResource, servicesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeServices) List(ctx context.Context, opts metav1.ListOptions) (resul
 }
 
 // Watch returns a watch.Interface that watches the requested services.
-func (c *FakeServices) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *servicesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(servicesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a service and creates it.  Returns the server's representation of the service, and an error, if there is any.
-func (c *FakeServices) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (result *v1.Service, err error) {
+func (c *servicesClusterClient) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (result *v1.Service, err error) {
 	emptyResult := &v1.Service{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(servicesResource, c.ns, service, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeServices) Create(ctx context.Context, service *v1.Service, opts met
 }
 
 // Update takes the representation of a service and updates it. Returns the server's representation of the service, and an error, if there is any.
-func (c *FakeServices) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
+func (c *servicesClusterClient) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
 	emptyResult := &v1.Service{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(servicesResource, c.ns, service, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeServices) Update(ctx context.Context, service *v1.Service, opts met
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeServices) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
+func (c *servicesClusterClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
 	emptyResult := &v1.Service{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(servicesResource, "status", c.ns, service, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeServices) UpdateStatus(ctx context.Context, service *v1.Service, op
 }
 
 // Delete takes name of the service and deletes it. Returns an error if one occurs.
-func (c *FakeServices) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *servicesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(servicesResource, c.ns, name, opts), &v1.Service{})
 
@@ -130,7 +127,7 @@ func (c *FakeServices) Delete(ctx context.Context, name string, opts metav1.Dele
 }
 
 // Patch applies the patch and returns the patched service.
-func (c *FakeServices) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Service, err error) {
+func (c *servicesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Service, err error) {
 	emptyResult := &v1.Service{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(servicesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -142,7 +139,7 @@ func (c *FakeServices) Patch(ctx context.Context, name string, pt types.PatchTyp
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied service.
-func (c *FakeServices) Apply(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
+func (c *servicesClusterClient) Apply(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
 	if service == nil {
 		return nil, fmt.Errorf("service provided to Apply must not be nil")
 	}
@@ -166,7 +163,7 @@ func (c *FakeServices) Apply(ctx context.Context, service *corev1.ServiceApplyCo
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeServices) ApplyStatus(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
+func (c *servicesClusterClient) ApplyStatus(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
 	if service == nil {
 		return nil, fmt.Errorf("service provided to Apply must not be nil")
 	}

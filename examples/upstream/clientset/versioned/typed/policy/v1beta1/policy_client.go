@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type PolicyV1beta1Interface interface {
+type PolicyV1beta1ClusterInterface interface {
 	PolicyV1beta1ClusterScoper
 	EvictionsClusterGetter
 	PodDisruptionBudgetsClusterGetter

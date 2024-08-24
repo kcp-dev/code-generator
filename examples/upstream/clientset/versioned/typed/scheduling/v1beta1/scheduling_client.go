@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type SchedulingV1beta1Interface interface {
+type SchedulingV1beta1ClusterInterface interface {
 	SchedulingV1beta1ClusterScoper
 	PriorityClassesClusterGetter
 }

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	storagev1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1alpha1"
 )
 
-// FakeVolumeAttachments implements VolumeAttachmentInterface
-type FakeVolumeAttachments struct {
-	Fake *FakeStorageV1alpha1
+// volumeAttachmentsClusterClient implements volumeAttachmentInterface
+type volumeAttachmentsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var volumeattachmentsResource = v1alpha1.SchemeGroupVersion.WithResource("volumeattachments")
@@ -42,18 +43,16 @@ var volumeattachmentsResource = v1alpha1.SchemeGroupVersion.WithResource("volume
 var volumeattachmentsKind = v1alpha1.SchemeGroupVersion.WithKind("VolumeAttachment")
 
 // Get takes name of the volumeAttachment, and returns the corresponding volumeAttachment object, and an error if there is any.
-func (c *FakeVolumeAttachments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.VolumeAttachment, err error) {
-	emptyResult := &v1alpha1.VolumeAttachment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(volumeattachmentsResource, name, options), emptyResult)
+func (c *volumeAttachmentsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.VolumeAttachment, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(volumeattachmentsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.VolumeAttachment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.VolumeAttachment), err
 }
 
 // List takes label and field selectors, and returns the list of VolumeAttachments that match those selectors.
-func (c *FakeVolumeAttachments) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VolumeAttachmentList, err error) {
+func (c *volumeAttachmentsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VolumeAttachmentList, err error) {
 	emptyResult := &v1alpha1.VolumeAttachmentList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(volumeattachmentsResource, volumeattachmentsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeVolumeAttachments) List(ctx context.Context, opts v1.ListOptions) (
 }
 
 // Watch returns a watch.Interface that watches the requested volumeAttachments.
-func (c *FakeVolumeAttachments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *volumeAttachmentsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(volumeattachmentsResource, opts))
 }
 
 // Create takes the representation of a volumeAttachment and creates it.  Returns the server's representation of the volumeAttachment, and an error, if there is any.
-func (c *FakeVolumeAttachments) Create(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.CreateOptions) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) Create(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.CreateOptions) (result *v1alpha1.VolumeAttachment, err error) {
 	emptyResult := &v1alpha1.VolumeAttachment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(volumeattachmentsResource, volumeAttachment, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeVolumeAttachments) Create(ctx context.Context, volumeAttachment *v1
 }
 
 // Update takes the representation of a volumeAttachment and updates it. Returns the server's representation of the volumeAttachment, and an error, if there is any.
-func (c *FakeVolumeAttachments) Update(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) Update(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttachment, err error) {
 	emptyResult := &v1alpha1.VolumeAttachment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(volumeattachmentsResource, volumeAttachment, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeVolumeAttachments) Update(ctx context.Context, volumeAttachment *v1
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeVolumeAttachments) UpdateStatus(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) UpdateStatus(ctx context.Context, volumeAttachment *v1alpha1.VolumeAttachment, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttachment, err error) {
 	emptyResult := &v1alpha1.VolumeAttachment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(volumeattachmentsResource, "status", volumeAttachment, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeVolumeAttachments) UpdateStatus(ctx context.Context, volumeAttachme
 }
 
 // Delete takes name of the volumeAttachment and deletes it. Returns an error if one occurs.
-func (c *FakeVolumeAttachments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *volumeAttachmentsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(volumeattachmentsResource, name, opts), &v1alpha1.VolumeAttachment{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeVolumeAttachments) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *volumeAttachmentsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(volumeattachmentsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.VolumeAttachmentList{})
@@ -130,7 +129,7 @@ func (c *FakeVolumeAttachments) DeleteCollection(ctx context.Context, opts v1.De
 }
 
 // Patch applies the patch and returns the patched volumeAttachment.
-func (c *FakeVolumeAttachments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.VolumeAttachment, err error) {
 	emptyResult := &v1alpha1.VolumeAttachment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(volumeattachmentsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeVolumeAttachments) Patch(ctx context.Context, name string, pt types
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied volumeAttachment.
-func (c *FakeVolumeAttachments) Apply(ctx context.Context, volumeAttachment *storagev1alpha1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) Apply(ctx context.Context, volumeAttachment *storagev1alpha1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttachment, err error) {
 	if volumeAttachment == nil {
 		return nil, fmt.Errorf("volumeAttachment provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeVolumeAttachments) Apply(ctx context.Context, volumeAttachment *sto
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeVolumeAttachments) ApplyStatus(ctx context.Context, volumeAttachment *storagev1alpha1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttachment, err error) {
+func (c *volumeAttachmentsClusterClient) ApplyStatus(ctx context.Context, volumeAttachment *storagev1alpha1.VolumeAttachmentApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttachment, err error) {
 	if volumeAttachment == nil {
 		return nil, fmt.Errorf("volumeAttachment provided to Apply must not be nil")
 	}

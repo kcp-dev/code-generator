@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type ResourceV1alpha3Interface interface {
+type ResourceV1alpha3ClusterInterface interface {
 	ResourceV1alpha3ClusterScoper
 	DeviceClassesClusterGetter
 	PodSchedulingContextsClusterGetter

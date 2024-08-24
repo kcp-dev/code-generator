@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
+	upstreamnode.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/node.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	nodev1beta1 "k8s.io/api/node/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	watch "k8s.io/apimachinery/pkg/watch"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/node/v1beta1"
+	time "time"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	nodev1beta1 "k8s.io/api/node/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	watch "k8s.io/apimachinery/pkg/watch"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/node/v1beta1"
-	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamnode.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/node.k8s.io"
 )
 
 
@@ -47,7 +47,6 @@ type RuntimeClassClusterInformer interface {
 type runtimeClassClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewRuntimeClassClusterInformer constructs a new informer for RuntimeClass type.

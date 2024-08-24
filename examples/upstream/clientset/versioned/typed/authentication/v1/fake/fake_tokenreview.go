@@ -21,14 +21,15 @@ package fake
 import (
 	"context"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testing "k8s.io/client-go/testing"
 )
 
-// FakeTokenReviews implements TokenReviewInterface
-type FakeTokenReviews struct {
-	Fake *FakeAuthenticationV1
+// tokenReviewsClusterClient implements tokenReviewInterface
+type tokenReviewsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var tokenreviewsResource = v1.SchemeGroupVersion.WithResource("tokenreviews")
@@ -36,7 +37,7 @@ var tokenreviewsResource = v1.SchemeGroupVersion.WithResource("tokenreviews")
 var tokenreviewsKind = v1.SchemeGroupVersion.WithKind("TokenReview")
 
 // Create takes the representation of a tokenReview and creates it.  Returns the server's representation of the tokenReview, and an error, if there is any.
-func (c *FakeTokenReviews) Create(ctx context.Context, tokenReview *v1.TokenReview, opts metav1.CreateOptions) (result *v1.TokenReview, err error) {
+func (c *tokenReviewsClusterClient) Create(ctx context.Context, tokenReview *v1.TokenReview, opts metav1.CreateOptions) (result *v1.TokenReview, err error) {
 	emptyResult := &v1.TokenReview{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(tokenreviewsResource, tokenReview, opts), emptyResult)

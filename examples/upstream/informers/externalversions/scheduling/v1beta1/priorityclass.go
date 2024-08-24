@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/scheduling/v1beta1"
 	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamscheduling.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/scheduling.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/scheduling/v1beta1"
+	time "time"
 )
 
 
@@ -47,7 +47,6 @@ type PriorityClassClusterInformer interface {
 type priorityClassClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewPriorityClassClusterInformer constructs a new informer for PriorityClass type.

@@ -190,7 +190,6 @@ var typeInformerStruct = `
 type $.type|private$Informer struct {
 	factory $.interfacesSharedInformerFactory|raw$
 	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
-	$if .namespaced$namespace string$end$
 }
 `
 
@@ -198,7 +197,6 @@ var typeInformerClusterStruct = `
 type $.type|private$ClusterInformer struct {
 	factory $.interfacesSharedInformerFactory|raw$
 	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
-	$if .namespaced$namespace string$end$
 }
 `
 
@@ -207,7 +205,7 @@ var typeInformerPublicConstructor = `
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func New$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
-	return NewFiltered$.type|public$Informer(client$if .namespaced$, namespace$end$, resyncPeriod, indexers, nil)
+	return NewFiltered$.type|public$Informer(client, resyncPeriod, indexers, nil)
 }
 `
 
@@ -216,7 +214,7 @@ var typeInformerClusterPublicConstructor = `
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func New$.type|public$ClusterInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
-	return NewFiltered$.type|public$ClusterInformer(client$if .namespaced$, namespace$end$, resyncPeriod, indexers, nil)
+	return NewFiltered$.type|public$ClusterInformer(client, resyncPeriod, indexers, nil)
 }
 `
 

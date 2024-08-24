@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	extensionsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/extensions/v1beta1"
 )
 
-// FakeDaemonSets implements DaemonSetInterface
-type FakeDaemonSets struct {
-	Fake *FakeExtensionsV1beta1
-	ns   string
+// daemonSetsClusterClient implements daemonSetInterface
+type daemonSetsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var daemonsetsResource = v1beta1.SchemeGroupVersion.WithResource("daemonsets")
@@ -43,19 +43,16 @@ var daemonsetsResource = v1beta1.SchemeGroupVersion.WithResource("daemonsets")
 var daemonsetsKind = v1beta1.SchemeGroupVersion.WithKind("DaemonSet")
 
 // Get takes name of the daemonSet, and returns the corresponding daemonSet object, and an error if there is any.
-func (c *FakeDaemonSets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.DaemonSet, err error) {
-	emptyResult := &v1beta1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(daemonsetsResource, c.ns, name, options), emptyResult)
-
+func (c *daemonSetsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.DaemonSet, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(daemonsetsResource, c.ClusterPath, c.Namespace, name), &v1beta1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.DaemonSet), err
 }
 
 // List takes label and field selectors, and returns the list of DaemonSets that match those selectors.
-func (c *FakeDaemonSets) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DaemonSetList, err error) {
+func (c *daemonSetsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DaemonSetList, err error) {
 	emptyResult := &v1beta1.DaemonSetList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(daemonsetsResource, daemonsetsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeDaemonSets) List(ctx context.Context, opts v1.ListOptions) (result 
 }
 
 // Watch returns a watch.Interface that watches the requested daemonSets.
-func (c *FakeDaemonSets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *daemonSetsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(daemonsetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a daemonSet and creates it.  Returns the server's representation of the daemonSet, and an error, if there is any.
-func (c *FakeDaemonSets) Create(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.CreateOptions) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) Create(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.CreateOptions) (result *v1beta1.DaemonSet, err error) {
 	emptyResult := &v1beta1.DaemonSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(daemonsetsResource, c.ns, daemonSet, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeDaemonSets) Create(ctx context.Context, daemonSet *v1beta1.DaemonSe
 }
 
 // Update takes the representation of a daemonSet and updates it. Returns the server's representation of the daemonSet, and an error, if there is any.
-func (c *FakeDaemonSets) Update(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.UpdateOptions) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) Update(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.UpdateOptions) (result *v1beta1.DaemonSet, err error) {
 	emptyResult := &v1beta1.DaemonSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(daemonsetsResource, c.ns, daemonSet, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeDaemonSets) Update(ctx context.Context, daemonSet *v1beta1.DaemonSe
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeDaemonSets) UpdateStatus(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.UpdateOptions) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) UpdateStatus(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.UpdateOptions) (result *v1beta1.DaemonSet, err error) {
 	emptyResult := &v1beta1.DaemonSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(daemonsetsResource, "status", c.ns, daemonSet, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeDaemonSets) UpdateStatus(ctx context.Context, daemonSet *v1beta1.Da
 }
 
 // Delete takes name of the daemonSet and deletes it. Returns an error if one occurs.
-func (c *FakeDaemonSets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *daemonSetsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(daemonsetsResource, c.ns, name, opts), &v1beta1.DaemonSet{})
 
@@ -130,7 +127,7 @@ func (c *FakeDaemonSets) Delete(ctx context.Context, name string, opts v1.Delete
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeDaemonSets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *daemonSetsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(daemonsetsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.DaemonSetList{})
@@ -138,7 +135,7 @@ func (c *FakeDaemonSets) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 }
 
 // Patch applies the patch and returns the patched daemonSet.
-func (c *FakeDaemonSets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.DaemonSet, err error) {
 	emptyResult := &v1beta1.DaemonSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(daemonsetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakeDaemonSets) Patch(ctx context.Context, name string, pt types.PatchT
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied daemonSet.
-func (c *FakeDaemonSets) Apply(ctx context.Context, daemonSet *extensionsv1beta1.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) Apply(ctx context.Context, daemonSet *extensionsv1beta1.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.DaemonSet, err error) {
 	if daemonSet == nil {
 		return nil, fmt.Errorf("daemonSet provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakeDaemonSets) Apply(ctx context.Context, daemonSet *extensionsv1beta1
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeDaemonSets) ApplyStatus(ctx context.Context, daemonSet *extensionsv1beta1.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.DaemonSet, err error) {
+func (c *daemonSetsClusterClient) ApplyStatus(ctx context.Context, daemonSet *extensionsv1beta1.DaemonSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.DaemonSet, err error) {
 	if daemonSet == nil {
 		return nil, fmt.Errorf("daemonSet provided to Apply must not be nil")
 	}

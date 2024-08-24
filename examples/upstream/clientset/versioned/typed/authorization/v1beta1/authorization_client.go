@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type AuthorizationV1beta1Interface interface {
+type AuthorizationV1beta1ClusterInterface interface {
 	AuthorizationV1beta1ClusterScoper
 	LocalSubjectAccessReviewsClusterGetter
 	SelfSubjectAccessReviewsClusterGetter

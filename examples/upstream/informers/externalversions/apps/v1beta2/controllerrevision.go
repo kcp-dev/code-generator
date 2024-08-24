@@ -47,14 +47,13 @@ type ControllerRevisionClusterInformer interface {
 type controllerRevisionClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewControllerRevisionClusterInformer constructs a new informer for ControllerRevision type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewControllerRevisionClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredControllerRevisionClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredControllerRevisionClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredControllerRevisionClusterInformer constructs a new informer for ControllerRevision type.

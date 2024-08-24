@@ -47,14 +47,13 @@ type ConfigMapClusterInformer interface {
 type configMapClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewConfigMapClusterInformer constructs a new informer for ConfigMap type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewConfigMapClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredConfigMapClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredConfigMapClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredConfigMapClusterInformer constructs a new informer for ConfigMap type.

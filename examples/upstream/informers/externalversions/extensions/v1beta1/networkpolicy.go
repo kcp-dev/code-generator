@@ -47,14 +47,13 @@ type NetworkPolicyClusterInformer interface {
 type networkPolicyClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewNetworkPolicyClusterInformer constructs a new informer for NetworkPolicy type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewNetworkPolicyClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredNetworkPolicyClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredNetworkPolicyClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredNetworkPolicyClusterInformer constructs a new informer for NetworkPolicy type.

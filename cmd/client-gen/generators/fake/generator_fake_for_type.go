@@ -58,7 +58,9 @@ func (g *genFakeForType) Namers(c *generator.Context) namer.NameSystems {
 }
 
 func (g *genFakeForType) Imports(c *generator.Context) (imports []string) {
-	return g.imports.ImportLines()
+	imports = g.imports.ImportLines()
+	imports = append(imports, "kcptesting \"github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing\"")
+	return imports
 }
 
 // Ideally, we'd like genStatus to return true if there is a subresource path
@@ -157,12 +159,7 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 		_, gvString := util.ParsePathGroupVersion(g.inputPackage)
 		m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
 	}
-
-	if tags.NonNamespaced {
-		sw.Do(structNonNamespaced, m)
-	} else {
-		sw.Do(structNamespaced, m)
-	}
+	sw.Do(structGeneric, m)
 
 	if tags.NoVerbs {
 		return sw.Error()
@@ -306,19 +303,10 @@ func adjustTemplate(name, verbType, template string) string {
 }
 
 // template for the struct that implements the type's interface
-var structNamespaced = `
-// Fake$.type|publicPlural$ implements $.type|public$Interface
-type Fake$.type|publicPlural$ struct {
-	Fake *Fake$.GroupGoName$$.Version$
-	ns     string
-}
-`
-
-// template for the struct that implements the type's interface
-var structNonNamespaced = `
-// Fake$.type|publicPlural$ implements $.type|public$Interface
-type Fake$.type|publicPlural$ struct {
-	Fake *Fake$.GroupGoName$$.Version$
+var structGeneric = `
+// $.type|privatePlural$ClusterClient implements $.type|private$Interface
+type $.type|privatePlural$ClusterClient struct {
+	*kcptesting.Fake
 }
 `
 
@@ -332,7 +320,7 @@ var $.type|allLowercasePlural$Kind = $.SchemeGroupVersion|raw$.WithKind("$.type|
 
 var listTemplate = `
 // List takes label and field selectors, and returns the list of $.type|publicPlural$ that match those selectors.
-func (c *Fake$.type|publicPlural$) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
+func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
 	emptyResult := &$.type|raw$List{}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewListActionWithOptions|raw$($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ns, opts), emptyResult)
@@ -346,7 +334,7 @@ func (c *Fake$.type|publicPlural$) List(ctx context.Context, opts $.ListOptions|
 
 var listUsingOptionsTemplate = `
 // List takes label and field selectors, and returns the list of $.type|publicPlural$ that match those selectors.
-func (c *Fake$.type|publicPlural$) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
+func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
 	emptyResult := &$.type|raw$List{}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewListActionWithOptions|raw$($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ns, opts), emptyResult)
@@ -371,13 +359,10 @@ func (c *Fake$.type|publicPlural$) List(ctx context.Context, opts $.ListOptions|
 
 var getTemplate = `
 // Get takes name of the $.type|private$, and returns the corresponding $.resultType|private$ object, and an error if there is any.
-func (c *Fake$.type|publicPlural$) Get(ctx context.Context, name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
-	emptyResult := &$.resultType|raw${}
-	obj, err := c.Fake.
-		$if .namespaced$Invokes($.NewGetActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, name, options), emptyResult)
-		$else$Invokes($.NewRootGetActionWithOptions|raw$($.type|allLowercasePlural$Resource, name, options), emptyResult)$end$
+func (c *$.type|privatePlural$ClusterClient) Get(ctx context.Context, name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name), &$.resultType|raw${})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*$.resultType|raw$), err
 }
@@ -385,7 +370,13 @@ func (c *Fake$.type|publicPlural$) Get(ctx context.Context, name string, options
 
 var getSubresourceTemplate = `
 // Get takes name of the $.type|private$, and returns the corresponding $.resultType|private$ object, and an error if there is any.
-func (c *Fake$.type|publicPlural$) Get(ctx context.Context, $.type|private$Name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Get(ctx context.Context, $.type|private$Name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configMapsResource, c.ClusterPath, c.Namespace, name), &corev1.ConfigMap{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*corev1.ConfigMap), err
+
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewGetSubresourceActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, "$.subresourcePath$", $.type|private$Name, options), emptyResult)
@@ -399,7 +390,7 @@ func (c *Fake$.type|publicPlural$) Get(ctx context.Context, $.type|private$Name 
 
 var deleteTemplate = `
 // Delete takes name of the $.type|private$ and deletes it. Returns an error if one occurs.
-func (c *Fake$.type|publicPlural$) Delete(ctx context.Context, name string, opts $.DeleteOptions|raw$) error {
+func (c *$.type|privatePlural$ClusterClient)Delete(ctx context.Context, name string, opts $.DeleteOptions|raw$) error {
 	_, err := c.Fake.
 		$if .namespaced$Invokes($.NewDeleteActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, name, opts), &$.type|raw${})
 		$else$Invokes($.NewRootDeleteActionWithOptions|raw$($.type|allLowercasePlural$Resource, name, opts), &$.type|raw${})$end$
@@ -409,7 +400,7 @@ func (c *Fake$.type|publicPlural$) Delete(ctx context.Context, name string, opts
 
 var deleteCollectionTemplate = `
 // DeleteCollection deletes a collection of objects.
-func (c *Fake$.type|publicPlural$) DeleteCollection(ctx context.Context, opts $.DeleteOptions|raw$, listOpts $.ListOptions|raw$) error {
+func (c *$.type|privatePlural$ClusterClient) DeleteCollection(ctx context.Context, opts $.DeleteOptions|raw$, listOpts $.ListOptions|raw$) error {
 	$if .namespaced$action := $.NewDeleteCollectionActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, opts, listOpts)
 	$else$action := $.NewRootDeleteCollectionActionWithOptions|raw$($.type|allLowercasePlural$Resource, opts, listOpts)
 	$end$
@@ -419,7 +410,7 @@ func (c *Fake$.type|publicPlural$) DeleteCollection(ctx context.Context, opts $.
 `
 var createTemplate = `
 // Create takes the representation of a $.inputType|private$ and creates it.  Returns the server's representation of the $.resultType|private$, and an error, if there is any.
-func (c *Fake$.type|publicPlural$) Create(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Create(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewCreateActionWithOptions|raw$($.inputType|allLowercasePlural$Resource, c.ns, $.inputType|private$, opts), emptyResult)
@@ -433,7 +424,7 @@ func (c *Fake$.type|publicPlural$) Create(ctx context.Context, $.inputType|priva
 
 var createSubresourceTemplate = `
 // Create takes the representation of a $.inputType|private$ and creates it.  Returns the server's representation of the $.resultType|private$, and an error, if there is any.
-func (c *Fake$.type|publicPlural$) Create(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Create(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewCreateSubresourceActionWithOptions|raw$($.type|allLowercasePlural$Resource, $.type|private$Name, "$.subresourcePath$", c.ns, $.inputType|private$, opts), emptyResult)
@@ -447,7 +438,7 @@ func (c *Fake$.type|publicPlural$) Create(ctx context.Context, $.type|private$Na
 
 var updateTemplate = `
 // Update takes the representation of a $.inputType|private$ and updates it. Returns the server's representation of the $.resultType|private$, and an error, if there is any.
-func (c *Fake$.type|publicPlural$) Update(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient)Update(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewUpdateActionWithOptions|raw$($.inputType|allLowercasePlural$Resource, c.ns, $.inputType|private$, opts), emptyResult)
@@ -461,7 +452,7 @@ func (c *Fake$.type|publicPlural$) Update(ctx context.Context, $.inputType|priva
 
 var updateSubresourceTemplate = `
 // Update takes the representation of a $.inputType|private$ and updates it. Returns the server's representation of the $.resultType|private$, and an error, if there is any.
-func (c *Fake$.type|publicPlural$) Update(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Update(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewUpdateSubresourceActionWithOptions|raw$($.type|allLowercasePlural$Resource, "$.subresourcePath$", c.ns, $.inputType|private$, opts), &$.inputType|raw${})
@@ -476,7 +467,7 @@ func (c *Fake$.type|publicPlural$) Update(ctx context.Context, $.type|private$Na
 var updateStatusTemplate = `
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *Fake$.type|publicPlural$) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts $.UpdateOptions|raw$) (result *$.type|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts $.UpdateOptions|raw$) (result *$.type|raw$, err error) {
 	emptyResult := &$.type|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewUpdateSubresourceActionWithOptions|raw$($.type|allLowercasePlural$Resource, "status", c.ns, $.type|private$, opts), emptyResult)
@@ -490,7 +481,7 @@ func (c *Fake$.type|publicPlural$) UpdateStatus(ctx context.Context, $.type|priv
 
 var watchTemplate = `
 // Watch returns a $.watchInterface|raw$ that watches the requested $.type|privatePlural$.
-func (c *Fake$.type|publicPlural$) Watch(ctx context.Context, opts $.ListOptions|raw$) ($.watchInterface|raw$, error) {
+func (c *$.type|privatePlural$ClusterClient) Watch(ctx context.Context, opts $.ListOptions|raw$) ($.watchInterface|raw$, error) {
 	return c.Fake.
 		$if .namespaced$InvokesWatch($.NewWatchActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, opts))
 		$else$InvokesWatch($.NewRootWatchActionWithOptions|raw$($.type|allLowercasePlural$Resource, opts))$end$
@@ -499,7 +490,7 @@ func (c *Fake$.type|publicPlural$) Watch(ctx context.Context, opts $.ListOptions
 
 var patchTemplate = `
 // Patch applies the patch and returns the patched $.resultType|private$.
-func (c *Fake$.type|publicPlural$) Patch(ctx context.Context, name string, pt $.PatchType|raw$, data []byte, opts $.PatchOptions|raw$, subresources ...string) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Patch(ctx context.Context, name string, pt $.PatchType|raw$, data []byte, opts $.PatchOptions|raw$, subresources ...string) (result *$.resultType|raw$, err error) {
 	emptyResult := &$.resultType|raw${}
 	obj, err := c.Fake.
 		$if .namespaced$Invokes($.NewPatchSubresourceActionWithOptions|raw$($.type|allLowercasePlural$Resource, c.ns, name, pt, data, opts, subresources... ), emptyResult)
@@ -513,7 +504,7 @@ func (c *Fake$.type|publicPlural$) Patch(ctx context.Context, name string, pt $.
 
 var applyTemplate = `
 // Apply takes the given apply declarative configuration, applies it and returns the applied $.resultType|private$.
-func (c *Fake$.type|publicPlural$) Apply(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Apply(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
 	if $.inputType|private$ == nil {
 		return nil, fmt.Errorf("$.inputType|private$ provided to Apply must not be nil")
 	}
@@ -539,7 +530,7 @@ func (c *Fake$.type|publicPlural$) Apply(ctx context.Context, $.inputType|privat
 var applyStatusTemplate = `
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *Fake$.type|publicPlural$) ApplyStatus(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) ApplyStatus(ctx context.Context, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
 	if $.inputType|private$ == nil {
 		return nil, fmt.Errorf("$.inputType|private$ provided to Apply must not be nil")
 	}
@@ -565,7 +556,7 @@ func (c *Fake$.type|publicPlural$) ApplyStatus(ctx context.Context, $.inputType|
 var applySubresourceTemplate = `
 // Apply takes top resource name and the apply declarative configuration for $.subresourcePath$,
 // applies it and returns the applied $.resultType|private$, and an error, if there is any.
-func (c *Fake$.type|publicPlural$) Apply(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
+func (c *$.type|privatePlural$ClusterClient) Apply(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputApplyConfig|raw$, opts $.ApplyOptions|raw$) (result *$.resultType|raw$, err error) {
 	if $.inputType|private$ == nil {
 		return nil, fmt.Errorf("$.inputType|private$ provided to Apply must not be nil")
 	}

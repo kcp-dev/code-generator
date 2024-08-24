@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type AutoscalingV2beta1Interface interface {
+type AutoscalingV2beta1ClusterInterface interface {
 	AutoscalingV2beta1ClusterScoper
 	HorizontalPodAutoscalersClusterGetter
 }

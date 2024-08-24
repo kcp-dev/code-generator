@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type ExtensionsV1beta1Interface interface {
+type ExtensionsV1beta1ClusterInterface interface {
 	ExtensionsV1beta1ClusterScoper
 	DaemonSetsClusterGetter
 	DeploymentsClusterGetter

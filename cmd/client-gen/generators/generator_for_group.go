@@ -69,6 +69,8 @@ func (g *genGroup) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	imports = append(imports, path.Join(g.clientsetPackage, "scheme"))
 
+	imports = append(imports, "github.com/kcp-dev/logicalcluster/v3")
+
 	imports = append(imports, "kcpclient \"github.com/kcp-dev/apimachinery/v2/pkg/client\"")
 
 	if len(g.singleClusterTypedClientsPackagePath) > 0 {
@@ -154,7 +156,7 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 }
 
 var groupInterfaceTemplate = `
-type $.GroupGoName$$.Version$Interface interface {
+type $.GroupGoName$$.Version$ClusterInterface interface {
 	$.GroupGoName$$.Version$ClusterScoper
     $range .types$ $.|publicPlural$ClusterGetter
     $end$

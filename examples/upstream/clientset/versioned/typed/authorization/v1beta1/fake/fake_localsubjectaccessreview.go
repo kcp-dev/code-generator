@@ -21,15 +21,15 @@ package fake
 import (
 	"context"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/authorization/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testing "k8s.io/client-go/testing"
 )
 
-// FakeLocalSubjectAccessReviews implements LocalSubjectAccessReviewInterface
-type FakeLocalSubjectAccessReviews struct {
-	Fake *FakeAuthorizationV1beta1
-	ns   string
+// localSubjectAccessReviewsClusterClient implements localSubjectAccessReviewInterface
+type localSubjectAccessReviewsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var localsubjectaccessreviewsResource = v1beta1.SchemeGroupVersion.WithResource("localsubjectaccessreviews")
@@ -37,7 +37,7 @@ var localsubjectaccessreviewsResource = v1beta1.SchemeGroupVersion.WithResource(
 var localsubjectaccessreviewsKind = v1beta1.SchemeGroupVersion.WithKind("LocalSubjectAccessReview")
 
 // Create takes the representation of a localSubjectAccessReview and creates it.  Returns the server's representation of the localSubjectAccessReview, and an error, if there is any.
-func (c *FakeLocalSubjectAccessReviews) Create(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts v1.CreateOptions) (result *v1beta1.LocalSubjectAccessReview, err error) {
+func (c *localSubjectAccessReviewsClusterClient) Create(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts v1.CreateOptions) (result *v1beta1.LocalSubjectAccessReview, err error) {
 	emptyResult := &v1beta1.LocalSubjectAccessReview{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(localsubjectaccessreviewsResource, c.ns, localSubjectAccessReview, opts), emptyResult)

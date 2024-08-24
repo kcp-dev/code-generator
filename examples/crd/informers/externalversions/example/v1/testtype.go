@@ -46,14 +46,13 @@ type TestTypeClusterInformer interface {
 type testTypeClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewTestTypeClusterInformer constructs a new informer for TestType type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewTestTypeClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredTestTypeClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredTestTypeClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredTestTypeClusterInformer constructs a new informer for TestType type.

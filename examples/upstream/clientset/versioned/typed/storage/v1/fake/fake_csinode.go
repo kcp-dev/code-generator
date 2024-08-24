@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	storagev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1"
 )
 
-// FakeCSINodes implements CSINodeInterface
-type FakeCSINodes struct {
-	Fake *FakeStorageV1
+// cSINodesClusterClient implements cSINodeInterface
+type cSINodesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var csinodesResource = v1.SchemeGroupVersion.WithResource("csinodes")
@@ -42,18 +43,16 @@ var csinodesResource = v1.SchemeGroupVersion.WithResource("csinodes")
 var csinodesKind = v1.SchemeGroupVersion.WithKind("CSINode")
 
 // Get takes name of the cSINode, and returns the corresponding cSINode object, and an error if there is any.
-func (c *FakeCSINodes) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CSINode, err error) {
-	emptyResult := &v1.CSINode{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(csinodesResource, name, options), emptyResult)
+func (c *cSINodesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CSINode, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(csinodesResource, c.ClusterPath, c.Namespace, name), &v1.CSINode{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CSINode), err
 }
 
 // List takes label and field selectors, and returns the list of CSINodes that match those selectors.
-func (c *FakeCSINodes) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CSINodeList, err error) {
+func (c *cSINodesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CSINodeList, err error) {
 	emptyResult := &v1.CSINodeList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(csinodesResource, csinodesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeCSINodes) List(ctx context.Context, opts metav1.ListOptions) (resul
 }
 
 // Watch returns a watch.Interface that watches the requested cSINodes.
-func (c *FakeCSINodes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *cSINodesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(csinodesResource, opts))
 }
 
 // Create takes the representation of a cSINode and creates it.  Returns the server's representation of the cSINode, and an error, if there is any.
-func (c *FakeCSINodes) Create(ctx context.Context, cSINode *v1.CSINode, opts metav1.CreateOptions) (result *v1.CSINode, err error) {
+func (c *cSINodesClusterClient) Create(ctx context.Context, cSINode *v1.CSINode, opts metav1.CreateOptions) (result *v1.CSINode, err error) {
 	emptyResult := &v1.CSINode{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(csinodesResource, cSINode, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeCSINodes) Create(ctx context.Context, cSINode *v1.CSINode, opts met
 }
 
 // Update takes the representation of a cSINode and updates it. Returns the server's representation of the cSINode, and an error, if there is any.
-func (c *FakeCSINodes) Update(ctx context.Context, cSINode *v1.CSINode, opts metav1.UpdateOptions) (result *v1.CSINode, err error) {
+func (c *cSINodesClusterClient) Update(ctx context.Context, cSINode *v1.CSINode, opts metav1.UpdateOptions) (result *v1.CSINode, err error) {
 	emptyResult := &v1.CSINode{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(csinodesResource, cSINode, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeCSINodes) Update(ctx context.Context, cSINode *v1.CSINode, opts met
 }
 
 // Delete takes name of the cSINode and deletes it. Returns an error if one occurs.
-func (c *FakeCSINodes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *cSINodesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(csinodesResource, name, opts), &v1.CSINode{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeCSINodes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *cSINodesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(csinodesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.CSINodeList{})
@@ -118,7 +117,7 @@ func (c *FakeCSINodes) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 }
 
 // Patch applies the patch and returns the patched cSINode.
-func (c *FakeCSINodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CSINode, err error) {
+func (c *cSINodesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CSINode, err error) {
 	emptyResult := &v1.CSINode{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(csinodesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeCSINodes) Patch(ctx context.Context, name string, pt types.PatchTyp
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied cSINode.
-func (c *FakeCSINodes) Apply(ctx context.Context, cSINode *storagev1.CSINodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CSINode, err error) {
+func (c *cSINodesClusterClient) Apply(ctx context.Context, cSINode *storagev1.CSINodeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CSINode, err error) {
 	if cSINode == nil {
 		return nil, fmt.Errorf("cSINode provided to Apply must not be nil")
 	}

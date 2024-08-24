@@ -28,7 +28,7 @@ import (
 	"k8s.io/code-generator/examples/crd/clientset/versioned/scheme"
 )
 
-type SecondExampleV1Interface interface {
+type SecondExampleV1ClusterInterface interface {
 	SecondExampleV1ClusterScoper
 	TestTypesClusterGetter
 }

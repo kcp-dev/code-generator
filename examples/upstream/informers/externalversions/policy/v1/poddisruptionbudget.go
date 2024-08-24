@@ -47,14 +47,13 @@ type PodDisruptionBudgetClusterInformer interface {
 type podDisruptionBudgetClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewPodDisruptionBudgetClusterInformer constructs a new informer for PodDisruptionBudget type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewPodDisruptionBudgetClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPodDisruptionBudgetClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredPodDisruptionBudgetClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredPodDisruptionBudgetClusterInformer constructs a new informer for PodDisruptionBudget type.

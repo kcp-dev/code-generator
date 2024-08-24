@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	storagev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1"
 )
 
-// FakeStorageClasses implements StorageClassInterface
-type FakeStorageClasses struct {
-	Fake *FakeStorageV1
+// storageClassesClusterClient implements storageClassInterface
+type storageClassesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var storageclassesResource = v1.SchemeGroupVersion.WithResource("storageclasses")
@@ -42,18 +43,16 @@ var storageclassesResource = v1.SchemeGroupVersion.WithResource("storageclasses"
 var storageclassesKind = v1.SchemeGroupVersion.WithKind("StorageClass")
 
 // Get takes name of the storageClass, and returns the corresponding storageClass object, and an error if there is any.
-func (c *FakeStorageClasses) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.StorageClass, err error) {
-	emptyResult := &v1.StorageClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(storageclassesResource, name, options), emptyResult)
+func (c *storageClassesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.StorageClass, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(storageclassesResource, c.ClusterPath, c.Namespace, name), &v1.StorageClass{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.StorageClass), err
 }
 
 // List takes label and field selectors, and returns the list of StorageClasses that match those selectors.
-func (c *FakeStorageClasses) List(ctx context.Context, opts metav1.ListOptions) (result *v1.StorageClassList, err error) {
+func (c *storageClassesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.StorageClassList, err error) {
 	emptyResult := &v1.StorageClassList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(storageclassesResource, storageclassesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeStorageClasses) List(ctx context.Context, opts metav1.ListOptions) 
 }
 
 // Watch returns a watch.Interface that watches the requested storageClasses.
-func (c *FakeStorageClasses) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *storageClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(storageclassesResource, opts))
 }
 
 // Create takes the representation of a storageClass and creates it.  Returns the server's representation of the storageClass, and an error, if there is any.
-func (c *FakeStorageClasses) Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (result *v1.StorageClass, err error) {
+func (c *storageClassesClusterClient) Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (result *v1.StorageClass, err error) {
 	emptyResult := &v1.StorageClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(storageclassesResource, storageClass, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeStorageClasses) Create(ctx context.Context, storageClass *v1.Storag
 }
 
 // Update takes the representation of a storageClass and updates it. Returns the server's representation of the storageClass, and an error, if there is any.
-func (c *FakeStorageClasses) Update(ctx context.Context, storageClass *v1.StorageClass, opts metav1.UpdateOptions) (result *v1.StorageClass, err error) {
+func (c *storageClassesClusterClient) Update(ctx context.Context, storageClass *v1.StorageClass, opts metav1.UpdateOptions) (result *v1.StorageClass, err error) {
 	emptyResult := &v1.StorageClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(storageclassesResource, storageClass, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeStorageClasses) Update(ctx context.Context, storageClass *v1.Storag
 }
 
 // Delete takes name of the storageClass and deletes it. Returns an error if one occurs.
-func (c *FakeStorageClasses) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *storageClassesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(storageclassesResource, name, opts), &v1.StorageClass{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStorageClasses) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *storageClassesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(storageclassesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.StorageClassList{})
@@ -118,7 +117,7 @@ func (c *FakeStorageClasses) DeleteCollection(ctx context.Context, opts metav1.D
 }
 
 // Patch applies the patch and returns the patched storageClass.
-func (c *FakeStorageClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.StorageClass, err error) {
+func (c *storageClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.StorageClass, err error) {
 	emptyResult := &v1.StorageClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageclassesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeStorageClasses) Patch(ctx context.Context, name string, pt types.Pa
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied storageClass.
-func (c *FakeStorageClasses) Apply(ctx context.Context, storageClass *storagev1.StorageClassApplyConfiguration, opts metav1.ApplyOptions) (result *v1.StorageClass, err error) {
+func (c *storageClassesClusterClient) Apply(ctx context.Context, storageClass *storagev1.StorageClassApplyConfiguration, opts metav1.ApplyOptions) (result *v1.StorageClass, err error) {
 	if storageClass == nil {
 		return nil, fmt.Errorf("storageClass provided to Apply must not be nil")
 	}

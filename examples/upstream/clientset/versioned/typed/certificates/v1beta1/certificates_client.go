@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type CertificatesV1beta1Interface interface {
+type CertificatesV1beta1ClusterInterface interface {
 	CertificatesV1beta1ClusterScoper
 	CertificateSigningRequestsClusterGetter
 }

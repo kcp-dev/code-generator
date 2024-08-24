@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha3
 
 import (
-	resourcev1alpha3 "k8s.io/api/resource/v1alpha3"
-	cache "k8s.io/client-go/tools/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	upstreamresource.k8s.iov1alpha3informers "k8s.io/client-go/informers/v1alpha3/resource.k8s.io"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
+	time "time"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	resourcev1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamresource.k8s.iov1alpha3informers "k8s.io/client-go/informers/v1alpha3/resource.k8s.io"
 )
 
 
@@ -47,14 +47,13 @@ type ResourceClaimTemplateClusterInformer interface {
 type resourceClaimTemplateClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewResourceClaimTemplateClusterInformer constructs a new informer for ResourceClaimTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewResourceClaimTemplateClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredResourceClaimTemplateClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredResourceClaimTemplateClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredResourceClaimTemplateClusterInformer constructs a new informer for ResourceClaimTemplate type.

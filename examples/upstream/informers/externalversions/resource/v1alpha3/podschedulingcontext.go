@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha3
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cache "k8s.io/client-go/tools/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamresource.k8s.iov1alpha3informers "k8s.io/client-go/informers/v1alpha3/resource.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	resourcev1alpha3 "k8s.io/api/resource/v1alpha3"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamresource.k8s.iov1alpha3informers "k8s.io/client-go/informers/v1alpha3/resource.k8s.io"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
 	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 
@@ -47,14 +47,13 @@ type PodSchedulingContextClusterInformer interface {
 type podSchedulingContextClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewPodSchedulingContextClusterInformer constructs a new informer for PodSchedulingContext type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewPodSchedulingContextClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPodSchedulingContextClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredPodSchedulingContextClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredPodSchedulingContextClusterInformer constructs a new informer for PodSchedulingContext type.

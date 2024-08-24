@@ -47,14 +47,13 @@ type DeploymentClusterInformer interface {
 type deploymentClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewDeploymentClusterInformer constructs a new informer for Deployment type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewDeploymentClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredDeploymentClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredDeploymentClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredDeploymentClusterInformer constructs a new informer for Deployment type.

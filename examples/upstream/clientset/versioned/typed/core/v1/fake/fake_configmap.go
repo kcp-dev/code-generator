@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 )
 
-// FakeConfigMaps implements ConfigMapInterface
-type FakeConfigMaps struct {
-	Fake *FakeCoreV1
-	ns   string
+// configMapsClusterClient implements configMapInterface
+type configMapsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var configmapsResource = v1.SchemeGroupVersion.WithResource("configmaps")
@@ -43,19 +43,16 @@ var configmapsResource = v1.SchemeGroupVersion.WithResource("configmaps")
 var configmapsKind = v1.SchemeGroupVersion.WithKind("ConfigMap")
 
 // Get takes name of the configMap, and returns the corresponding configMap object, and an error if there is any.
-func (c *FakeConfigMaps) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ConfigMap, err error) {
-	emptyResult := &v1.ConfigMap{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(configmapsResource, c.ns, name, options), emptyResult)
-
+func (c *configMapsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ConfigMap, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configmapsResource, c.ClusterPath, c.Namespace, name), &v1.ConfigMap{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ConfigMap), err
 }
 
 // List takes label and field selectors, and returns the list of ConfigMaps that match those selectors.
-func (c *FakeConfigMaps) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ConfigMapList, err error) {
+func (c *configMapsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ConfigMapList, err error) {
 	emptyResult := &v1.ConfigMapList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(configmapsResource, configmapsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeConfigMaps) List(ctx context.Context, opts metav1.ListOptions) (res
 }
 
 // Watch returns a watch.Interface that watches the requested configMaps.
-func (c *FakeConfigMaps) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *configMapsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(configmapsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a configMap and creates it.  Returns the server's representation of the configMap, and an error, if there is any.
-func (c *FakeConfigMaps) Create(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (result *v1.ConfigMap, err error) {
+func (c *configMapsClusterClient) Create(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (result *v1.ConfigMap, err error) {
 	emptyResult := &v1.ConfigMap{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(configmapsResource, c.ns, configMap, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeConfigMaps) Create(ctx context.Context, configMap *v1.ConfigMap, op
 }
 
 // Update takes the representation of a configMap and updates it. Returns the server's representation of the configMap, and an error, if there is any.
-func (c *FakeConfigMaps) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (result *v1.ConfigMap, err error) {
+func (c *configMapsClusterClient) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (result *v1.ConfigMap, err error) {
 	emptyResult := &v1.ConfigMap{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(configmapsResource, c.ns, configMap, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeConfigMaps) Update(ctx context.Context, configMap *v1.ConfigMap, op
 }
 
 // Delete takes name of the configMap and deletes it. Returns an error if one occurs.
-func (c *FakeConfigMaps) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *configMapsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(configmapsResource, c.ns, name, opts), &v1.ConfigMap{})
 
@@ -117,7 +114,7 @@ func (c *FakeConfigMaps) Delete(ctx context.Context, name string, opts metav1.De
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeConfigMaps) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *configMapsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(configmapsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ConfigMapList{})
@@ -125,7 +122,7 @@ func (c *FakeConfigMaps) DeleteCollection(ctx context.Context, opts metav1.Delet
 }
 
 // Patch applies the patch and returns the patched configMap.
-func (c *FakeConfigMaps) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConfigMap, err error) {
+func (c *configMapsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConfigMap, err error) {
 	emptyResult := &v1.ConfigMap{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(configmapsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeConfigMaps) Patch(ctx context.Context, name string, pt types.PatchT
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied configMap.
-func (c *FakeConfigMaps) Apply(ctx context.Context, configMap *corev1.ConfigMapApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ConfigMap, err error) {
+func (c *configMapsClusterClient) Apply(ctx context.Context, configMap *corev1.ConfigMapApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ConfigMap, err error) {
 	if configMap == nil {
 		return nil, fmt.Errorf("configMap provided to Apply must not be nil")
 	}

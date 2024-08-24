@@ -47,14 +47,13 @@ type EndpointsClusterInformer interface {
 type endpointsClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewEndpointsClusterInformer constructs a new informer for Endpoints type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewEndpointsClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredEndpointsClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredEndpointsClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredEndpointsClusterInformer constructs a new informer for Endpoints type.

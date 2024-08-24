@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type BatchV1Interface interface {
+type BatchV1ClusterInterface interface {
 	BatchV1ClusterScoper
 	CronJobsClusterGetter
 	JobsClusterGetter

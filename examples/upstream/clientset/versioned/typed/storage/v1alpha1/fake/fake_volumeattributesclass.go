@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	storagev1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1alpha1"
 )
 
-// FakeVolumeAttributesClasses implements VolumeAttributesClassInterface
-type FakeVolumeAttributesClasses struct {
-	Fake *FakeStorageV1alpha1
+// volumeAttributesClassesClusterClient implements volumeAttributesClassInterface
+type volumeAttributesClassesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var volumeattributesclassesResource = v1alpha1.SchemeGroupVersion.WithResource("volumeattributesclasses")
@@ -42,18 +43,16 @@ var volumeattributesclassesResource = v1alpha1.SchemeGroupVersion.WithResource("
 var volumeattributesclassesKind = v1alpha1.SchemeGroupVersion.WithKind("VolumeAttributesClass")
 
 // Get takes name of the volumeAttributesClass, and returns the corresponding volumeAttributesClass object, and an error if there is any.
-func (c *FakeVolumeAttributesClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
-	emptyResult := &v1alpha1.VolumeAttributesClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(volumeattributesclassesResource, name, options), emptyResult)
+func (c *volumeAttributesClassesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(volumeattributesclassesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.VolumeAttributesClass{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.VolumeAttributesClass), err
 }
 
 // List takes label and field selectors, and returns the list of VolumeAttributesClasses that match those selectors.
-func (c *FakeVolumeAttributesClasses) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VolumeAttributesClassList, err error) {
+func (c *volumeAttributesClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VolumeAttributesClassList, err error) {
 	emptyResult := &v1alpha1.VolumeAttributesClassList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(volumeattributesclassesResource, volumeattributesclassesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeVolumeAttributesClasses) List(ctx context.Context, opts v1.ListOpti
 }
 
 // Watch returns a watch.Interface that watches the requested volumeAttributesClasses.
-func (c *FakeVolumeAttributesClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *volumeAttributesClassesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(volumeattributesclassesResource, opts))
 }
 
 // Create takes the representation of a volumeAttributesClass and creates it.  Returns the server's representation of the volumeAttributesClass, and an error, if there is any.
-func (c *FakeVolumeAttributesClasses) Create(ctx context.Context, volumeAttributesClass *v1alpha1.VolumeAttributesClass, opts v1.CreateOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
+func (c *volumeAttributesClassesClusterClient) Create(ctx context.Context, volumeAttributesClass *v1alpha1.VolumeAttributesClass, opts v1.CreateOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
 	emptyResult := &v1alpha1.VolumeAttributesClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(volumeattributesclassesResource, volumeAttributesClass, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeVolumeAttributesClasses) Create(ctx context.Context, volumeAttribut
 }
 
 // Update takes the representation of a volumeAttributesClass and updates it. Returns the server's representation of the volumeAttributesClass, and an error, if there is any.
-func (c *FakeVolumeAttributesClasses) Update(ctx context.Context, volumeAttributesClass *v1alpha1.VolumeAttributesClass, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
+func (c *volumeAttributesClassesClusterClient) Update(ctx context.Context, volumeAttributesClass *v1alpha1.VolumeAttributesClass, opts v1.UpdateOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
 	emptyResult := &v1alpha1.VolumeAttributesClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(volumeattributesclassesResource, volumeAttributesClass, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakeVolumeAttributesClasses) Update(ctx context.Context, volumeAttribut
 }
 
 // Delete takes name of the volumeAttributesClass and deletes it. Returns an error if one occurs.
-func (c *FakeVolumeAttributesClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *volumeAttributesClassesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(volumeattributesclassesResource, name, opts), &v1alpha1.VolumeAttributesClass{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeVolumeAttributesClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *volumeAttributesClassesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(volumeattributesclassesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.VolumeAttributesClassList{})
@@ -118,7 +117,7 @@ func (c *FakeVolumeAttributesClasses) DeleteCollection(ctx context.Context, opts
 }
 
 // Patch applies the patch and returns the patched volumeAttributesClass.
-func (c *FakeVolumeAttributesClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.VolumeAttributesClass, err error) {
+func (c *volumeAttributesClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.VolumeAttributesClass, err error) {
 	emptyResult := &v1alpha1.VolumeAttributesClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(volumeattributesclassesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakeVolumeAttributesClasses) Patch(ctx context.Context, name string, pt
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied volumeAttributesClass.
-func (c *FakeVolumeAttributesClasses) Apply(ctx context.Context, volumeAttributesClass *storagev1alpha1.VolumeAttributesClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
+func (c *volumeAttributesClassesClusterClient) Apply(ctx context.Context, volumeAttributesClass *storagev1alpha1.VolumeAttributesClassApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.VolumeAttributesClass, err error) {
 	if volumeAttributesClass == nil {
 		return nil, fmt.Errorf("volumeAttributesClass provided to Apply must not be nil")
 	}

@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
 )
 
-// FakeStatefulSets implements StatefulSetInterface
-type FakeStatefulSets struct {
-	Fake *FakeAppsV1beta2
-	ns   string
+// statefulSetsClusterClient implements statefulSetInterface
+type statefulSetsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var statefulsetsResource = v1beta2.SchemeGroupVersion.WithResource("statefulsets")
@@ -43,19 +43,16 @@ var statefulsetsResource = v1beta2.SchemeGroupVersion.WithResource("statefulsets
 var statefulsetsKind = v1beta2.SchemeGroupVersion.WithKind("StatefulSet")
 
 // Get takes name of the statefulSet, and returns the corresponding statefulSet object, and an error if there is any.
-func (c *FakeStatefulSets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.StatefulSet, err error) {
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(statefulsetsResource, c.ns, name, options), emptyResult)
-
+func (c *statefulSetsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.StatefulSet, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(statefulsetsResource, c.ClusterPath, c.Namespace, name), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
 }
 
 // List takes label and field selectors, and returns the list of StatefulSets that match those selectors.
-func (c *FakeStatefulSets) List(ctx context.Context, opts v1.ListOptions) (result *v1beta2.StatefulSetList, err error) {
+func (c *statefulSetsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta2.StatefulSetList, err error) {
 	emptyResult := &v1beta2.StatefulSetList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(statefulsetsResource, statefulsetsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeStatefulSets) List(ctx context.Context, opts v1.ListOptions) (resul
 }
 
 // Watch returns a watch.Interface that watches the requested statefulSets.
-func (c *FakeStatefulSets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *statefulSetsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(statefulsetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a statefulSet and creates it.  Returns the server's representation of the statefulSet, and an error, if there is any.
-func (c *FakeStatefulSets) Create(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.CreateOptions) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) Create(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.CreateOptions) (result *v1beta2.StatefulSet, err error) {
 	emptyResult := &v1beta2.StatefulSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(statefulsetsResource, c.ns, statefulSet, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeStatefulSets) Create(ctx context.Context, statefulSet *v1beta2.Stat
 }
 
 // Update takes the representation of a statefulSet and updates it. Returns the server's representation of the statefulSet, and an error, if there is any.
-func (c *FakeStatefulSets) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
 	emptyResult := &v1beta2.StatefulSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(statefulsetsResource, c.ns, statefulSet, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeStatefulSets) Update(ctx context.Context, statefulSet *v1beta2.Stat
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeStatefulSets) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
 	emptyResult := &v1beta2.StatefulSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(statefulsetsResource, "status", c.ns, statefulSet, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeStatefulSets) UpdateStatus(ctx context.Context, statefulSet *v1beta
 }
 
 // Delete takes name of the statefulSet and deletes it. Returns an error if one occurs.
-func (c *FakeStatefulSets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *statefulSetsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(statefulsetsResource, c.ns, name, opts), &v1beta2.StatefulSet{})
 
@@ -130,7 +127,7 @@ func (c *FakeStatefulSets) Delete(ctx context.Context, name string, opts v1.Dele
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStatefulSets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *statefulSetsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(statefulsetsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta2.StatefulSetList{})
@@ -138,7 +135,7 @@ func (c *FakeStatefulSets) DeleteCollection(ctx context.Context, opts v1.DeleteO
 }
 
 // Patch applies the patch and returns the patched statefulSet.
-func (c *FakeStatefulSets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.StatefulSet, err error) {
 	emptyResult := &v1beta2.StatefulSet{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(statefulsetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakeStatefulSets) Patch(ctx context.Context, name string, pt types.Patc
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied statefulSet.
-func (c *FakeStatefulSets) Apply(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) Apply(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
 	if statefulSet == nil {
 		return nil, fmt.Errorf("statefulSet provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakeStatefulSets) Apply(ctx context.Context, statefulSet *appsv1beta2.S
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeStatefulSets) ApplyStatus(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
+func (c *statefulSetsClusterClient) ApplyStatus(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
 	if statefulSet == nil {
 		return nil, fmt.Errorf("statefulSet provided to Apply must not be nil")
 	}
@@ -197,7 +194,13 @@ func (c *FakeStatefulSets) ApplyStatus(ctx context.Context, statefulSet *appsv1b
 }
 
 // GetScale takes name of the statefulSet, and returns the corresponding scale object, and an error if there is any.
-func (c *FakeStatefulSets) GetScale(ctx context.Context, statefulSetName string, options v1.GetOptions) (result *v1beta2.Scale, err error) {
+func (c *statefulSetsClusterClient) GetScale(ctx context.Context, statefulSetName string, options v1.GetOptions) (result *v1beta2.Scale, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configMapsResource, c.ClusterPath, c.Namespace, name), &corev1.ConfigMap{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*corev1.ConfigMap), err
+
 	emptyResult := &v1beta2.Scale{}
 	obj, err := c.Fake.
 		Invokes(testing.NewGetSubresourceActionWithOptions(statefulsetsResource, c.ns, "scale", statefulSetName, options), emptyResult)
@@ -209,7 +212,7 @@ func (c *FakeStatefulSets) GetScale(ctx context.Context, statefulSetName string,
 }
 
 // UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *FakeStatefulSets) UpdateScale(ctx context.Context, statefulSetName string, scale *v1beta2.Scale, opts v1.UpdateOptions) (result *v1beta2.Scale, err error) {
+func (c *statefulSetsClusterClient) UpdateScale(ctx context.Context, statefulSetName string, scale *v1beta2.Scale, opts v1.UpdateOptions) (result *v1beta2.Scale, err error) {
 	emptyResult := &v1beta2.Scale{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(statefulsetsResource, "scale", c.ns, scale, opts), &v1beta2.Scale{})
@@ -222,7 +225,7 @@ func (c *FakeStatefulSets) UpdateScale(ctx context.Context, statefulSetName stri
 
 // ApplyScale takes top resource name and the apply declarative configuration for scale,
 // applies it and returns the applied scale, and an error, if there is any.
-func (c *FakeStatefulSets) ApplyScale(ctx context.Context, statefulSetName string, scale *appsv1beta2.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.Scale, err error) {
+func (c *statefulSetsClusterClient) ApplyScale(ctx context.Context, statefulSetName string, scale *appsv1beta2.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.Scale, err error) {
 	if scale == nil {
 		return nil, fmt.Errorf("scale provided to ApplyScale must not be nil")
 	}

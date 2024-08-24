@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type FlowcontrolV1beta2Interface interface {
+type FlowcontrolV1beta2ClusterInterface interface {
 	FlowcontrolV1beta2ClusterScoper
 	FlowSchemasClusterGetter
 	PriorityLevelConfigurationsClusterGetter

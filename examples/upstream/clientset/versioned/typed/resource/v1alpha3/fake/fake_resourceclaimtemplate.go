@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
 )
 
-// FakeResourceClaimTemplates implements ResourceClaimTemplateInterface
-type FakeResourceClaimTemplates struct {
-	Fake *FakeResourceV1alpha3
-	ns   string
+// resourceClaimTemplatesClusterClient implements resourceClaimTemplateInterface
+type resourceClaimTemplatesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var resourceclaimtemplatesResource = v1alpha3.SchemeGroupVersion.WithResource("resourceclaimtemplates")
@@ -43,19 +43,16 @@ var resourceclaimtemplatesResource = v1alpha3.SchemeGroupVersion.WithResource("r
 var resourceclaimtemplatesKind = v1alpha3.SchemeGroupVersion.WithKind("ResourceClaimTemplate")
 
 // Get takes name of the resourceClaimTemplate, and returns the corresponding resourceClaimTemplate object, and an error if there is any.
-func (c *FakeResourceClaimTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
-	emptyResult := &v1alpha3.ResourceClaimTemplate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(resourceclaimtemplatesResource, c.ns, name, options), emptyResult)
-
+func (c *resourceClaimTemplatesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, name), &v1alpha3.ResourceClaimTemplate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }
 
 // List takes label and field selectors, and returns the list of ResourceClaimTemplates that match those selectors.
-func (c *FakeResourceClaimTemplates) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.ResourceClaimTemplateList, err error) {
+func (c *resourceClaimTemplatesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.ResourceClaimTemplateList, err error) {
 	emptyResult := &v1alpha3.ResourceClaimTemplateList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(resourceclaimtemplatesResource, resourceclaimtemplatesKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeResourceClaimTemplates) List(ctx context.Context, opts v1.ListOptio
 }
 
 // Watch returns a watch.Interface that watches the requested resourceClaimTemplates.
-func (c *FakeResourceClaimTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *resourceClaimTemplatesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(resourceclaimtemplatesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a resourceClaimTemplate and creates it.  Returns the server's representation of the resourceClaimTemplate, and an error, if there is any.
-func (c *FakeResourceClaimTemplates) Create(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.CreateOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
+func (c *resourceClaimTemplatesClusterClient) Create(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.CreateOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
 	emptyResult := &v1alpha3.ResourceClaimTemplate{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(resourceclaimtemplatesResource, c.ns, resourceClaimTemplate, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeResourceClaimTemplates) Create(ctx context.Context, resourceClaimTe
 }
 
 // Update takes the representation of a resourceClaimTemplate and updates it. Returns the server's representation of the resourceClaimTemplate, and an error, if there is any.
-func (c *FakeResourceClaimTemplates) Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.UpdateOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
+func (c *resourceClaimTemplatesClusterClient) Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts v1.UpdateOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
 	emptyResult := &v1alpha3.ResourceClaimTemplate{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(resourceclaimtemplatesResource, c.ns, resourceClaimTemplate, opts), emptyResult)
@@ -109,7 +106,7 @@ func (c *FakeResourceClaimTemplates) Update(ctx context.Context, resourceClaimTe
 }
 
 // Delete takes name of the resourceClaimTemplate and deletes it. Returns an error if one occurs.
-func (c *FakeResourceClaimTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *resourceClaimTemplatesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(resourceclaimtemplatesResource, c.ns, name, opts), &v1alpha3.ResourceClaimTemplate{})
 
@@ -117,7 +114,7 @@ func (c *FakeResourceClaimTemplates) Delete(ctx context.Context, name string, op
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeResourceClaimTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *resourceClaimTemplatesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(resourceclaimtemplatesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha3.ResourceClaimTemplateList{})
@@ -125,7 +122,7 @@ func (c *FakeResourceClaimTemplates) DeleteCollection(ctx context.Context, opts 
 }
 
 // Patch applies the patch and returns the patched resourceClaimTemplate.
-func (c *FakeResourceClaimTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.ResourceClaimTemplate, err error) {
+func (c *resourceClaimTemplatesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.ResourceClaimTemplate, err error) {
 	emptyResult := &v1alpha3.ResourceClaimTemplate{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(resourceclaimtemplatesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -137,7 +134,7 @@ func (c *FakeResourceClaimTemplates) Patch(ctx context.Context, name string, pt 
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied resourceClaimTemplate.
-func (c *FakeResourceClaimTemplates) Apply(ctx context.Context, resourceClaimTemplate *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
+func (c *resourceClaimTemplatesClusterClient) Apply(ctx context.Context, resourceClaimTemplate *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaimTemplate, err error) {
 	if resourceClaimTemplate == nil {
 		return nil, fmt.Errorf("resourceClaimTemplate provided to Apply must not be nil")
 	}

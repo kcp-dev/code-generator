@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/networking/v1beta1"
+	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
-	upstreamnetworking.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/networking.k8s.io"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	time "time"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamnetworking.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/networking.k8s.io"
 )
 
 
@@ -47,14 +47,13 @@ type IngressClusterInformer interface {
 type ingressClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewIngressClusterInformer constructs a new informer for Ingress type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewIngressClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredIngressClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredIngressClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredIngressClusterInformer constructs a new informer for Ingress type.

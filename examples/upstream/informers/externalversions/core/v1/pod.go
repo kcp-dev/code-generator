@@ -47,14 +47,13 @@ type PodClusterInformer interface {
 type podClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewPodClusterInformer constructs a new informer for Pod type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewPodClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPodClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredPodClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredPodClusterInformer constructs a new informer for Pod type.

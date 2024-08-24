@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type StorageV1Interface interface {
+type StorageV1ClusterInterface interface {
 	StorageV1ClusterScoper
 	CSIDriversClusterGetter
 	CSINodesClusterGetter

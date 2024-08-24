@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	apiserverinternalv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apiserverinternal/v1alpha1"
 )
 
-// FakeStorageVersions implements StorageVersionInterface
-type FakeStorageVersions struct {
-	Fake *FakeInternalV1alpha1
+// storageVersionsClusterClient implements storageVersionInterface
+type storageVersionsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var storageversionsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversions")
@@ -42,18 +43,16 @@ var storageversionsResource = v1alpha1.SchemeGroupVersion.WithResource("storagev
 var storageversionsKind = v1alpha1.SchemeGroupVersion.WithKind("StorageVersion")
 
 // Get takes name of the storageVersion, and returns the corresponding storageVersion object, and an error if there is any.
-func (c *FakeStorageVersions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.StorageVersion, err error) {
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(storageversionsResource, name, options), emptyResult)
+func (c *storageVersionsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.StorageVersion, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(storageversionsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.StorageVersion{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.StorageVersion), err
 }
 
 // List takes label and field selectors, and returns the list of StorageVersions that match those selectors.
-func (c *FakeStorageVersions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionList, err error) {
+func (c *storageVersionsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionList, err error) {
 	emptyResult := &v1alpha1.StorageVersionList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(storageversionsResource, storageversionsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeStorageVersions) List(ctx context.Context, opts v1.ListOptions) (re
 }
 
 // Watch returns a watch.Interface that watches the requested storageVersions.
-func (c *FakeStorageVersions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *storageVersionsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(storageversionsResource, opts))
 }
 
 // Create takes the representation of a storageVersion and creates it.  Returns the server's representation of the storageVersion, and an error, if there is any.
-func (c *FakeStorageVersions) Create(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.CreateOptions) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) Create(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.CreateOptions) (result *v1alpha1.StorageVersion, err error) {
 	emptyResult := &v1alpha1.StorageVersion{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(storageversionsResource, storageVersion, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeStorageVersions) Create(ctx context.Context, storageVersion *v1alph
 }
 
 // Update takes the representation of a storageVersion and updates it. Returns the server's representation of the storageVersion, and an error, if there is any.
-func (c *FakeStorageVersions) Update(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) Update(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
 	emptyResult := &v1alpha1.StorageVersion{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(storageversionsResource, storageVersion, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeStorageVersions) Update(ctx context.Context, storageVersion *v1alph
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeStorageVersions) UpdateStatus(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) UpdateStatus(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
 	emptyResult := &v1alpha1.StorageVersion{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(storageversionsResource, "status", storageVersion, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeStorageVersions) UpdateStatus(ctx context.Context, storageVersion *
 }
 
 // Delete takes name of the storageVersion and deletes it. Returns an error if one occurs.
-func (c *FakeStorageVersions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *storageVersionsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(storageversionsResource, name, opts), &v1alpha1.StorageVersion{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStorageVersions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *storageVersionsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(storageversionsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.StorageVersionList{})
@@ -130,7 +129,7 @@ func (c *FakeStorageVersions) DeleteCollection(ctx context.Context, opts v1.Dele
 }
 
 // Patch applies the patch and returns the patched storageVersion.
-func (c *FakeStorageVersions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersion, err error) {
 	emptyResult := &v1alpha1.StorageVersion{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageversionsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeStorageVersions) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied storageVersion.
-func (c *FakeStorageVersions) Apply(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) Apply(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
 	if storageVersion == nil {
 		return nil, fmt.Errorf("storageVersion provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeStorageVersions) Apply(ctx context.Context, storageVersion *apiserv
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeStorageVersions) ApplyStatus(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
+func (c *storageVersionsClusterClient) ApplyStatus(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
 	if storageVersion == nil {
 		return nil, fmt.Errorf("storageVersion provided to Apply must not be nil")
 	}

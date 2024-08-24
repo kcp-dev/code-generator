@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1alpha1 "k8s.io/api/storagemigration/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	storagemigrationv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storagemigration/v1alpha1"
 )
 
-// FakeStorageVersionMigrations implements StorageVersionMigrationInterface
-type FakeStorageVersionMigrations struct {
-	Fake *FakeStoragemigrationV1alpha1
+// storageVersionMigrationsClusterClient implements storageVersionMigrationInterface
+type storageVersionMigrationsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var storageversionmigrationsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversionmigrations")
@@ -42,18 +43,16 @@ var storageversionmigrationsResource = v1alpha1.SchemeGroupVersion.WithResource(
 var storageversionmigrationsKind = v1alpha1.SchemeGroupVersion.WithKind("StorageVersionMigration")
 
 // Get takes name of the storageVersionMigration, and returns the corresponding storageVersionMigration object, and an error if there is any.
-func (c *FakeStorageVersionMigrations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.StorageVersionMigration, err error) {
-	emptyResult := &v1alpha1.StorageVersionMigration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(storageversionmigrationsResource, name, options), emptyResult)
+func (c *storageVersionMigrationsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(storageversionmigrationsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.StorageVersionMigration{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.StorageVersionMigration), err
 }
 
 // List takes label and field selectors, and returns the list of StorageVersionMigrations that match those selectors.
-func (c *FakeStorageVersionMigrations) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionMigrationList, err error) {
+func (c *storageVersionMigrationsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionMigrationList, err error) {
 	emptyResult := &v1alpha1.StorageVersionMigrationList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(storageversionmigrationsResource, storageversionmigrationsKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakeStorageVersionMigrations) List(ctx context.Context, opts v1.ListOpt
 }
 
 // Watch returns a watch.Interface that watches the requested storageVersionMigrations.
-func (c *FakeStorageVersionMigrations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *storageVersionMigrationsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(storageversionmigrationsResource, opts))
 }
 
 // Create takes the representation of a storageVersionMigration and creates it.  Returns the server's representation of the storageVersionMigration, and an error, if there is any.
-func (c *FakeStorageVersionMigrations) Create(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.CreateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) Create(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.CreateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
 	emptyResult := &v1alpha1.StorageVersionMigration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(storageversionmigrationsResource, storageVersionMigration, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakeStorageVersionMigrations) Create(ctx context.Context, storageVersio
 }
 
 // Update takes the representation of a storageVersionMigration and updates it. Returns the server's representation of the storageVersionMigration, and an error, if there is any.
-func (c *FakeStorageVersionMigrations) Update(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.UpdateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) Update(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.UpdateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
 	emptyResult := &v1alpha1.StorageVersionMigration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(storageversionmigrationsResource, storageVersionMigration, opts), emptyResult)
@@ -104,7 +103,7 @@ func (c *FakeStorageVersionMigrations) Update(ctx context.Context, storageVersio
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeStorageVersionMigrations) UpdateStatus(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.UpdateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) UpdateStatus(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts v1.UpdateOptions) (result *v1alpha1.StorageVersionMigration, err error) {
 	emptyResult := &v1alpha1.StorageVersionMigration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(storageversionmigrationsResource, "status", storageVersionMigration, opts), emptyResult)
@@ -115,14 +114,14 @@ func (c *FakeStorageVersionMigrations) UpdateStatus(ctx context.Context, storage
 }
 
 // Delete takes name of the storageVersionMigration and deletes it. Returns an error if one occurs.
-func (c *FakeStorageVersionMigrations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *storageVersionMigrationsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(storageversionmigrationsResource, name, opts), &v1alpha1.StorageVersionMigration{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStorageVersionMigrations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *storageVersionMigrationsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(storageversionmigrationsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.StorageVersionMigrationList{})
@@ -130,7 +129,7 @@ func (c *FakeStorageVersionMigrations) DeleteCollection(ctx context.Context, opt
 }
 
 // Patch applies the patch and returns the patched storageVersionMigration.
-func (c *FakeStorageVersionMigrations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersionMigration, err error) {
 	emptyResult := &v1alpha1.StorageVersionMigration{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageversionmigrationsResource, name, pt, data, opts, subresources...), emptyResult)
@@ -141,7 +140,7 @@ func (c *FakeStorageVersionMigrations) Patch(ctx context.Context, name string, p
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied storageVersionMigration.
-func (c *FakeStorageVersionMigrations) Apply(ctx context.Context, storageVersionMigration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) Apply(ctx context.Context, storageVersionMigration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersionMigration, err error) {
 	if storageVersionMigration == nil {
 		return nil, fmt.Errorf("storageVersionMigration provided to Apply must not be nil")
 	}
@@ -164,7 +163,7 @@ func (c *FakeStorageVersionMigrations) Apply(ctx context.Context, storageVersion
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeStorageVersionMigrations) ApplyStatus(ctx context.Context, storageVersionMigration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersionMigration, err error) {
+func (c *storageVersionMigrationsClusterClient) ApplyStatus(ctx context.Context, storageVersionMigration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersionMigration, err error) {
 	if storageVersionMigration == nil {
 		return nil, fmt.Errorf("storageVersionMigration provided to Apply must not be nil")
 	}

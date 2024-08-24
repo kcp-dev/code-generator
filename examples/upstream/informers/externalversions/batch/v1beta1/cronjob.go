@@ -47,14 +47,13 @@ type CronJobClusterInformer interface {
 type cronJobClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewCronJobClusterInformer constructs a new informer for CronJob type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewCronJobClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredCronJobClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredCronJobClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredCronJobClusterInformer constructs a new informer for CronJob type.

@@ -22,7 +22,10 @@ import (
 	"fmt"
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
 	discovery "k8s.io/client-go/discovery"
+	client "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 	corev1 "k8s.io/code-generator/examples/apiserver/clientset/versioned/typed/core/v1"
@@ -31,45 +34,47 @@ import (
 	thirdexamplev1 "k8s.io/code-generator/examples/apiserver/clientset/versioned/typed/example3.io/v1"
 )
 
-type Interface interface {
+type ClusterInterface interface {
+	Cluster(logicalcluster.Name) client.Interface
 	Discovery() discovery.DiscoveryInterface
-	CoreV1() corev1.CoreV1Interface
-	ExampleV1() examplev1.ExampleV1Interface
-	SecondExampleV1() secondexamplev1.SecondExampleV1Interface
-	ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface
+	CoreV1() corev1.CoreV1ClusterInterface
+	ExampleV1() examplev1.ExampleV1ClusterInterface
+	SecondExampleV1() secondexamplev1.SecondExampleV1ClusterInterface
+	ThirdExampleV1() thirdexamplev1.ThirdExampleV1ClusterInterface
 }
 
-// Clientset contains the clients for groups.
-type Clientset struct {
+// ClusterClientset contains the clients for groups.
+type ClusterClientset struct {
 	*discovery.DiscoveryClient
-	coreV1          *corev1.CoreV1Client
-	exampleV1       *examplev1.ExampleV1Client
-	secondExampleV1 *secondexamplev1.SecondExampleV1Client
-	thirdExampleV1  *thirdexamplev1.ThirdExampleV1Client
+	clientCache     kcpclient.Cache[*client.Clientset]
+	coreV1          *corev1.CoreV1ClusterClient
+	exampleV1       *examplev1.ExampleV1ClusterClient
+	secondExampleV1 *secondexamplev1.SecondExampleV1ClusterClient
+	thirdExampleV1  *thirdexamplev1.ThirdExampleV1ClusterClient
 }
 
 // CoreV1 retrieves the CoreV1Client
-func (c *Clientset) CoreV1() corev1.CoreV1Interface {
+func (c *ClusterClientset) CoreV1() corev1.CoreV1ClusterInterface {
 	return c.coreV1
 }
 
 // ExampleV1 retrieves the ExampleV1Client
-func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
+func (c *ClusterClientset) ExampleV1() examplev1.ExampleV1ClusterInterface {
 	return c.exampleV1
 }
 
 // SecondExampleV1 retrieves the SecondExampleV1Client
-func (c *Clientset) SecondExampleV1() secondexamplev1.SecondExampleV1Interface {
+func (c *ClusterClientset) SecondExampleV1() secondexamplev1.SecondExampleV1ClusterInterface {
 	return c.secondExampleV1
 }
 
 // ThirdExampleV1 retrieves the ThirdExampleV1Client
-func (c *Clientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1Interface {
+func (c *ClusterClientset) ThirdExampleV1() thirdexamplev1.ThirdExampleV1ClusterInterface {
 	return c.thirdExampleV1
 }
 
 // Discovery retrieves the DiscoveryClient
-func (c *Clientset) Discovery() discovery.DiscoveryInterface {
+func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 	if c == nil {
 		return nil
 	}
@@ -81,7 +86,7 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 // NewForConfig will generate a rate-limiter in configShallowCopy.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*Clientset, error) {
+func NewForConfig(c *rest.Config) (*ClusterClientset, error) {
 	configShallowCopy := *c
 
 	if configShallowCopy.UserAgent == "" {
@@ -97,11 +102,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	return NewForConfigAndClient(&configShallowCopy, httpClient)
 }
 
-// NewForConfigAndClient creates a new Clientset for the given config and http client.
+// NewForConfigAndClient creates a new ClusterClientset for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfigAndClient will generate a rate-limiter in configShallowCopy.
-func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset, error) {
+func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*ClusterClientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
 		if configShallowCopy.Burst <= 0 {
@@ -110,7 +115,15 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 
-	var cs Clientset
+	cache := kcpclient.NewCache(c, httpClient, &kcpclient.Constructor[*client.Clientset]{
+		NewForConfigAndClient: client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
+		return nil, err
+	}
+
+	var cs ClusterClientset
+	cs.clientCache = cache
 	var err error
 	cs.coreV1, err = corev1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -136,24 +149,12 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	return &cs, nil
 }
 
-// NewForConfigOrDie creates a new Clientset for the given config and
+// NewForConfigOrDie creates a new ClusterClientset for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *Clientset {
+func NewForConfigOrDie(c *rest.Config) *ClusterClientset {
 	cs, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return cs
-}
-
-// New creates a new Clientset for the given RESTClient.
-func New(c rest.Interface) *Clientset {
-	var cs Clientset
-	cs.coreV1 = corev1.New(c)
-	cs.exampleV1 = examplev1.New(c)
-	cs.secondExampleV1 = secondexamplev1.New(c)
-	cs.thirdExampleV1 = thirdexamplev1.New(c)
-
-	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
-	return &cs
 }

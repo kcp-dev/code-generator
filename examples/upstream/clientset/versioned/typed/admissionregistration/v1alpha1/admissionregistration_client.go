@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type AdmissionregistrationV1alpha1Interface interface {
+type AdmissionregistrationV1alpha1ClusterInterface interface {
 	AdmissionregistrationV1alpha1ClusterScoper
 	ValidatingAdmissionPoliciesClusterGetter
 	ValidatingAdmissionPolicyBindingsClusterGetter

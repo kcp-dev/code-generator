@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	time "time"
+	watch "k8s.io/apimachinery/pkg/watch"
+	flowcontrolv1beta1 "k8s.io/api/flowcontrol/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/flowcontrol/v1beta1"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	upstreamflowcontrol.apiserver.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/flowcontrol.apiserver.k8s.io"
-	flowcontrolv1beta1 "k8s.io/api/flowcontrol/v1beta1"
-	cache "k8s.io/client-go/tools/cache"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 
 
@@ -47,7 +47,6 @@ type PriorityLevelConfigurationClusterInformer interface {
 type priorityLevelConfigurationClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewPriorityLevelConfigurationClusterInformer constructs a new informer for PriorityLevelConfiguration type.

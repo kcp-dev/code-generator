@@ -21,18 +21,18 @@ package v1alpha1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	storagev1alpha1 "k8s.io/api/storage/v1alpha1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
-	"github.com/kcp-dev/logicalcluster/v3"
-	time "time"
 	upstreamstorage.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/storage.k8s.io"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	storagev1alpha1 "k8s.io/api/storage/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/storage/v1alpha1"
+	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 
@@ -47,7 +47,6 @@ type VolumeAttributesClassClusterInformer interface {
 type volumeAttributesClassClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewVolumeAttributesClassClusterInformer constructs a new informer for VolumeAttributesClass type.

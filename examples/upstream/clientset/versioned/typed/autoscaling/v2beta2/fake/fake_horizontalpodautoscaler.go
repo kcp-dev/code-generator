@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v2beta2 "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	autoscalingv2beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/autoscaling/v2beta2"
 )
 
-// FakeHorizontalPodAutoscalers implements HorizontalPodAutoscalerInterface
-type FakeHorizontalPodAutoscalers struct {
-	Fake *FakeAutoscalingV2beta2
-	ns   string
+// horizontalPodAutoscalersClusterClient implements horizontalPodAutoscalerInterface
+type horizontalPodAutoscalersClusterClient struct {
+	*kcptesting.Fake
 }
 
 var horizontalpodautoscalersResource = v2beta2.SchemeGroupVersion.WithResource("horizontalpodautoscalers")
@@ -43,19 +43,16 @@ var horizontalpodautoscalersResource = v2beta2.SchemeGroupVersion.WithResource("
 var horizontalpodautoscalersKind = v2beta2.SchemeGroupVersion.WithKind("HorizontalPodAutoscaler")
 
 // Get takes name of the horizontalPodAutoscaler, and returns the corresponding horizontalPodAutoscaler object, and an error if there is any.
-func (c *FakeHorizontalPodAutoscalers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
-	emptyResult := &v2beta2.HorizontalPodAutoscaler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(horizontalpodautoscalersResource, c.ns, name, options), emptyResult)
-
+func (c *horizontalPodAutoscalersClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(horizontalpodautoscalersResource, c.ClusterPath, c.Namespace, name), &v2beta2.HorizontalPodAutoscaler{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v2beta2.HorizontalPodAutoscaler), err
 }
 
 // List takes label and field selectors, and returns the list of HorizontalPodAutoscalers that match those selectors.
-func (c *FakeHorizontalPodAutoscalers) List(ctx context.Context, opts v1.ListOptions) (result *v2beta2.HorizontalPodAutoscalerList, err error) {
+func (c *horizontalPodAutoscalersClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v2beta2.HorizontalPodAutoscalerList, err error) {
 	emptyResult := &v2beta2.HorizontalPodAutoscalerList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(horizontalpodautoscalersResource, horizontalpodautoscalersKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeHorizontalPodAutoscalers) List(ctx context.Context, opts v1.ListOpt
 }
 
 // Watch returns a watch.Interface that watches the requested horizontalPodAutoscalers.
-func (c *FakeHorizontalPodAutoscalers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *horizontalPodAutoscalersClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(horizontalpodautoscalersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a horizontalPodAutoscaler and creates it.  Returns the server's representation of the horizontalPodAutoscaler, and an error, if there is any.
-func (c *FakeHorizontalPodAutoscalers) Create(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.CreateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) Create(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.CreateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	emptyResult := &v2beta2.HorizontalPodAutoscaler{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(horizontalpodautoscalersResource, c.ns, horizontalPodAutoscaler, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeHorizontalPodAutoscalers) Create(ctx context.Context, horizontalPod
 }
 
 // Update takes the representation of a horizontalPodAutoscaler and updates it. Returns the server's representation of the horizontalPodAutoscaler, and an error, if there is any.
-func (c *FakeHorizontalPodAutoscalers) Update(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) Update(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	emptyResult := &v2beta2.HorizontalPodAutoscaler{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(horizontalpodautoscalersResource, c.ns, horizontalPodAutoscaler, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeHorizontalPodAutoscalers) Update(ctx context.Context, horizontalPod
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeHorizontalPodAutoscalers) UpdateStatus(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) UpdateStatus(ctx context.Context, horizontalPodAutoscaler *v2beta2.HorizontalPodAutoscaler, opts v1.UpdateOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	emptyResult := &v2beta2.HorizontalPodAutoscaler{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(horizontalpodautoscalersResource, "status", c.ns, horizontalPodAutoscaler, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeHorizontalPodAutoscalers) UpdateStatus(ctx context.Context, horizon
 }
 
 // Delete takes name of the horizontalPodAutoscaler and deletes it. Returns an error if one occurs.
-func (c *FakeHorizontalPodAutoscalers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *horizontalPodAutoscalersClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(horizontalpodautoscalersResource, c.ns, name, opts), &v2beta2.HorizontalPodAutoscaler{})
 
@@ -130,7 +127,7 @@ func (c *FakeHorizontalPodAutoscalers) Delete(ctx context.Context, name string, 
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeHorizontalPodAutoscalers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *horizontalPodAutoscalersClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(horizontalpodautoscalersResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v2beta2.HorizontalPodAutoscalerList{})
@@ -138,7 +135,7 @@ func (c *FakeHorizontalPodAutoscalers) DeleteCollection(ctx context.Context, opt
 }
 
 // Patch applies the patch and returns the patched horizontalPodAutoscaler.
-func (c *FakeHorizontalPodAutoscalers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	emptyResult := &v2beta2.HorizontalPodAutoscaler{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(horizontalpodautoscalersResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakeHorizontalPodAutoscalers) Patch(ctx context.Context, name string, p
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied horizontalPodAutoscaler.
-func (c *FakeHorizontalPodAutoscalers) Apply(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) Apply(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	if horizontalPodAutoscaler == nil {
 		return nil, fmt.Errorf("horizontalPodAutoscaler provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakeHorizontalPodAutoscalers) Apply(ctx context.Context, horizontalPodA
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeHorizontalPodAutoscalers) ApplyStatus(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
+func (c *horizontalPodAutoscalersClusterClient) ApplyStatus(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta2.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (result *v2beta2.HorizontalPodAutoscaler, err error) {
 	if horizontalPodAutoscaler == nil {
 		return nil, fmt.Errorf("horizontalPodAutoscaler provided to Apply must not be nil")
 	}

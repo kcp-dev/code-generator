@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,10 +33,9 @@ import (
 	extensionsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/extensions/v1beta1"
 )
 
-// FakeDeployments implements DeploymentInterface
-type FakeDeployments struct {
-	Fake *FakeExtensionsV1beta1
-	ns   string
+// deploymentsClusterClient implements deploymentInterface
+type deploymentsClusterClient struct {
+	*kcptesting.Fake
 }
 
 var deploymentsResource = v1beta1.SchemeGroupVersion.WithResource("deployments")
@@ -43,19 +43,16 @@ var deploymentsResource = v1beta1.SchemeGroupVersion.WithResource("deployments")
 var deploymentsKind = v1beta1.SchemeGroupVersion.WithKind("Deployment")
 
 // Get takes name of the deployment, and returns the corresponding deployment object, and an error if there is any.
-func (c *FakeDeployments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Deployment, err error) {
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(deploymentsResource, c.ns, name, options), emptyResult)
-
+func (c *deploymentsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Deployment, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(deploymentsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
 // List takes label and field selectors, and returns the list of Deployments that match those selectors.
-func (c *FakeDeployments) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DeploymentList, err error) {
+func (c *deploymentsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DeploymentList, err error) {
 	emptyResult := &v1beta1.DeploymentList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewListActionWithOptions(deploymentsResource, deploymentsKind, c.ns, opts), emptyResult)
@@ -78,14 +75,14 @@ func (c *FakeDeployments) List(ctx context.Context, opts v1.ListOptions) (result
 }
 
 // Watch returns a watch.Interface that watches the requested deployments.
-func (c *FakeDeployments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *deploymentsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchActionWithOptions(deploymentsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a deployment and creates it.  Returns the server's representation of the deployment, and an error, if there is any.
-func (c *FakeDeployments) Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (result *v1beta1.Deployment, err error) {
 	emptyResult := &v1beta1.Deployment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateActionWithOptions(deploymentsResource, c.ns, deployment, opts), emptyResult)
@@ -97,7 +94,7 @@ func (c *FakeDeployments) Create(ctx context.Context, deployment *v1beta1.Deploy
 }
 
 // Update takes the representation of a deployment and updates it. Returns the server's representation of the deployment, and an error, if there is any.
-func (c *FakeDeployments) Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
 	emptyResult := &v1beta1.Deployment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateActionWithOptions(deploymentsResource, c.ns, deployment, opts), emptyResult)
@@ -110,7 +107,7 @@ func (c *FakeDeployments) Update(ctx context.Context, deployment *v1beta1.Deploy
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeDeployments) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
 	emptyResult := &v1beta1.Deployment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(deploymentsResource, "status", c.ns, deployment, opts), emptyResult)
@@ -122,7 +119,7 @@ func (c *FakeDeployments) UpdateStatus(ctx context.Context, deployment *v1beta1.
 }
 
 // Delete takes name of the deployment and deletes it. Returns an error if one occurs.
-func (c *FakeDeployments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *deploymentsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteActionWithOptions(deploymentsResource, c.ns, name, opts), &v1beta1.Deployment{})
 
@@ -130,7 +127,7 @@ func (c *FakeDeployments) Delete(ctx context.Context, name string, opts v1.Delet
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeDeployments) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *deploymentsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionActionWithOptions(deploymentsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.DeploymentList{})
@@ -138,7 +135,7 @@ func (c *FakeDeployments) DeleteCollection(ctx context.Context, opts v1.DeleteOp
 }
 
 // Patch applies the patch and returns the patched deployment.
-func (c *FakeDeployments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Deployment, err error) {
 	emptyResult := &v1beta1.Deployment{}
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceActionWithOptions(deploymentsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
@@ -150,7 +147,7 @@ func (c *FakeDeployments) Patch(ctx context.Context, name string, pt types.Patch
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied deployment.
-func (c *FakeDeployments) Apply(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) Apply(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
 	if deployment == nil {
 		return nil, fmt.Errorf("deployment provided to Apply must not be nil")
 	}
@@ -174,7 +171,7 @@ func (c *FakeDeployments) Apply(ctx context.Context, deployment *extensionsv1bet
 
 // ApplyStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeDeployments) ApplyStatus(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
+func (c *deploymentsClusterClient) ApplyStatus(ctx context.Context, deployment *extensionsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
 	if deployment == nil {
 		return nil, fmt.Errorf("deployment provided to Apply must not be nil")
 	}
@@ -197,7 +194,13 @@ func (c *FakeDeployments) ApplyStatus(ctx context.Context, deployment *extension
 }
 
 // GetScale takes name of the deployment, and returns the corresponding scale object, and an error if there is any.
-func (c *FakeDeployments) GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (result *v1beta1.Scale, err error) {
+func (c *deploymentsClusterClient) GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (result *v1beta1.Scale, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configMapsResource, c.ClusterPath, c.Namespace, name), &corev1.ConfigMap{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*corev1.ConfigMap), err
+
 	emptyResult := &v1beta1.Scale{}
 	obj, err := c.Fake.
 		Invokes(testing.NewGetSubresourceActionWithOptions(deploymentsResource, c.ns, "scale", deploymentName, options), emptyResult)
@@ -209,7 +212,7 @@ func (c *FakeDeployments) GetScale(ctx context.Context, deploymentName string, o
 }
 
 // UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *FakeDeployments) UpdateScale(ctx context.Context, deploymentName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (result *v1beta1.Scale, err error) {
+func (c *deploymentsClusterClient) UpdateScale(ctx context.Context, deploymentName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (result *v1beta1.Scale, err error) {
 	emptyResult := &v1beta1.Scale{}
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceActionWithOptions(deploymentsResource, "scale", c.ns, scale, opts), &v1beta1.Scale{})
@@ -222,7 +225,7 @@ func (c *FakeDeployments) UpdateScale(ctx context.Context, deploymentName string
 
 // ApplyScale takes top resource name and the apply declarative configuration for scale,
 // applies it and returns the applied scale, and an error, if there is any.
-func (c *FakeDeployments) ApplyScale(ctx context.Context, deploymentName string, scale *extensionsv1beta1.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Scale, err error) {
+func (c *deploymentsClusterClient) ApplyScale(ctx context.Context, deploymentName string, scale *extensionsv1beta1.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Scale, err error) {
 	if scale == nil {
 		return nil, fmt.Errorf("scale provided to ApplyScale must not be nil")
 	}

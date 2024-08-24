@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
-	upstreaminternal.apiserver.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/internal.apiserver.k8s.io"
-	apiserverinternalv1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/apiserverinternal/v1alpha1"
+	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreaminternal.apiserver.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/internal.apiserver.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	apiserverinternalv1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/apiserverinternal/v1alpha1"
+	time "time"
 )
 
 
@@ -47,7 +47,6 @@ type StorageVersionClusterInformer interface {
 type storageVersionClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewStorageVersionClusterInformer constructs a new informer for StorageVersion type.

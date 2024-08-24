@@ -20,18 +20,18 @@ limitations under the License.
 package v1alpha1
 
 import (
-	cache "k8s.io/client-go/tools/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
+	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1alpha1"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamrbac.authorization.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/rbac.authorization.k8s.io"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamrbac.authorization.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/rbac.authorization.k8s.io"
+	cache "k8s.io/client-go/tools/cache"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1alpha1"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 )
 
@@ -47,7 +47,6 @@ type ClusterRoleBindingClusterInformer interface {
 type clusterRoleBindingClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewClusterRoleBindingClusterInformer constructs a new informer for ClusterRoleBinding type.

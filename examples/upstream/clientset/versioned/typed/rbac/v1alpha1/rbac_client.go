@@ -29,7 +29,7 @@ import (
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
-type RbacV1alpha1Interface interface {
+type RbacV1alpha1ClusterInterface interface {
 	RbacV1alpha1ClusterScoper
 	ClusterRolesClusterGetter
 	ClusterRoleBindingsClusterGetter

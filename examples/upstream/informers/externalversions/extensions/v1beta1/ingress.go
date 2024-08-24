@@ -47,14 +47,13 @@ type IngressClusterInformer interface {
 type ingressClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewIngressClusterInformer constructs a new informer for Ingress type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewIngressClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredIngressClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredIngressClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredIngressClusterInformer constructs a new informer for Ingress type.

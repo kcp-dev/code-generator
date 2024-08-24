@@ -21,18 +21,18 @@ package v1beta2
 
 import (
 	"github.com/kcp-dev/logicalcluster/v3"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
+	time "time"
+	upstreamflowcontrol.apiserver.k8s.iov1beta2informers "k8s.io/client-go/informers/v1beta2/flowcontrol.apiserver.k8s.io"
+	flowcontrolv1beta2 "k8s.io/api/flowcontrol/v1beta2"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta2 "k8s.io/code-generator/examples/upstream/listers/flowcontrol/v1beta2"
-	time "time"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	flowcontrolv1beta2 "k8s.io/api/flowcontrol/v1beta2"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamflowcontrol.apiserver.k8s.iov1beta2informers "k8s.io/client-go/informers/v1beta2/flowcontrol.apiserver.k8s.io"
 )
 
 
@@ -47,7 +47,6 @@ type FlowSchemaClusterInformer interface {
 type flowSchemaClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	
 }
 
 // NewFlowSchemaClusterInformer constructs a new informer for FlowSchema type.

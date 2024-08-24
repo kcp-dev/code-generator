@@ -23,6 +23,7 @@ import (
 	json "encoding/json"
 	"fmt"
 
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	v1beta1 "k8s.io/api/scheduling/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -32,9 +33,9 @@ import (
 	schedulingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/scheduling/v1beta1"
 )
 
-// FakePriorityClasses implements PriorityClassInterface
-type FakePriorityClasses struct {
-	Fake *FakeSchedulingV1beta1
+// priorityClassesClusterClient implements priorityClassInterface
+type priorityClassesClusterClient struct {
+	*kcptesting.Fake
 }
 
 var priorityclassesResource = v1beta1.SchemeGroupVersion.WithResource("priorityclasses")
@@ -42,18 +43,16 @@ var priorityclassesResource = v1beta1.SchemeGroupVersion.WithResource("priorityc
 var priorityclassesKind = v1beta1.SchemeGroupVersion.WithKind("PriorityClass")
 
 // Get takes name of the priorityClass, and returns the corresponding priorityClass object, and an error if there is any.
-func (c *FakePriorityClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.PriorityClass, err error) {
-	emptyResult := &v1beta1.PriorityClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(priorityclassesResource, name, options), emptyResult)
+func (c *priorityClassesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.PriorityClass, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(priorityclassesResource, c.ClusterPath, c.Namespace, name), &v1beta1.PriorityClass{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.PriorityClass), err
 }
 
 // List takes label and field selectors, and returns the list of PriorityClasses that match those selectors.
-func (c *FakePriorityClasses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.PriorityClassList, err error) {
+func (c *priorityClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.PriorityClassList, err error) {
 	emptyResult := &v1beta1.PriorityClassList{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListActionWithOptions(priorityclassesResource, priorityclassesKind, opts), emptyResult)
@@ -75,13 +74,13 @@ func (c *FakePriorityClasses) List(ctx context.Context, opts v1.ListOptions) (re
 }
 
 // Watch returns a watch.Interface that watches the requested priorityClasses.
-func (c *FakePriorityClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *priorityClassesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchActionWithOptions(priorityclassesResource, opts))
 }
 
 // Create takes the representation of a priorityClass and creates it.  Returns the server's representation of the priorityClass, and an error, if there is any.
-func (c *FakePriorityClasses) Create(ctx context.Context, priorityClass *v1beta1.PriorityClass, opts v1.CreateOptions) (result *v1beta1.PriorityClass, err error) {
+func (c *priorityClassesClusterClient) Create(ctx context.Context, priorityClass *v1beta1.PriorityClass, opts v1.CreateOptions) (result *v1beta1.PriorityClass, err error) {
 	emptyResult := &v1beta1.PriorityClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateActionWithOptions(priorityclassesResource, priorityClass, opts), emptyResult)
@@ -92,7 +91,7 @@ func (c *FakePriorityClasses) Create(ctx context.Context, priorityClass *v1beta1
 }
 
 // Update takes the representation of a priorityClass and updates it. Returns the server's representation of the priorityClass, and an error, if there is any.
-func (c *FakePriorityClasses) Update(ctx context.Context, priorityClass *v1beta1.PriorityClass, opts v1.UpdateOptions) (result *v1beta1.PriorityClass, err error) {
+func (c *priorityClassesClusterClient) Update(ctx context.Context, priorityClass *v1beta1.PriorityClass, opts v1.UpdateOptions) (result *v1beta1.PriorityClass, err error) {
 	emptyResult := &v1beta1.PriorityClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateActionWithOptions(priorityclassesResource, priorityClass, opts), emptyResult)
@@ -103,14 +102,14 @@ func (c *FakePriorityClasses) Update(ctx context.Context, priorityClass *v1beta1
 }
 
 // Delete takes name of the priorityClass and deletes it. Returns an error if one occurs.
-func (c *FakePriorityClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *priorityClassesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteActionWithOptions(priorityclassesResource, name, opts), &v1beta1.PriorityClass{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakePriorityClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *priorityClassesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionActionWithOptions(priorityclassesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.PriorityClassList{})
@@ -118,7 +117,7 @@ func (c *FakePriorityClasses) DeleteCollection(ctx context.Context, opts v1.Dele
 }
 
 // Patch applies the patch and returns the patched priorityClass.
-func (c *FakePriorityClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PriorityClass, err error) {
+func (c *priorityClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PriorityClass, err error) {
 	emptyResult := &v1beta1.PriorityClass{}
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceActionWithOptions(priorityclassesResource, name, pt, data, opts, subresources...), emptyResult)
@@ -129,7 +128,7 @@ func (c *FakePriorityClasses) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Apply takes the given apply declarative configuration, applies it and returns the applied priorityClass.
-func (c *FakePriorityClasses) Apply(ctx context.Context, priorityClass *schedulingv1beta1.PriorityClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PriorityClass, err error) {
+func (c *priorityClassesClusterClient) Apply(ctx context.Context, priorityClass *schedulingv1beta1.PriorityClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.PriorityClass, err error) {
 	if priorityClass == nil {
 		return nil, fmt.Errorf("priorityClass provided to Apply must not be nil")
 	}

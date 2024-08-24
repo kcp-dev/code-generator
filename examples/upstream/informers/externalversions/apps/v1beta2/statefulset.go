@@ -47,14 +47,13 @@ type StatefulSetClusterInformer interface {
 type statefulSetClusterInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewStatefulSetClusterInformer constructs a new informer for StatefulSet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewStatefulSetClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredStatefulSetClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredStatefulSetClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredStatefulSetClusterInformer constructs a new informer for StatefulSet type.

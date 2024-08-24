@@ -18,8 +18,11 @@ limitations under the License.
 
 package fake
 
-// FakeEvictions implements EvictionInterface
-type FakeEvictions struct {
-	Fake *FakePolicyV1
-	ns   string
+import (
+	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+)
+
+// evictionsClusterClient implements evictionInterface
+type evictionsClusterClient struct {
+	*kcptesting.Fake
 }

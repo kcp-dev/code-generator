@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
-	networkingv1 "k8s.io/api/networking/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	networkingv1 "k8s.io/api/networking/v1"
+	watch "k8s.io/apimachinery/pkg/watch"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1 "k8s.io/code-generator/examples/upstream/listers/networking/v1"
+	time "time"
 	upstreamnetworking.k8s.iov1informers "k8s.io/client-go/informers/v1/networking.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1 "k8s.io/code-generator/examples/upstream/listers/networking/v1"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 
 
@@ -47,14 +47,13 @@ type NetworkPolicyClusterInformer interface {
 type networkPolicyClusterInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace string
 }
 
 // NewNetworkPolicyClusterInformer constructs a new informer for NetworkPolicy type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewNetworkPolicyClusterInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredNetworkPolicyClusterInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewFilteredNetworkPolicyClusterInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredNetworkPolicyClusterInformer constructs a new informer for NetworkPolicy type.
