@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
@@ -45,4 +46,37 @@ type DeploymentClusterInterface interface {
 
 type deploymentsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *deploymentsClusterInterface) Cluster(clusterPath logicalcluster.Path) DeploymentNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &deploymentsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Deployments that are available in all clusters.
+func (c *deploymentsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta2.DeploymentList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Deployments(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Deployments across all clusters.
+func (c *deploymentsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Deployments(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// DeploymentNamespacer can scope to objects within a namespace, returning a DeploymentInterface.
+type DeploymentNamespacer interface {
+	Namespace(name string) upstreamappsv1beta2client.DeploymentInterface
+}
+
+type deploymentsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *deploymentsNamespacer) Namespace(namespace string) upstreamappsv1beta2client.DeploymentInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Deployments(namespace)
 }

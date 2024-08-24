@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamrbacv1beta1client "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
@@ -39,10 +40,29 @@ type ClusterRoleBindingsClusterGetter interface {
 type ClusterRoleBindingClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ClusterRoleBindingList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamrbacv1beta1client.ClusterRoleBindingInterface
 	ClusterRoleBindingExpansion
 }
 
 type clusterRoleBindingsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamrbacv1beta1client.RbacV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *clusterRoleBindingsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamrbacv1beta1client.ClusterRoleBindingInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).ClusterRoleBindings()
+}
+
+// List returns the entire collection of all ClusterRoleBindings that are available in all clusters.
+func (c *clusterRoleBindingsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.ClusterRoleBindingList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterRoleBindings().List(ctx, opts)
+}
+
+// Watch begins to watch all ClusterRoleBindings across all clusters.
+func (c *clusterRoleBindingsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterRoleBindings().Watch(ctx, opts)
 }

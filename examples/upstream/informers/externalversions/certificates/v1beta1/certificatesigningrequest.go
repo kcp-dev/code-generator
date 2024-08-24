@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
+	upstreamcertificates.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/certificates.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/certificates/v1beta1"
-	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	cache "k8s.io/client-go/tools/cache"
 	time "time"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	cache "k8s.io/client-go/tools/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamcertificates.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/certificates.k8s.io"
 )
 
 

@@ -19,6 +19,7 @@ package generators
 import (
 	"io"
 	"path"
+	"strings"
 
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
@@ -43,6 +44,8 @@ type genGroup struct {
 	clientsetPackage string // must be a Go import-path
 	// If the genGroup has been called. This generator should only execute once.
 	called bool
+
+	singleClusterTypedClientsPackagePath string
 }
 
 var _ generator.Generator = &genGroup{}
@@ -65,6 +68,13 @@ func (g *genGroup) Namers(c *generator.Context) namer.NameSystems {
 func (g *genGroup) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	imports = append(imports, path.Join(g.clientsetPackage, "scheme"))
+
+	imports = append(imports, "kcpclient \"github.com/kcp-dev/apimachinery/v2/pkg/client\"")
+
+	if len(g.singleClusterTypedClientsPackagePath) > 0 {
+		imports = append(imports, "upstream"+strings.ToLower(g.groupGoName+g.version+"client \""+g.singleClusterTypedClientsPackagePath+"/"+g.groupGoName+"/"+g.version+"\""))
+	}
+
 	return
 }
 
@@ -99,9 +109,23 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 		"restRESTClientFor":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientFor"}),
 		"restRESTClientForConfigAndClient": c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientForConfigAndClient"}),
 		"SchemeGroupVersion":               c.Universe.Variable(types.Name{Package: g.inputPackage, Name: "SchemeGroupVersion"}),
+		"kcpClientCacheType":               g.groupGoName + namer.IC(g.version) + "Client",
+		"kcpClientCacheInterface":          g.groupGoName + namer.IC(g.version) + "Interface",
+		"kcpGroupVersion":                  "upstream" + strings.ToLower(g.groupGoName+g.version+"client"),
+		"kcpExternalClientCacheType":       "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + g.groupGoName + namer.IC(g.version) + "Client",
+		"kcpExternalClientInterface":       "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + g.groupGoName + namer.IC(g.version) + "Interface",
 	}
 	sw.Do(groupInterfaceTemplate, m)
-	sw.Do(groupClientTemplate, m)
+
+	if g.singleClusterTypedClientsPackagePath != "" {
+		sw.Do(groupClusterScoperExternalInterface, m)
+		sw.Do(groupClientExternalTemplate, m)
+		sw.Do(groupClientClusterExternalMethod, m)
+	} else {
+		sw.Do(groupClusterScoperInterface, m)
+		sw.Do(groupClientTemplate, m)
+	}
+
 	for _, t := range g.types {
 		tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 		if err != nil {
@@ -113,49 +137,77 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 			"Version":     namer.IC(g.version),
 		}
 		if tags.NonNamespaced {
-			sw.Do(getterImplNonNamespaced, wrapper)
-		} else {
-			sw.Do(getterImplNamespaced, wrapper)
 		}
+		sw.Do(getterImplGeneric, wrapper)
+
 	}
 	sw.Do(newClientForConfigTemplate, m)
 	sw.Do(newClientForConfigAndClientTemplate, m)
 	sw.Do(newClientForConfigOrDieTemplate, m)
-	sw.Do(newClientForRESTClientTemplate, m)
 	if g.version == "" {
 		sw.Do(setInternalVersionClientDefaultsTemplate, m)
 	} else {
 		sw.Do(setClientDefaultsTemplate, m)
 	}
-	sw.Do(getRESTClient, m)
 
 	return sw.Error()
 }
 
 var groupInterfaceTemplate = `
 type $.GroupGoName$$.Version$Interface interface {
-    RESTClient() $.restRESTClientInterface|raw$
-    $range .types$ $.|publicPlural$Getter
+	$.GroupGoName$$.Version$ClusterScoper
+    $range .types$ $.|publicPlural$ClusterGetter
     $end$
+}
+`
+
+var groupClientClusterMethod = `
+func (c *$.GroupGoName$$.Version$ClusterClient) Cluster(clusterPath logicalcluster.Path) corev1.CoreV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+`
+
+var groupClientClusterExternalMethod = `
+func (c *$.GroupGoName$$.Version$ClusterClient) Cluster(clusterPath logicalcluster.Path) $.kcpExternalClientInterface$ {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+`
+
+var groupClusterScoperExternalInterface = `
+type $.GroupGoName$$.Version$ClusterScoper interface {
+	Cluster(logicalcluster.Path) $.kcpExternalClientInterface$
+}
+`
+
+var groupClusterScoperInterface = `
+type $.GroupGoName$$.Version$ClusterScoper interface {
+	Cluster(logicalcluster.Path) $.kcpClientCacheInterface$
 }
 `
 
 var groupClientTemplate = `
 // $.GroupGoName$$.Version$Client is used to interact with features provided by the $.groupName$ group.
-type $.GroupGoName$$.Version$Client struct {
-	restClient $.restRESTClientInterface|raw$
+type $.GroupGoName$$.Version$ClusterClient struct {
+	clientCache kcpclient.Cache[*$.kcpClientCacheInterface$]
 }
 `
 
-var getterImplNamespaced = `
-func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.type|public$Interface {
-	return new$.type|publicPlural$(c, namespace)
+var groupClientExternalTemplate = `
+// $.GroupGoName$$.Version$Client is used to interact with features provided by the $.groupName$ group.
+type $.GroupGoName$$.Version$ClusterClient struct {
+	clientCache kcpclient.Cache[*$.kcpExternalClientCacheType$]
 }
 `
 
-var getterImplNonNamespaced = `
-func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.type|public$Interface {
-	return new$.type|publicPlural$(c)
+var getterImplGeneric = `
+func (c *$.GroupGoName$$.Version$ClusterClient) $.type|publicPlural$() $.type|public$ClusterInterface {
+	return &$.type|privatePlural$ClusterInterface{clientCache: c.clientCache}
 }
 `
 
@@ -163,7 +215,7 @@ var newClientForConfigTemplate = `
 // NewForConfig creates a new $.GroupGoName$$.Version$Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *$.restConfig|raw$) (*$.GroupGoName$$.Version$Client, error) {
+func NewForConfig(c *$.restConfig|raw$) (*$.GroupGoName$$.Version$ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -179,23 +231,22 @@ func NewForConfig(c *$.restConfig|raw$) (*$.GroupGoName$$.Version$Client, error)
 var newClientForConfigAndClientTemplate = `
 // NewForConfigAndClient creates a new $.GroupGoName$$.Version$Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *$.restConfig|raw$, h *http.Client) (*$.GroupGoName$$.Version$Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *$.restConfig|raw$, h *http.Client) (*$.GroupGoName$$.Version$ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*$.kcpExternalClientCacheType$]{
+		NewForConfigAndClient: $.kcpGroupVersion$.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := $.restRESTClientForConfigAndClient|raw$(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &$.GroupGoName$$.Version$Client{client}, nil
+
+	return &$.GroupGoName$$.Version$ClusterClient{clientCache: cache}, nil
 }
 `
 
 var newClientForConfigOrDieTemplate = `
 // NewForConfigOrDie creates a new $.GroupGoName$$.Version$Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *$.restConfig|raw$) *$.GroupGoName$$.Version$Client {
+func NewForConfigOrDie(c *$.restConfig|raw$) *$.GroupGoName$$.Version$ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -203,25 +254,6 @@ func NewForConfigOrDie(c *$.restConfig|raw$) *$.GroupGoName$$.Version$Client {
 	return client
 }
 `
-
-var getRESTClient = `
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *$.GroupGoName$$.Version$Client) RESTClient() $.restRESTClientInterface|raw$ {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
-}
-`
-
-var newClientForRESTClientTemplate = `
-// New creates a new $.GroupGoName$$.Version$Client for the given RESTClient.
-func New(c $.restRESTClientInterface|raw$) *$.GroupGoName$$.Version$Client {
-	return &$.GroupGoName$$.Version$Client{c}
-}
-`
-
 var setInternalVersionClientDefaultsTemplate = `
 func setConfigDefaults(config *$.restConfig|raw$) error {
 	config.APIPath = $.apiPath$

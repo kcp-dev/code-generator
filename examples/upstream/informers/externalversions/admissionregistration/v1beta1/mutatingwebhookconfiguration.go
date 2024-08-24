@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
+	watch "k8s.io/apimachinery/pkg/watch"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1beta1"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamadmissionregistration.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/admissionregistration.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	time "time"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	upstreamadmissionregistration.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/admissionregistration.k8s.io"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	cache "k8s.io/client-go/tools/cache"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1beta1"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 

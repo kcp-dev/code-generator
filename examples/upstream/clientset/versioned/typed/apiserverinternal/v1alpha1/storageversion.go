@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreaminternalv1alpha1client "k8s.io/client-go/kubernetes/typed/internal/v1alpha1"
@@ -39,10 +40,29 @@ type StorageVersionsClusterGetter interface {
 type StorageVersionClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.StorageVersionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreaminternalv1alpha1client.StorageVersionInterface
 	StorageVersionExpansion
 }
 
 type storageVersionsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreaminternalv1alpha1client.InternalV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *storageVersionsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreaminternalv1alpha1client.StorageVersionInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).StorageVersions()
+}
+
+// List returns the entire collection of all StorageVersions that are available in all clusters.
+func (c *storageVersionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.StorageVersionList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersions().List(ctx, opts)
+}
+
+// Watch begins to watch all StorageVersions across all clusters.
+func (c *storageVersionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersions().Watch(ctx, opts)
 }

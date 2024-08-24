@@ -21,49 +21,63 @@ package v1alpha3
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type ResourceV1alpha3Interface interface {
-	RESTClient() rest.Interface
-	DeviceClassesGetter
-	PodSchedulingContextsGetter
-	ResourceClaimsGetter
-	ResourceClaimTemplatesGetter
-	ResourceSlicesGetter
+	ResourceV1alpha3ClusterScoper
+	DeviceClassesClusterGetter
+	PodSchedulingContextsClusterGetter
+	ResourceClaimsClusterGetter
+	ResourceClaimTemplatesClusterGetter
+	ResourceSlicesClusterGetter
+}
+
+type ResourceV1alpha3ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamresourcev1alpha3client.ResourceV1alpha3Interface
 }
 
 // ResourceV1alpha3Client is used to interact with features provided by the resource.k8s.io group.
-type ResourceV1alpha3Client struct {
-	restClient rest.Interface
+type ResourceV1alpha3ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
 }
 
-func (c *ResourceV1alpha3Client) DeviceClasses() DeviceClassInterface {
-	return newDeviceClasses(c)
+func (c *ResourceV1alpha3ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamresourcev1alpha3client.ResourceV1alpha3Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *ResourceV1alpha3Client) PodSchedulingContexts(namespace string) PodSchedulingContextInterface {
-	return newPodSchedulingContexts(c, namespace)
+func (c *ResourceV1alpha3ClusterClient) DeviceClasses() DeviceClassClusterInterface {
+	return &deviceClassesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ResourceV1alpha3Client) ResourceClaims(namespace string) ResourceClaimInterface {
-	return newResourceClaims(c, namespace)
+func (c *ResourceV1alpha3ClusterClient) PodSchedulingContexts() PodSchedulingContextClusterInterface {
+	return &podSchedulingContextsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ResourceV1alpha3Client) ResourceClaimTemplates(namespace string) ResourceClaimTemplateInterface {
-	return newResourceClaimTemplates(c, namespace)
+func (c *ResourceV1alpha3ClusterClient) ResourceClaims() ResourceClaimClusterInterface {
+	return &resourceClaimsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ResourceV1alpha3Client) ResourceSlices() ResourceSliceInterface {
-	return newResourceSlices(c)
+func (c *ResourceV1alpha3ClusterClient) ResourceClaimTemplates() ResourceClaimTemplateClusterInterface {
+	return &resourceClaimTemplatesClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *ResourceV1alpha3ClusterClient) ResourceSlices() ResourceSliceClusterInterface {
+	return &resourceSlicesClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new ResourceV1alpha3Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*ResourceV1alpha3Client, error) {
+func NewForConfig(c *rest.Config) (*ResourceV1alpha3ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -77,31 +91,25 @@ func NewForConfig(c *rest.Config) (*ResourceV1alpha3Client, error) {
 
 // NewForConfigAndClient creates a new ResourceV1alpha3Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ResourceV1alpha3Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ResourceV1alpha3ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]{
+		NewForConfigAndClient: upstreamresourcev1alpha3client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &ResourceV1alpha3Client{client}, nil
+
+	return &ResourceV1alpha3ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new ResourceV1alpha3Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ResourceV1alpha3Client {
+func NewForConfigOrDie(c *rest.Config) *ResourceV1alpha3ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new ResourceV1alpha3Client for the given RESTClient.
-func New(c rest.Interface) *ResourceV1alpha3Client {
-	return &ResourceV1alpha3Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -115,13 +123,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *ResourceV1alpha3Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

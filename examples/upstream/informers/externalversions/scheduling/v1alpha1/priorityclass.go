@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	time "time"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/scheduling/v1alpha1"
 	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	upstreamscheduling.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/scheduling.k8s.io"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/scheduling/v1alpha1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 

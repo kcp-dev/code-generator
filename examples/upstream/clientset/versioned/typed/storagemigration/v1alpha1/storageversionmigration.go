@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storagemigration/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamstoragemigrationv1alpha1client "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
@@ -39,10 +40,29 @@ type StorageVersionMigrationsClusterGetter interface {
 type StorageVersionMigrationClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.StorageVersionMigrationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamstoragemigrationv1alpha1client.StorageVersionMigrationInterface
 	StorageVersionMigrationExpansion
 }
 
 type storageVersionMigrationsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamstoragemigrationv1alpha1client.StoragemigrationV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *storageVersionMigrationsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamstoragemigrationv1alpha1client.StorageVersionMigrationInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).StorageVersionMigrations()
+}
+
+// List returns the entire collection of all StorageVersionMigrations that are available in all clusters.
+func (c *storageVersionMigrationsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.StorageVersionMigrationList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersionMigrations().List(ctx, opts)
+}
+
+// Watch begins to watch all StorageVersionMigrations across all clusters.
+func (c *storageVersionMigrationsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersionMigrations().Watch(ctx, opts)
 }

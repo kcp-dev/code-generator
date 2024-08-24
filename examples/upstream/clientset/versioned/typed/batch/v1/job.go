@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
@@ -45,4 +46,37 @@ type JobClusterInterface interface {
 
 type jobsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreambatchv1client.BatchV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *jobsClusterInterface) Cluster(clusterPath logicalcluster.Path) JobNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &jobsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Jobs that are available in all clusters.
+func (c *jobsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*batchv1.JobList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Jobs(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Jobs across all clusters.
+func (c *jobsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Jobs(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// JobNamespacer can scope to objects within a namespace, returning a JobInterface.
+type JobNamespacer interface {
+	Namespace(name string) upstreambatchv1client.JobInterface
+}
+
+type jobsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreambatchv1client.BatchV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *jobsNamespacer) Namespace(namespace string) upstreambatchv1client.JobInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Jobs(namespace)
 }

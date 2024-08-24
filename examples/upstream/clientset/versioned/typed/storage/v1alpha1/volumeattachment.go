@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storage/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamstoragev1alpha1client "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
@@ -39,10 +40,29 @@ type VolumeAttachmentsClusterGetter interface {
 type VolumeAttachmentClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.VolumeAttachmentList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamstoragev1alpha1client.VolumeAttachmentInterface
 	VolumeAttachmentExpansion
 }
 
 type volumeAttachmentsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamstoragev1alpha1client.StorageV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *volumeAttachmentsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamstoragev1alpha1client.VolumeAttachmentInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).VolumeAttachments()
+}
+
+// List returns the entire collection of all VolumeAttachments that are available in all clusters.
+func (c *volumeAttachmentsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.VolumeAttachmentList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).VolumeAttachments().List(ctx, opts)
+}
+
+// Watch begins to watch all VolumeAttachments across all clusters.
+func (c *volumeAttachmentsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).VolumeAttachments().Watch(ctx, opts)
 }

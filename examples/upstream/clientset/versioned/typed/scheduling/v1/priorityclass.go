@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	schedulingv1 "k8s.io/api/scheduling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamschedulingv1client "k8s.io/client-go/kubernetes/typed/scheduling/v1"
@@ -39,10 +40,29 @@ type PriorityClassesClusterGetter interface {
 type PriorityClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*schedulingv1.PriorityClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamschedulingv1client.PriorityClassInterface
 	PriorityClassExpansion
 }
 
 type priorityClassesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamschedulingv1client.SchedulingV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *priorityClassesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamschedulingv1client.PriorityClassInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).PriorityClasses()
+}
+
+// List returns the entire collection of all PriorityClasses that are available in all clusters.
+func (c *priorityClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*schedulingv1.PriorityClassList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityClasses().List(ctx, opts)
+}
+
+// Watch begins to watch all PriorityClasses across all clusters.
+func (c *priorityClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityClasses().Watch(ctx, opts)
 }

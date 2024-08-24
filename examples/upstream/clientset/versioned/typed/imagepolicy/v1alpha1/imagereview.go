@@ -19,7 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	v1alpha1 "k8s.io/api/imagepolicy/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	upstreamimagepolicyv1alpha1client "k8s.io/client-go/kubernetes/typed/imagepolicy/v1alpha1"
 )
 
@@ -36,4 +42,23 @@ type ImageReviewClusterInterface interface {
 
 type imageReviewsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamimagepolicyv1alpha1client.ImagepolicyV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *imageReviewsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamimagepolicyv1alpha1client.ImageReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).ImageReviews()
+}
+
+// List returns the entire collection of all ImageReviews that are available in all clusters.
+func (c *imageReviewsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ImageReviewList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ImageReviews().List(ctx, opts)
+}
+
+// Watch begins to watch all ImageReviews across all clusters.
+func (c *imageReviewsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ImageReviews().Watch(ctx, opts)
 }

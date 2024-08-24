@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	time "time"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/code-generator/examples/upstream/listers/admissionregistration/v1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"github.com/kcp-dev/logicalcluster/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	time "time"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamadmissionregistration.k8s.iov1informers "k8s.io/client-go/informers/v1/admissionregistration.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 )
 
 

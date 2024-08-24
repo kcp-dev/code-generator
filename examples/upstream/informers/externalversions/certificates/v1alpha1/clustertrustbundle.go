@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/certificates/v1alpha1"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	certificatesv1alpha1 "k8s.io/api/certificates/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
+	watch "k8s.io/apimachinery/pkg/watch"
+	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/certificates/v1alpha1"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamcertificates.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/certificates.k8s.io"
-	certificatesv1alpha1 "k8s.io/api/certificates/v1alpha1"
-	watch "k8s.io/apimachinery/pkg/watch"
+	"github.com/kcp-dev/logicalcluster/v3"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	time "time"
 )
 
 

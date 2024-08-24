@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcertificatesv1client "k8s.io/client-go/kubernetes/typed/certificates/v1"
@@ -39,11 +40,30 @@ type CertificateSigningRequestsClusterGetter interface {
 type CertificateSigningRequestClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*certificatesv1.CertificateSigningRequestList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamcertificatesv1client.CertificateSigningRequestInterface
 
 	CertificateSigningRequestExpansion
 }
 
 type certificateSigningRequestsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcertificatesv1client.CertificatesV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *certificateSigningRequestsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1client.CertificateSigningRequestInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).CertificateSigningRequests()
+}
+
+// List returns the entire collection of all CertificateSigningRequests that are available in all clusters.
+func (c *certificateSigningRequestsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*certificatesv1.CertificateSigningRequestList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CertificateSigningRequests().List(ctx, opts)
+}
+
+// Watch begins to watch all CertificateSigningRequests across all clusters.
+func (c *certificateSigningRequestsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CertificateSigningRequests().Watch(ctx, opts)
 }

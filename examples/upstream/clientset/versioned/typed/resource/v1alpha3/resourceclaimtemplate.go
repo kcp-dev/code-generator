@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
@@ -45,4 +46,37 @@ type ResourceClaimTemplateClusterInterface interface {
 
 type resourceClaimTemplatesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *resourceClaimTemplatesClusterInterface) Cluster(clusterPath logicalcluster.Path) ResourceClaimTemplateNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &resourceClaimTemplatesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all ResourceClaimTemplates that are available in all clusters.
+func (c *resourceClaimTemplatesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.ResourceClaimTemplateList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceClaimTemplates(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all ResourceClaimTemplates across all clusters.
+func (c *resourceClaimTemplatesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceClaimTemplates(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// ResourceClaimTemplateNamespacer can scope to objects within a namespace, returning a ResourceClaimTemplateInterface.
+type ResourceClaimTemplateNamespacer interface {
+	Namespace(name string) upstreamresourcev1alpha3client.ResourceClaimTemplateInterface
+}
+
+type resourceClaimTemplatesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *resourceClaimTemplatesNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.ResourceClaimTemplateInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).ResourceClaimTemplates(namespace)
 }

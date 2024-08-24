@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
@@ -46,4 +47,37 @@ type StatefulSetClusterInterface interface {
 
 type statefulSetsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamappsv1client.AppsV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *statefulSetsClusterInterface) Cluster(clusterPath logicalcluster.Path) StatefulSetNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &statefulSetsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all StatefulSets that are available in all clusters.
+func (c *statefulSetsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.StatefulSetList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StatefulSets(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all StatefulSets across all clusters.
+func (c *statefulSetsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StatefulSets(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// StatefulSetNamespacer can scope to objects within a namespace, returning a StatefulSetInterface.
+type StatefulSetNamespacer interface {
+	Namespace(name string) upstreamappsv1client.StatefulSetInterface
+}
+
+type statefulSetsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamappsv1client.AppsV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *statefulSetsNamespacer) Namespace(namespace string) upstreamappsv1client.StatefulSetInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).StatefulSets(namespace)
 }

@@ -21,49 +21,63 @@ package v1beta2
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type AppsV1beta2Interface interface {
-	RESTClient() rest.Interface
-	ControllerRevisionsGetter
-	DaemonSetsGetter
-	DeploymentsGetter
-	ReplicaSetsGetter
-	StatefulSetsGetter
+	AppsV1beta2ClusterScoper
+	ControllerRevisionsClusterGetter
+	DaemonSetsClusterGetter
+	DeploymentsClusterGetter
+	ReplicaSetsClusterGetter
+	StatefulSetsClusterGetter
+}
+
+type AppsV1beta2ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamappsv1beta2client.AppsV1beta2Interface
 }
 
 // AppsV1beta2Client is used to interact with features provided by the apps group.
-type AppsV1beta2Client struct {
-	restClient rest.Interface
+type AppsV1beta2ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamappsv1beta2client.AppsV1beta2Client]
 }
 
-func (c *AppsV1beta2Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
-	return newControllerRevisions(c, namespace)
+func (c *AppsV1beta2ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamappsv1beta2client.AppsV1beta2Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *AppsV1beta2Client) DaemonSets(namespace string) DaemonSetInterface {
-	return newDaemonSets(c, namespace)
+func (c *AppsV1beta2ClusterClient) ControllerRevisions() ControllerRevisionClusterInterface {
+	return &controllerRevisionsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *AppsV1beta2Client) Deployments(namespace string) DeploymentInterface {
-	return newDeployments(c, namespace)
+func (c *AppsV1beta2ClusterClient) DaemonSets() DaemonSetClusterInterface {
+	return &daemonSetsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *AppsV1beta2Client) ReplicaSets(namespace string) ReplicaSetInterface {
-	return newReplicaSets(c, namespace)
+func (c *AppsV1beta2ClusterClient) Deployments() DeploymentClusterInterface {
+	return &deploymentsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *AppsV1beta2Client) StatefulSets(namespace string) StatefulSetInterface {
-	return newStatefulSets(c, namespace)
+func (c *AppsV1beta2ClusterClient) ReplicaSets() ReplicaSetClusterInterface {
+	return &replicaSetsClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *AppsV1beta2ClusterClient) StatefulSets() StatefulSetClusterInterface {
+	return &statefulSetsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new AppsV1beta2Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*AppsV1beta2Client, error) {
+func NewForConfig(c *rest.Config) (*AppsV1beta2ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -77,31 +91,25 @@ func NewForConfig(c *rest.Config) (*AppsV1beta2Client, error) {
 
 // NewForConfigAndClient creates a new AppsV1beta2Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AppsV1beta2Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AppsV1beta2ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamappsv1beta2client.AppsV1beta2Client]{
+		NewForConfigAndClient: upstreamappsv1beta2client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &AppsV1beta2Client{client}, nil
+
+	return &AppsV1beta2ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new AppsV1beta2Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *AppsV1beta2Client {
+func NewForConfigOrDie(c *rest.Config) *AppsV1beta2ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new AppsV1beta2Client for the given RESTClient.
-func New(c rest.Interface) *AppsV1beta2Client {
-	return &AppsV1beta2Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -115,13 +123,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *AppsV1beta2Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

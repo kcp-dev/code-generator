@@ -19,7 +19,13 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	v1 "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	upstreamauthenticationv1client "k8s.io/client-go/kubernetes/typed/authentication/v1"
 )
 
@@ -36,4 +42,23 @@ type TokenReviewClusterInterface interface {
 
 type tokenReviewsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamauthenticationv1client.AuthenticationV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *tokenReviewsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1client.TokenReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).TokenReviews()
+}
+
+// List returns the entire collection of all TokenReviews that are available in all clusters.
+func (c *tokenReviewsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.TokenReviewList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).TokenReviews().List(ctx, opts)
+}
+
+// Watch begins to watch all TokenReviews across all clusters.
+func (c *tokenReviewsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).TokenReviews().Watch(ctx, opts)
 }

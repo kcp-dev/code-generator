@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -46,4 +47,37 @@ type ReplicationControllerClusterInterface interface {
 
 type replicationControllersClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *replicationControllersClusterInterface) Cluster(clusterPath logicalcluster.Path) ReplicationControllerNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &replicationControllersNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all ReplicationControllers that are available in all clusters.
+func (c *replicationControllersClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ReplicationControllerList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ReplicationControllers(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all ReplicationControllers across all clusters.
+func (c *replicationControllersClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ReplicationControllers(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// ReplicationControllerNamespacer can scope to objects within a namespace, returning a ReplicationControllerInterface.
+type ReplicationControllerNamespacer interface {
+	Namespace(name string) upstreamcorev1client.ReplicationControllerInterface
+}
+
+type replicationControllersNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *replicationControllersNamespacer) Namespace(namespace string) upstreamcorev1client.ReplicationControllerInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).ReplicationControllers(namespace)
 }

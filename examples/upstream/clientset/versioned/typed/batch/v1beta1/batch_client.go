@@ -21,29 +21,43 @@ package v1beta1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/batch/v1beta1"
+	upstreambatchv1beta1client "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type BatchV1beta1Interface interface {
-	RESTClient() rest.Interface
-	CronJobsGetter
+	BatchV1beta1ClusterScoper
+	CronJobsClusterGetter
+}
+
+type BatchV1beta1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreambatchv1beta1client.BatchV1beta1Interface
 }
 
 // BatchV1beta1Client is used to interact with features provided by the batch group.
-type BatchV1beta1Client struct {
-	restClient rest.Interface
+type BatchV1beta1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreambatchv1beta1client.BatchV1beta1Client]
 }
 
-func (c *BatchV1beta1Client) CronJobs(namespace string) CronJobInterface {
-	return newCronJobs(c, namespace)
+func (c *BatchV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreambatchv1beta1client.BatchV1beta1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+
+func (c *BatchV1beta1ClusterClient) CronJobs() CronJobClusterInterface {
+	return &cronJobsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new BatchV1beta1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*BatchV1beta1Client, error) {
+func NewForConfig(c *rest.Config) (*BatchV1beta1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -57,31 +71,25 @@ func NewForConfig(c *rest.Config) (*BatchV1beta1Client, error) {
 
 // NewForConfigAndClient creates a new BatchV1beta1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*BatchV1beta1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*BatchV1beta1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreambatchv1beta1client.BatchV1beta1Client]{
+		NewForConfigAndClient: upstreambatchv1beta1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &BatchV1beta1Client{client}, nil
+
+	return &BatchV1beta1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new BatchV1beta1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *BatchV1beta1Client {
+func NewForConfigOrDie(c *rest.Config) *BatchV1beta1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new BatchV1beta1Client for the given RESTClient.
-func New(c rest.Interface) *BatchV1beta1Client {
-	return &BatchV1beta1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -95,13 +103,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *BatchV1beta1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

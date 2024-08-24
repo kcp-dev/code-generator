@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamrbacv1beta1client "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
@@ -45,4 +46,37 @@ type RoleClusterInterface interface {
 
 type rolesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamrbacv1beta1client.RbacV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *rolesClusterInterface) Cluster(clusterPath logicalcluster.Path) RoleNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &rolesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Roles that are available in all clusters.
+func (c *rolesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.RoleList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Roles(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Roles across all clusters.
+func (c *rolesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Roles(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// RoleNamespacer can scope to objects within a namespace, returning a RoleInterface.
+type RoleNamespacer interface {
+	Namespace(name string) upstreamrbacv1beta1client.RoleInterface
+}
+
+type rolesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamrbacv1beta1client.RbacV1beta1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *rolesNamespacer) Namespace(namespace string) upstreamrbacv1beta1client.RoleInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Roles(namespace)
 }

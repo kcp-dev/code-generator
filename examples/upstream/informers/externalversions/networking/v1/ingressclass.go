@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
+	upstreamnetworking.k8s.iov1informers "k8s.io/client-go/informers/v1/networking.k8s.io"
+	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1 "k8s.io/code-generator/examples/upstream/listers/networking/v1"
 	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	networkingv1 "k8s.io/api/networking/v1"
-	watch "k8s.io/apimachinery/pkg/watch"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1 "k8s.io/code-generator/examples/upstream/listers/networking/v1"
-	upstreamnetworking.k8s.iov1informers "k8s.io/client-go/informers/v1/networking.k8s.io"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 )
 
 

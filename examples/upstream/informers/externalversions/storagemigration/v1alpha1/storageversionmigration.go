@@ -20,17 +20,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	cache "k8s.io/client-go/tools/cache"
-	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/storagemigration/v1alpha1"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	storagemigrationv1alpha1 "k8s.io/api/storagemigration/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
 	upstreamstoragemigration.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/storagemigration.k8s.io"
+	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/storagemigration/v1alpha1"
+	time "time"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 )

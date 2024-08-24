@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/networking/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamnetworkingv1alpha1client "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
@@ -39,10 +40,29 @@ type IPAddressesClusterGetter interface {
 type IPAddressClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.IPAddressList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamnetworkingv1alpha1client.IPAddressInterface
 	IPAddressExpansion
 }
 
 type iPAddressesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamnetworkingv1alpha1client.NetworkingV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *iPAddressesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1alpha1client.IPAddressInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).IPAddresses()
+}
+
+// List returns the entire collection of all IPAddresses that are available in all clusters.
+func (c *iPAddressesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.IPAddressList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IPAddresses().List(ctx, opts)
+}
+
+// Watch begins to watch all IPAddresses across all clusters.
+func (c *iPAddressesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IPAddresses().Watch(ctx, opts)
 }

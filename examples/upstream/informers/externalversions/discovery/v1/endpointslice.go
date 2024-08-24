@@ -20,18 +20,18 @@ limitations under the License.
 package v1
 
 import (
+	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
-	upstreamdiscovery.k8s.iov1informers "k8s.io/client-go/informers/v1/discovery.k8s.io"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
-	v1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	upstreamdiscovery.k8s.iov1informers "k8s.io/client-go/informers/v1/discovery.k8s.io"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 

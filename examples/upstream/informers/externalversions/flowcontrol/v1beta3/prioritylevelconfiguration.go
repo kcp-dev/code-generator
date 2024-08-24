@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta3
 
 import (
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	flowcontrolv1beta3 "k8s.io/api/flowcontrol/v1beta3"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta3 "k8s.io/code-generator/examples/upstream/listers/flowcontrol/v1beta3"
-	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	upstreamflowcontrol.apiserver.k8s.iov1beta3informers "k8s.io/client-go/informers/v1beta3/flowcontrol.apiserver.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	flowcontrolv1beta3 "k8s.io/api/flowcontrol/v1beta3"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	time "time"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	upstreamflowcontrol.apiserver.k8s.iov1beta3informers "k8s.io/client-go/informers/v1beta3/flowcontrol.apiserver.k8s.io"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 )
 
 

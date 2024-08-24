@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	upstreamrbac.authorization.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/rbac.authorization.k8s.io"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1beta1"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1beta1"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	time "time"
+	upstreamrbac.authorization.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/rbac.authorization.k8s.io"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 )
 
 

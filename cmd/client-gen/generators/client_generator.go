@@ -170,15 +170,16 @@ func targetForGroup(args *args.Args, gv clientgentypes.GroupVersion, typeList []
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: groupPkgName + "_client.go",
 				},
-				outputPackage:    gvPkg,
-				inputPackage:     inputPkg,
-				clientsetPackage: clientsetPkg,
-				group:            gv.Group.NonEmpty(),
-				version:          gv.Version.String(),
-				groupGoName:      groupGoName,
-				apiPath:          apiPath,
-				types:            typeList,
-				imports:          generator.NewImportTracker(),
+				outputPackage:                        gvPkg,
+				inputPackage:                         inputPkg,
+				clientsetPackage:                     clientsetPkg,
+				group:                                gv.Group.NonEmpty(),
+				version:                              gv.Version.String(),
+				groupGoName:                          groupGoName,
+				apiPath:                              apiPath,
+				types:                                typeList,
+				imports:                              generator.NewImportTracker(),
+				singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
 			})
 
 			expansionFileName := "generated_expansion.go"

@@ -21,29 +21,43 @@ package v2
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v2 "k8s.io/api/autoscaling/v2"
+	upstreamautoscalingv2client "k8s.io/client-go/kubernetes/typed/autoscaling/v2"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type AutoscalingV2Interface interface {
-	RESTClient() rest.Interface
-	HorizontalPodAutoscalersGetter
+	AutoscalingV2ClusterScoper
+	HorizontalPodAutoscalersClusterGetter
+}
+
+type AutoscalingV2ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamautoscalingv2client.AutoscalingV2Interface
 }
 
 // AutoscalingV2Client is used to interact with features provided by the autoscaling group.
-type AutoscalingV2Client struct {
-	restClient rest.Interface
+type AutoscalingV2ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamautoscalingv2client.AutoscalingV2Client]
 }
 
-func (c *AutoscalingV2Client) HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerInterface {
-	return newHorizontalPodAutoscalers(c, namespace)
+func (c *AutoscalingV2ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamautoscalingv2client.AutoscalingV2Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+
+func (c *AutoscalingV2ClusterClient) HorizontalPodAutoscalers() HorizontalPodAutoscalerClusterInterface {
+	return &horizontalPodAutoscalersClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new AutoscalingV2Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*AutoscalingV2Client, error) {
+func NewForConfig(c *rest.Config) (*AutoscalingV2ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -57,31 +71,25 @@ func NewForConfig(c *rest.Config) (*AutoscalingV2Client, error) {
 
 // NewForConfigAndClient creates a new AutoscalingV2Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AutoscalingV2Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AutoscalingV2ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamautoscalingv2client.AutoscalingV2Client]{
+		NewForConfigAndClient: upstreamautoscalingv2client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &AutoscalingV2Client{client}, nil
+
+	return &AutoscalingV2ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new AutoscalingV2Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *AutoscalingV2Client {
+func NewForConfigOrDie(c *rest.Config) *AutoscalingV2ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new AutoscalingV2Client for the given RESTClient.
-func New(c rest.Interface) *AutoscalingV2Client {
-	return &AutoscalingV2Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -95,13 +103,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *AutoscalingV2Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

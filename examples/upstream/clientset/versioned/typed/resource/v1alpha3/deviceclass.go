@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
@@ -39,10 +40,29 @@ type DeviceClassesClusterGetter interface {
 type DeviceClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha3.DeviceClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamresourcev1alpha3client.DeviceClassInterface
 	DeviceClassExpansion
 }
 
 type deviceClassesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *deviceClassesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamresourcev1alpha3client.DeviceClassInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).DeviceClasses()
+}
+
+// List returns the entire collection of all DeviceClasses that are available in all clusters.
+func (c *deviceClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.DeviceClassList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).DeviceClasses().List(ctx, opts)
+}
+
+// Watch begins to watch all DeviceClasses across all clusters.
+func (c *deviceClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).DeviceClasses().Watch(ctx, opts)
 }

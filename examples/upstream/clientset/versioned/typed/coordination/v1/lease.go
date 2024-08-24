@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcoordinationv1client "k8s.io/client-go/kubernetes/typed/coordination/v1"
@@ -45,4 +46,37 @@ type LeaseClusterInterface interface {
 
 type leasesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcoordinationv1client.CoordinationV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *leasesClusterInterface) Cluster(clusterPath logicalcluster.Path) LeaseNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &leasesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Leases that are available in all clusters.
+func (c *leasesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*coordinationv1.LeaseList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Leases(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Leases across all clusters.
+func (c *leasesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Leases(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// LeaseNamespacer can scope to objects within a namespace, returning a LeaseInterface.
+type LeaseNamespacer interface {
+	Namespace(name string) upstreamcoordinationv1client.LeaseInterface
+}
+
+type leasesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcoordinationv1client.CoordinationV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *leasesNamespacer) Namespace(namespace string) upstreamcoordinationv1client.LeaseInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Leases(namespace)
 }

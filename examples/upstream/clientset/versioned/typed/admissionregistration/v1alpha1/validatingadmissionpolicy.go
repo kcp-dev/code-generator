@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/admissionregistration/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamadmissionregistrationv1alpha1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
@@ -39,10 +40,29 @@ type ValidatingAdmissionPoliciesClusterGetter interface {
 type ValidatingAdmissionPolicyClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ValidatingAdmissionPolicyList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamadmissionregistrationv1alpha1client.ValidatingAdmissionPolicyInterface
 	ValidatingAdmissionPolicyExpansion
 }
 
 type validatingAdmissionPoliciesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1alpha1client.AdmissionregistrationV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingAdmissionPoliciesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamadmissionregistrationv1alpha1client.ValidatingAdmissionPolicyInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).ValidatingAdmissionPolicies()
+}
+
+// List returns the entire collection of all ValidatingAdmissionPolicies that are available in all clusters.
+func (c *validatingAdmissionPoliciesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ValidatingAdmissionPolicyList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingAdmissionPolicies().List(ctx, opts)
+}
+
+// Watch begins to watch all ValidatingAdmissionPolicies across all clusters.
+func (c *validatingAdmissionPoliciesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingAdmissionPolicies().Watch(ctx, opts)
 }

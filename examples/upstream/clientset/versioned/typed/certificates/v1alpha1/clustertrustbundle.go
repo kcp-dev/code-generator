@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/certificates/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcertificatesv1alpha1client "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
@@ -39,10 +40,29 @@ type ClusterTrustBundlesClusterGetter interface {
 type ClusterTrustBundleClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterTrustBundleList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamcertificatesv1alpha1client.ClusterTrustBundleInterface
 	ClusterTrustBundleExpansion
 }
 
 type clusterTrustBundlesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcertificatesv1alpha1client.CertificatesV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *clusterTrustBundlesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1alpha1client.ClusterTrustBundleInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).ClusterTrustBundles()
+}
+
+// List returns the entire collection of all ClusterTrustBundles that are available in all clusters.
+func (c *clusterTrustBundlesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ClusterTrustBundleList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterTrustBundles().List(ctx, opts)
+}
+
+// Watch begins to watch all ClusterTrustBundles across all clusters.
+func (c *clusterTrustBundlesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterTrustBundles().Watch(ctx, opts)
 }

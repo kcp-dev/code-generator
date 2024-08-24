@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
@@ -45,4 +46,37 @@ type ControllerRevisionClusterInterface interface {
 
 type controllerRevisionsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamappsv1client.AppsV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *controllerRevisionsClusterInterface) Cluster(clusterPath logicalcluster.Path) ControllerRevisionNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &controllerRevisionsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all ControllerRevisions that are available in all clusters.
+func (c *controllerRevisionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.ControllerRevisionList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ControllerRevisions(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all ControllerRevisions across all clusters.
+func (c *controllerRevisionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ControllerRevisions(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// ControllerRevisionNamespacer can scope to objects within a namespace, returning a ControllerRevisionInterface.
+type ControllerRevisionNamespacer interface {
+	Namespace(name string) upstreamappsv1client.ControllerRevisionInterface
+}
+
+type controllerRevisionsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamappsv1client.AppsV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *controllerRevisionsNamespacer) Namespace(namespace string) upstreamappsv1client.ControllerRevisionInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).ControllerRevisions(namespace)
 }

@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
@@ -39,10 +40,29 @@ type CSIDriversClusterGetter interface {
 type CSIDriverClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CSIDriverList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamstoragev1beta1client.CSIDriverInterface
 	CSIDriverExpansion
 }
 
 type cSIDriversClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *cSIDriversClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamstoragev1beta1client.CSIDriverInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).CSIDrivers()
+}
+
+// List returns the entire collection of all CSIDrivers that are available in all clusters.
+func (c *cSIDriversClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.CSIDriverList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIDrivers().List(ctx, opts)
+}
+
+// Watch begins to watch all CSIDrivers across all clusters.
+func (c *cSIDriversClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIDrivers().Watch(ctx, opts)
 }

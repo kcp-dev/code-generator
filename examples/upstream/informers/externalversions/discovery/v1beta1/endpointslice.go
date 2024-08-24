@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	watch "k8s.io/apimachinery/pkg/watch"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1beta1"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
+	watch "k8s.io/apimachinery/pkg/watch"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/discovery/v1beta1"
 	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
 	upstreamdiscovery.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/discovery.k8s.io"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	cache "k8s.io/client-go/tools/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 

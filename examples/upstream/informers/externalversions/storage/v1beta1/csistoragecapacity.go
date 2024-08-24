@@ -20,18 +20,18 @@ limitations under the License.
 package v1beta1
 
 import (
-	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
-	time "time"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cache "k8s.io/client-go/tools/cache"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
+	time "time"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 

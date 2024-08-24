@@ -20,19 +20,19 @@ limitations under the License.
 package v1beta1
 
 import (
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	cache "k8s.io/client-go/tools/cache"
 	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	upstreamstorage.k8s.iov1beta1informers "k8s.io/client-go/informers/v1beta1/storage.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	watch "k8s.io/apimachinery/pkg/watch"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1beta1 "k8s.io/code-generator/examples/upstream/listers/storage/v1beta1"
 	time "time"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	cache "k8s.io/client-go/tools/cache"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
 )
 
 

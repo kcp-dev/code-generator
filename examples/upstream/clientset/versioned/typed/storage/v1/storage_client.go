@@ -21,49 +21,63 @@ package v1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/storage/v1"
+	upstreamstoragev1client "k8s.io/client-go/kubernetes/typed/storage/v1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type StorageV1Interface interface {
-	RESTClient() rest.Interface
-	CSIDriversGetter
-	CSINodesGetter
-	CSIStorageCapacitiesGetter
-	StorageClassesGetter
-	VolumeAttachmentsGetter
+	StorageV1ClusterScoper
+	CSIDriversClusterGetter
+	CSINodesClusterGetter
+	CSIStorageCapacitiesClusterGetter
+	StorageClassesClusterGetter
+	VolumeAttachmentsClusterGetter
+}
+
+type StorageV1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamstoragev1client.StorageV1Interface
 }
 
 // StorageV1Client is used to interact with features provided by the storage.k8s.io group.
-type StorageV1Client struct {
-	restClient rest.Interface
+type StorageV1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1client.StorageV1Client]
 }
 
-func (c *StorageV1Client) CSIDrivers() CSIDriverInterface {
-	return newCSIDrivers(c)
+func (c *StorageV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamstoragev1client.StorageV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *StorageV1Client) CSINodes() CSINodeInterface {
-	return newCSINodes(c)
+func (c *StorageV1ClusterClient) CSIDrivers() CSIDriverClusterInterface {
+	return &cSIDriversClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *StorageV1Client) CSIStorageCapacities(namespace string) CSIStorageCapacityInterface {
-	return newCSIStorageCapacities(c, namespace)
+func (c *StorageV1ClusterClient) CSINodes() CSINodeClusterInterface {
+	return &cSINodesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *StorageV1Client) StorageClasses() StorageClassInterface {
-	return newStorageClasses(c)
+func (c *StorageV1ClusterClient) CSIStorageCapacities() CSIStorageCapacityClusterInterface {
+	return &cSIStorageCapacitiesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *StorageV1Client) VolumeAttachments() VolumeAttachmentInterface {
-	return newVolumeAttachments(c)
+func (c *StorageV1ClusterClient) StorageClasses() StorageClassClusterInterface {
+	return &storageClassesClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *StorageV1ClusterClient) VolumeAttachments() VolumeAttachmentClusterInterface {
+	return &volumeAttachmentsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new StorageV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*StorageV1Client, error) {
+func NewForConfig(c *rest.Config) (*StorageV1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -77,31 +91,25 @@ func NewForConfig(c *rest.Config) (*StorageV1Client, error) {
 
 // NewForConfigAndClient creates a new StorageV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*StorageV1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*StorageV1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamstoragev1client.StorageV1Client]{
+		NewForConfigAndClient: upstreamstoragev1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &StorageV1Client{client}, nil
+
+	return &StorageV1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new StorageV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *StorageV1Client {
+func NewForConfigOrDie(c *rest.Config) *StorageV1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new StorageV1Client for the given RESTClient.
-func New(c rest.Interface) *StorageV1Client {
-	return &StorageV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -115,13 +123,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *StorageV1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

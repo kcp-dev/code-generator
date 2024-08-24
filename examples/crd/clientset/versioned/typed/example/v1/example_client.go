@@ -21,34 +21,40 @@ package v1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/crd/apis/example/v1"
 	"k8s.io/code-generator/examples/crd/clientset/versioned/scheme"
 )
 
 type ExampleV1Interface interface {
-	RESTClient() rest.Interface
-	ClusterTestTypesGetter
-	TestTypesGetter
+	ExampleV1ClusterScoper
+	ClusterTestTypesClusterGetter
+	TestTypesClusterGetter
+}
+
+type ExampleV1ClusterScoper interface {
+	Cluster(logicalcluster.Path) ExampleV1Interface
 }
 
 // ExampleV1Client is used to interact with features provided by the example.crd.code-generator.k8s.io group.
-type ExampleV1Client struct {
-	restClient rest.Interface
+type ExampleV1ClusterClient struct {
+	clientCache kcpclient.Cache[*ExampleV1Interface]
 }
 
-func (c *ExampleV1Client) ClusterTestTypes() ClusterTestTypeInterface {
-	return newClusterTestTypes(c)
+func (c *ExampleV1ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
+	return &clusterTestTypesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ExampleV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, namespace)
+func (c *ExampleV1ClusterClient) TestTypes() TestTypeClusterInterface {
+	return &testTypesClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new ExampleV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*ExampleV1Client, error) {
+func NewForConfig(c *rest.Config) (*ExampleV1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -62,31 +68,25 @@ func NewForConfig(c *rest.Config) (*ExampleV1Client, error) {
 
 // NewForConfigAndClient creates a new ExampleV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampleV1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampleV1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamexamplev1client.ExampleV1Client]{
+		NewForConfigAndClient: upstreamexamplev1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &ExampleV1Client{client}, nil
+
+	return &ExampleV1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new ExampleV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ExampleV1Client {
+func NewForConfigOrDie(c *rest.Config) *ExampleV1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new ExampleV1Client for the given RESTClient.
-func New(c rest.Interface) *ExampleV1Client {
-	return &ExampleV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -100,13 +100,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *ExampleV1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

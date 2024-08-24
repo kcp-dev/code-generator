@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	v1 "k8s.io/code-generator/examples/upstream/listers/coordination/v1"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
-	coordinationv1 "k8s.io/api/coordination/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	"github.com/kcp-dev/logicalcluster/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	v1 "k8s.io/code-generator/examples/upstream/listers/coordination/v1"
+	time "time"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamcoordination.k8s.iov1informers "k8s.io/client-go/informers/v1/coordination.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 )
 
 

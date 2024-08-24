@@ -21,34 +21,48 @@ package v1beta1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/flowcontrol/v1beta1"
+	upstreamflowcontrolv1beta1client "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type FlowcontrolV1beta1Interface interface {
-	RESTClient() rest.Interface
-	FlowSchemasGetter
-	PriorityLevelConfigurationsGetter
+	FlowcontrolV1beta1ClusterScoper
+	FlowSchemasClusterGetter
+	PriorityLevelConfigurationsClusterGetter
+}
+
+type FlowcontrolV1beta1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamflowcontrolv1beta1client.FlowcontrolV1beta1Interface
 }
 
 // FlowcontrolV1beta1Client is used to interact with features provided by the flowcontrol.apiserver.k8s.io group.
-type FlowcontrolV1beta1Client struct {
-	restClient rest.Interface
+type FlowcontrolV1beta1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamflowcontrolv1beta1client.FlowcontrolV1beta1Client]
 }
 
-func (c *FlowcontrolV1beta1Client) FlowSchemas() FlowSchemaInterface {
-	return newFlowSchemas(c)
+func (c *FlowcontrolV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamflowcontrolv1beta1client.FlowcontrolV1beta1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *FlowcontrolV1beta1Client) PriorityLevelConfigurations() PriorityLevelConfigurationInterface {
-	return newPriorityLevelConfigurations(c)
+func (c *FlowcontrolV1beta1ClusterClient) FlowSchemas() FlowSchemaClusterInterface {
+	return &flowSchemasClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *FlowcontrolV1beta1ClusterClient) PriorityLevelConfigurations() PriorityLevelConfigurationClusterInterface {
+	return &priorityLevelConfigurationsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new FlowcontrolV1beta1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*FlowcontrolV1beta1Client, error) {
+func NewForConfig(c *rest.Config) (*FlowcontrolV1beta1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -62,31 +76,25 @@ func NewForConfig(c *rest.Config) (*FlowcontrolV1beta1Client, error) {
 
 // NewForConfigAndClient creates a new FlowcontrolV1beta1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*FlowcontrolV1beta1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*FlowcontrolV1beta1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamflowcontrolv1beta1client.FlowcontrolV1beta1Client]{
+		NewForConfigAndClient: upstreamflowcontrolv1beta1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &FlowcontrolV1beta1Client{client}, nil
+
+	return &FlowcontrolV1beta1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new FlowcontrolV1beta1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *FlowcontrolV1beta1Client {
+func NewForConfigOrDie(c *rest.Config) *FlowcontrolV1beta1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new FlowcontrolV1beta1Client for the given RESTClient.
-func New(c rest.Interface) *FlowcontrolV1beta1Client {
-	return &FlowcontrolV1beta1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -100,13 +108,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *FlowcontrolV1beta1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

@@ -21,29 +21,43 @@ package v1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/certificates/v1"
+	upstreamcertificatesv1client "k8s.io/client-go/kubernetes/typed/certificates/v1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type CertificatesV1Interface interface {
-	RESTClient() rest.Interface
-	CertificateSigningRequestsGetter
+	CertificatesV1ClusterScoper
+	CertificateSigningRequestsClusterGetter
+}
+
+type CertificatesV1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamcertificatesv1client.CertificatesV1Interface
 }
 
 // CertificatesV1Client is used to interact with features provided by the certificates.k8s.io group.
-type CertificatesV1Client struct {
-	restClient rest.Interface
+type CertificatesV1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamcertificatesv1client.CertificatesV1Client]
 }
 
-func (c *CertificatesV1Client) CertificateSigningRequests() CertificateSigningRequestInterface {
-	return newCertificateSigningRequests(c)
+func (c *CertificatesV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1client.CertificatesV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+
+func (c *CertificatesV1ClusterClient) CertificateSigningRequests() CertificateSigningRequestClusterInterface {
+	return &certificateSigningRequestsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new CertificatesV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*CertificatesV1Client, error) {
+func NewForConfig(c *rest.Config) (*CertificatesV1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -57,31 +71,25 @@ func NewForConfig(c *rest.Config) (*CertificatesV1Client, error) {
 
 // NewForConfigAndClient creates a new CertificatesV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*CertificatesV1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*CertificatesV1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamcertificatesv1client.CertificatesV1Client]{
+		NewForConfigAndClient: upstreamcertificatesv1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &CertificatesV1Client{client}, nil
+
+	return &CertificatesV1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new CertificatesV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *CertificatesV1Client {
+func NewForConfigOrDie(c *rest.Config) *CertificatesV1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new CertificatesV1Client for the given RESTClient.
-func New(c rest.Interface) *CertificatesV1Client {
-	return &CertificatesV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -95,13 +103,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *CertificatesV1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

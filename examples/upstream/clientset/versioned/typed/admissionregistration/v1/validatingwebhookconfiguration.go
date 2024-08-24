@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamadmissionregistrationv1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
@@ -39,10 +40,29 @@ type ValidatingWebhookConfigurationsClusterGetter interface {
 type ValidatingWebhookConfigurationClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*admissionregistrationv1.ValidatingWebhookConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamadmissionregistrationv1client.ValidatingWebhookConfigurationInterface
 	ValidatingWebhookConfigurationExpansion
 }
 
 type validatingWebhookConfigurationsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamadmissionregistrationv1client.AdmissionregistrationV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingWebhookConfigurationsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamadmissionregistrationv1client.ValidatingWebhookConfigurationInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).ValidatingWebhookConfigurations()
+}
+
+// List returns the entire collection of all ValidatingWebhookConfigurations that are available in all clusters.
+func (c *validatingWebhookConfigurationsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1.ValidatingWebhookConfigurationList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingWebhookConfigurations().List(ctx, opts)
+}
+
+// Watch begins to watch all ValidatingWebhookConfigurations across all clusters.
+func (c *validatingWebhookConfigurationsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingWebhookConfigurations().Watch(ctx, opts)
 }

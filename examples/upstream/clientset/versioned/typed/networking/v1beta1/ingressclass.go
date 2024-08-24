@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamnetworkingv1beta1client "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
@@ -39,10 +40,29 @@ type IngressClassesClusterGetter interface {
 type IngressClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.IngressClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamnetworkingv1beta1client.IngressClassInterface
 	IngressClassExpansion
 }
 
 type ingressClassesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamnetworkingv1beta1client.NetworkingV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *ingressClassesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1beta1client.IngressClassInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).IngressClasses()
+}
+
+// List returns the entire collection of all IngressClasses that are available in all clusters.
+func (c *ingressClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.IngressClassList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IngressClasses().List(ctx, opts)
+}
+
+// Watch begins to watch all IngressClasses across all clusters.
+func (c *ingressClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IngressClasses().Watch(ctx, opts)
 }

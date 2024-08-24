@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -45,4 +46,37 @@ type EventClusterInterface interface {
 
 type eventsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *eventsClusterInterface) Cluster(clusterPath logicalcluster.Path) EventNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &eventsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Events that are available in all clusters.
+func (c *eventsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.EventList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Events(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Events across all clusters.
+func (c *eventsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Events(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// EventNamespacer can scope to objects within a namespace, returning a EventInterface.
+type EventNamespacer interface {
+	Namespace(name string) upstreamcorev1client.EventInterface
+}
+
+type eventsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *eventsNamespacer) Namespace(namespace string) upstreamcorev1client.EventInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Events(namespace)
 }

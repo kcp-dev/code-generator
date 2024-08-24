@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
+	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamcoordination.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/coordination.k8s.io"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	coordinationv1alpha1 "k8s.io/api/coordination/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	time "time"
-	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
+	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/coordination/v1alpha1"
-	upstreamcoordination.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/coordination.k8s.io"
-	watch "k8s.io/apimachinery/pkg/watch"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 )
 
 

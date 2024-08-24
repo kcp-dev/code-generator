@@ -19,7 +19,13 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	v1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	upstreamauthorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 )
 
@@ -36,4 +42,23 @@ type SubjectAccessReviewClusterInterface interface {
 
 type subjectAccessReviewsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamauthorizationv1client.AuthorizationV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *subjectAccessReviewsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamauthorizationv1client.SubjectAccessReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).SubjectAccessReviews()
+}
+
+// List returns the entire collection of all SubjectAccessReviews that are available in all clusters.
+func (c *subjectAccessReviewsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.SubjectAccessReviewList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).SubjectAccessReviews().List(ctx, opts)
+}
+
+// Watch begins to watch all SubjectAccessReviews across all clusters.
+func (c *subjectAccessReviewsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).SubjectAccessReviews().Watch(ctx, opts)
 }

@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/node/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamnodev1beta1client "k8s.io/client-go/kubernetes/typed/node/v1beta1"
@@ -39,10 +40,29 @@ type RuntimeClassesClusterGetter interface {
 type RuntimeClassClusterInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.RuntimeClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Cluster(logicalcluster.Path) upstreamNodeMagic
+	Cluster(logicalcluster.Path) upstreamnodev1beta1client.RuntimeClassInterface
 	RuntimeClassExpansion
 }
 
 type runtimeClassesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamnodev1beta1client.NodeV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *runtimeClassesClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamnodev1beta1client.RuntimeClassInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).RuntimeClasses()
+}
+
+// List returns the entire collection of all RuntimeClasses that are available in all clusters.
+func (c *runtimeClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.RuntimeClassList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).RuntimeClasses().List(ctx, opts)
+}
+
+// Watch begins to watch all RuntimeClasses across all clusters.
+func (c *runtimeClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).RuntimeClasses().Watch(ctx, opts)
 }

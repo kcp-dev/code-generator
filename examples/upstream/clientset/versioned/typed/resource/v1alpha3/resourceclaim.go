@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
@@ -45,4 +46,37 @@ type ResourceClaimClusterInterface interface {
 
 type resourceClaimsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *resourceClaimsClusterInterface) Cluster(clusterPath logicalcluster.Path) ResourceClaimNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &resourceClaimsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all ResourceClaims that are available in all clusters.
+func (c *resourceClaimsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.ResourceClaimList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceClaims(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all ResourceClaims across all clusters.
+func (c *resourceClaimsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceClaims(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// ResourceClaimNamespacer can scope to objects within a namespace, returning a ResourceClaimInterface.
+type ResourceClaimNamespacer interface {
+	Namespace(name string) upstreamresourcev1alpha3client.ResourceClaimInterface
+}
+
+type resourceClaimsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *resourceClaimsNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.ResourceClaimInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).ResourceClaims(namespace)
 }

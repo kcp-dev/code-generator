@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
@@ -45,4 +46,37 @@ type PodSchedulingContextClusterInterface interface {
 
 type podSchedulingContextsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *podSchedulingContextsClusterInterface) Cluster(clusterPath logicalcluster.Path) PodSchedulingContextNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &podSchedulingContextsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all PodSchedulingContexts that are available in all clusters.
+func (c *podSchedulingContextsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.PodSchedulingContextList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodSchedulingContexts(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all PodSchedulingContexts across all clusters.
+func (c *podSchedulingContextsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodSchedulingContexts(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// PodSchedulingContextNamespacer can scope to objects within a namespace, returning a PodSchedulingContextInterface.
+type PodSchedulingContextNamespacer interface {
+	Namespace(name string) upstreamresourcev1alpha3client.PodSchedulingContextInterface
+}
+
+type podSchedulingContextsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamresourcev1alpha3client.ResourceV1alpha3Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *podSchedulingContextsNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.PodSchedulingContextInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).PodSchedulingContexts(namespace)
 }

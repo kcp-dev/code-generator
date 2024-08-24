@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamdiscoveryv1client "k8s.io/client-go/kubernetes/typed/discovery/v1"
@@ -45,4 +46,37 @@ type EndpointSliceClusterInterface interface {
 
 type endpointSlicesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamdiscoveryv1client.DiscoveryV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *endpointSlicesClusterInterface) Cluster(clusterPath logicalcluster.Path) EndpointSliceNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &endpointSlicesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all EndpointSlices that are available in all clusters.
+func (c *endpointSlicesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*discoveryv1.EndpointSliceList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).EndpointSlices(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all EndpointSlices across all clusters.
+func (c *endpointSlicesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).EndpointSlices(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// EndpointSliceNamespacer can scope to objects within a namespace, returning a EndpointSliceInterface.
+type EndpointSliceNamespacer interface {
+	Namespace(name string) upstreamdiscoveryv1client.EndpointSliceInterface
+}
+
+type endpointSlicesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamdiscoveryv1client.DiscoveryV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *endpointSlicesNamespacer) Namespace(namespace string) upstreamdiscoveryv1client.EndpointSliceInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).EndpointSlices(namespace)
 }

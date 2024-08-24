@@ -21,44 +21,58 @@ package v1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/rbac/v1"
+	upstreamrbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type RbacV1Interface interface {
-	RESTClient() rest.Interface
-	ClusterRolesGetter
-	ClusterRoleBindingsGetter
-	RolesGetter
-	RoleBindingsGetter
+	RbacV1ClusterScoper
+	ClusterRolesClusterGetter
+	ClusterRoleBindingsClusterGetter
+	RolesClusterGetter
+	RoleBindingsClusterGetter
+}
+
+type RbacV1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamrbacv1client.RbacV1Interface
 }
 
 // RbacV1Client is used to interact with features provided by the rbac.authorization.k8s.io group.
-type RbacV1Client struct {
-	restClient rest.Interface
+type RbacV1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamrbacv1client.RbacV1Client]
 }
 
-func (c *RbacV1Client) ClusterRoles() ClusterRoleInterface {
-	return newClusterRoles(c)
+func (c *RbacV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamrbacv1client.RbacV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *RbacV1Client) ClusterRoleBindings() ClusterRoleBindingInterface {
-	return newClusterRoleBindings(c)
+func (c *RbacV1ClusterClient) ClusterRoles() ClusterRoleClusterInterface {
+	return &clusterRolesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *RbacV1Client) Roles(namespace string) RoleInterface {
-	return newRoles(c, namespace)
+func (c *RbacV1ClusterClient) ClusterRoleBindings() ClusterRoleBindingClusterInterface {
+	return &clusterRoleBindingsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *RbacV1Client) RoleBindings(namespace string) RoleBindingInterface {
-	return newRoleBindings(c, namespace)
+func (c *RbacV1ClusterClient) Roles() RoleClusterInterface {
+	return &rolesClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *RbacV1ClusterClient) RoleBindings() RoleBindingClusterInterface {
+	return &roleBindingsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new RbacV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*RbacV1Client, error) {
+func NewForConfig(c *rest.Config) (*RbacV1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -72,31 +86,25 @@ func NewForConfig(c *rest.Config) (*RbacV1Client, error) {
 
 // NewForConfigAndClient creates a new RbacV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*RbacV1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*RbacV1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamrbacv1client.RbacV1Client]{
+		NewForConfigAndClient: upstreamrbacv1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &RbacV1Client{client}, nil
+
+	return &RbacV1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new RbacV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *RbacV1Client {
+func NewForConfigOrDie(c *rest.Config) *RbacV1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new RbacV1Client for the given RESTClient.
-func New(c rest.Interface) *RbacV1Client {
-	return &RbacV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -110,13 +118,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *RbacV1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

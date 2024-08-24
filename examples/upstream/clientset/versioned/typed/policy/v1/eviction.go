@@ -19,7 +19,13 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	v1 "k8s.io/api/policy/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	upstreampolicyv1client "k8s.io/client-go/kubernetes/typed/policy/v1"
 )
 
@@ -36,4 +42,37 @@ type EvictionClusterInterface interface {
 
 type evictionsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreampolicyv1client.PolicyV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *evictionsClusterInterface) Cluster(clusterPath logicalcluster.Path) EvictionNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &evictionsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Evictions that are available in all clusters.
+func (c *evictionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.EvictionList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Evictions(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Evictions across all clusters.
+func (c *evictionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Evictions(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// EvictionNamespacer can scope to objects within a namespace, returning a EvictionInterface.
+type EvictionNamespacer interface {
+	Namespace(name string) upstreampolicyv1client.EvictionInterface
+}
+
+type evictionsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreampolicyv1client.PolicyV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *evictionsNamespacer) Namespace(namespace string) upstreampolicyv1client.EvictionInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Evictions(namespace)
 }

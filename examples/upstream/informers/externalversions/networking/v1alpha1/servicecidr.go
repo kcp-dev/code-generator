@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	cache "k8s.io/client-go/tools/cache"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/networking/v1alpha1"
 	time "time"
-	upstreamnetworking.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/networking.k8s.io"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
-	"github.com/kcp-dev/logicalcluster/v3"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	networkingv1alpha1 "k8s.io/api/networking/v1alpha1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	upstreamnetworking.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/networking.k8s.io"
 )
 
 

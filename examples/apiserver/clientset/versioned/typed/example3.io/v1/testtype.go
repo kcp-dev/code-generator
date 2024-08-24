@@ -23,6 +23,7 @@ import (
 
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	example3iov1 "k8s.io/code-generator/examples/apiserver/apis/example3.io/v1"
@@ -44,4 +45,37 @@ type TestTypeClusterInterface interface {
 
 type testTypesClusterInterface struct {
 	clientCache kcpclient.Cache[*ThirdExampleV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *testTypesClusterInterface) Cluster(clusterPath logicalcluster.Path) TestTypeNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &testTypesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all TestTypes that are available in all clusters.
+func (c *testTypesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*example3iov1.TestTypeList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).TestTypes(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all TestTypes across all clusters.
+func (c *testTypesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).TestTypes(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// TestTypeNamespacer can scope to objects within a namespace, returning a TestTypeInterface.
+type TestTypeNamespacer interface {
+	Namespace(name string) TestTypeInterface
+}
+
+type testTypesNamespacer struct {
+	clientCache kcpclient.Cache[*ThirdExampleV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *testTypesNamespacer) Namespace(namespace string) TestTypeInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).TestTypes(namespace)
 }

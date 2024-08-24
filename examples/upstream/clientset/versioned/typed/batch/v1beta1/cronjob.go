@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/batch/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreambatchv1beta1client "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
@@ -45,4 +46,37 @@ type CronJobClusterInterface interface {
 
 type cronJobsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreambatchv1beta1client.BatchV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *cronJobsClusterInterface) Cluster(clusterPath logicalcluster.Path) CronJobNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &cronJobsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all CronJobs that are available in all clusters.
+func (c *cronJobsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.CronJobList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CronJobs(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all CronJobs across all clusters.
+func (c *cronJobsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CronJobs(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// CronJobNamespacer can scope to objects within a namespace, returning a CronJobInterface.
+type CronJobNamespacer interface {
+	Namespace(name string) upstreambatchv1beta1client.CronJobInterface
+}
+
+type cronJobsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreambatchv1beta1client.BatchV1beta1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *cronJobsNamespacer) Namespace(namespace string) upstreambatchv1beta1client.CronJobInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).CronJobs(namespace)
 }

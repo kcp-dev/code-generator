@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha1
 
 import (
-	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/listers/storage/v1alpha1"
 	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	storagev1alpha1 "k8s.io/api/storage/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	cache "k8s.io/client-go/tools/cache"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	upstreamstorage.k8s.iov1alpha1informers "k8s.io/client-go/informers/v1alpha1/storage.k8s.io"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
 )
 
 

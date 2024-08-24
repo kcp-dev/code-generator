@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/coordination/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcoordinationv1alpha1client "k8s.io/client-go/kubernetes/typed/coordination/v1alpha1"
@@ -45,4 +46,37 @@ type LeaseCandidateClusterInterface interface {
 
 type leaseCandidatesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcoordinationv1alpha1client.CoordinationV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *leaseCandidatesClusterInterface) Cluster(clusterPath logicalcluster.Path) LeaseCandidateNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &leaseCandidatesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all LeaseCandidates that are available in all clusters.
+func (c *leaseCandidatesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.LeaseCandidateList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LeaseCandidates(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all LeaseCandidates across all clusters.
+func (c *leaseCandidatesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LeaseCandidates(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// LeaseCandidateNamespacer can scope to objects within a namespace, returning a LeaseCandidateInterface.
+type LeaseCandidateNamespacer interface {
+	Namespace(name string) upstreamcoordinationv1alpha1client.LeaseCandidateInterface
+}
+
+type leaseCandidatesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcoordinationv1alpha1client.CoordinationV1alpha1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *leaseCandidatesNamespacer) Namespace(namespace string) upstreamcoordinationv1alpha1client.LeaseCandidateInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).LeaseCandidates(namespace)
 }

@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -46,4 +47,37 @@ type PodClusterInterface interface {
 
 type podsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *podsClusterInterface) Cluster(clusterPath logicalcluster.Path) PodNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &podsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all Pods that are available in all clusters.
+func (c *podsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Pods(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all Pods across all clusters.
+func (c *podsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Pods(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// PodNamespacer can scope to objects within a namespace, returning a PodInterface.
+type PodNamespacer interface {
+	Namespace(name string) upstreamcorev1client.PodInterface
+}
+
+type podsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *podsNamespacer) Namespace(namespace string) upstreamcorev1client.PodInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).Pods(namespace)
 }

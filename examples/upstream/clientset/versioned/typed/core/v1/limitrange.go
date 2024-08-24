@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -45,4 +46,37 @@ type LimitRangeClusterInterface interface {
 
 type limitRangesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *limitRangesClusterInterface) Cluster(clusterPath logicalcluster.Path) LimitRangeNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &limitRangesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all LimitRanges that are available in all clusters.
+func (c *limitRangesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.LimitRangeList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LimitRanges(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all LimitRanges across all clusters.
+func (c *limitRangesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LimitRanges(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// LimitRangeNamespacer can scope to objects within a namespace, returning a LimitRangeInterface.
+type LimitRangeNamespacer interface {
+	Namespace(name string) upstreamcorev1client.LimitRangeInterface
+}
+
+type limitRangesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *limitRangesNamespacer) Namespace(namespace string) upstreamcorev1client.LimitRangeInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).LimitRanges(namespace)
 }

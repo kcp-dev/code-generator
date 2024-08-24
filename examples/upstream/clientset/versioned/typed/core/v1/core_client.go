@@ -21,104 +21,118 @@ package v1
 import (
 	"net/http"
 
+	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/upstream/clientset/versioned/scheme"
 )
 
 type CoreV1Interface interface {
-	RESTClient() rest.Interface
-	ComponentStatusesGetter
-	ConfigMapsGetter
-	EndpointsGetter
-	EventsGetter
-	LimitRangesGetter
-	NamespacesGetter
-	NodesGetter
-	PersistentVolumesGetter
-	PersistentVolumeClaimsGetter
-	PodsGetter
-	PodTemplatesGetter
-	ReplicationControllersGetter
-	ResourceQuotasGetter
-	SecretsGetter
-	ServicesGetter
-	ServiceAccountsGetter
+	CoreV1ClusterScoper
+	ComponentStatusesClusterGetter
+	ConfigMapsClusterGetter
+	EndpointsClusterGetter
+	EventsClusterGetter
+	LimitRangesClusterGetter
+	NamespacesClusterGetter
+	NodesClusterGetter
+	PersistentVolumesClusterGetter
+	PersistentVolumeClaimsClusterGetter
+	PodsClusterGetter
+	PodTemplatesClusterGetter
+	ReplicationControllersClusterGetter
+	ResourceQuotasClusterGetter
+	SecretsClusterGetter
+	ServicesClusterGetter
+	ServiceAccountsClusterGetter
+}
+
+type CoreV1ClusterScoper interface {
+	Cluster(logicalcluster.Path) upstreamcorev1client.CoreV1Interface
 }
 
 // CoreV1Client is used to interact with features provided by the  group.
-type CoreV1Client struct {
-	restClient rest.Interface
+type CoreV1ClusterClient struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
 }
 
-func (c *CoreV1Client) ComponentStatuses() ComponentStatusInterface {
-	return newComponentStatuses(c)
+func (c *CoreV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcorev1client.CoreV1Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *CoreV1Client) ConfigMaps(namespace string) ConfigMapInterface {
-	return newConfigMaps(c, namespace)
+func (c *CoreV1ClusterClient) ComponentStatuses() ComponentStatusClusterInterface {
+	return &componentStatusesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Endpoints(namespace string) EndpointsInterface {
-	return newEndpoints(c, namespace)
+func (c *CoreV1ClusterClient) ConfigMaps() ConfigMapClusterInterface {
+	return &configMapsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Events(namespace string) EventInterface {
-	return newEvents(c, namespace)
+func (c *CoreV1ClusterClient) Endpoints() EndpointsClusterInterface {
+	return &endpointsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) LimitRanges(namespace string) LimitRangeInterface {
-	return newLimitRanges(c, namespace)
+func (c *CoreV1ClusterClient) Events() EventClusterInterface {
+	return &eventsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Namespaces() NamespaceInterface {
-	return newNamespaces(c)
+func (c *CoreV1ClusterClient) LimitRanges() LimitRangeClusterInterface {
+	return &limitRangesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Nodes() NodeInterface {
-	return newNodes(c)
+func (c *CoreV1ClusterClient) Namespaces() NamespaceClusterInterface {
+	return &namespacesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) PersistentVolumes() PersistentVolumeInterface {
-	return newPersistentVolumes(c)
+func (c *CoreV1ClusterClient) Nodes() NodeClusterInterface {
+	return &nodesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) PersistentVolumeClaims(namespace string) PersistentVolumeClaimInterface {
-	return newPersistentVolumeClaims(c, namespace)
+func (c *CoreV1ClusterClient) PersistentVolumes() PersistentVolumeClusterInterface {
+	return &persistentVolumesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Pods(namespace string) PodInterface {
-	return newPods(c, namespace)
+func (c *CoreV1ClusterClient) PersistentVolumeClaims() PersistentVolumeClaimClusterInterface {
+	return &persistentVolumeClaimsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) PodTemplates(namespace string) PodTemplateInterface {
-	return newPodTemplates(c, namespace)
+func (c *CoreV1ClusterClient) Pods() PodClusterInterface {
+	return &podsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) ReplicationControllers(namespace string) ReplicationControllerInterface {
-	return newReplicationControllers(c, namespace)
+func (c *CoreV1ClusterClient) PodTemplates() PodTemplateClusterInterface {
+	return &podTemplatesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) ResourceQuotas(namespace string) ResourceQuotaInterface {
-	return newResourceQuotas(c, namespace)
+func (c *CoreV1ClusterClient) ReplicationControllers() ReplicationControllerClusterInterface {
+	return &replicationControllersClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Secrets(namespace string) SecretInterface {
-	return newSecrets(c, namespace)
+func (c *CoreV1ClusterClient) ResourceQuotas() ResourceQuotaClusterInterface {
+	return &resourceQuotasClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) Services(namespace string) ServiceInterface {
-	return newServices(c, namespace)
+func (c *CoreV1ClusterClient) Secrets() SecretClusterInterface {
+	return &secretsClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *CoreV1Client) ServiceAccounts(namespace string) ServiceAccountInterface {
-	return newServiceAccounts(c, namespace)
+func (c *CoreV1ClusterClient) Services() ServiceClusterInterface {
+	return &servicesClusterInterface{clientCache: c.clientCache}
+}
+
+func (c *CoreV1ClusterClient) ServiceAccounts() ServiceAccountClusterInterface {
+	return &serviceAccountsClusterInterface{clientCache: c.clientCache}
 }
 
 // NewForConfig creates a new CoreV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*CoreV1Client, error) {
+func NewForConfig(c *rest.Config) (*CoreV1ClusterClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -132,31 +146,25 @@ func NewForConfig(c *rest.Config) (*CoreV1Client, error) {
 
 // NewForConfigAndClient creates a new CoreV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*CoreV1Client, error) {
-	config := *c
-	if err := setConfigDefaults(&config); err != nil {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*CoreV1ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*upstreamcorev1client.CoreV1Client]{
+		NewForConfigAndClient: upstreamcorev1client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientForConfigAndClient(&config, h)
-	if err != nil {
-		return nil, err
-	}
-	return &CoreV1Client{client}, nil
+
+	return &CoreV1ClusterClient{clientCache: cache}, nil
 }
 
 // NewForConfigOrDie creates a new CoreV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *CoreV1Client {
+func NewForConfigOrDie(c *rest.Config) *CoreV1ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
 	}
 	return client
-}
-
-// New creates a new CoreV1Client for the given RESTClient.
-func New(c rest.Interface) *CoreV1Client {
-	return &CoreV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -170,13 +178,4 @@ func setConfigDefaults(config *rest.Config) error {
 	}
 
 	return nil
-}
-
-// RESTClient returns a RESTClient that is used to communicate
-// with API server by this client implementation.
-func (c *CoreV1Client) RESTClient() rest.Interface {
-	if c == nil {
-		return nil
-	}
-	return c.restClient
 }

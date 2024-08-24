@@ -20,19 +20,19 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	v1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1"
-	"github.com/kcp-dev/logicalcluster/v3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
 	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
-	time "time"
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/code-generator/examples/upstream/listers/rbac/v1"
+	time "time"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamrbac.authorization.k8s.iov1informers "k8s.io/client-go/informers/v1/rbac.authorization.k8s.io"
 )
 
 

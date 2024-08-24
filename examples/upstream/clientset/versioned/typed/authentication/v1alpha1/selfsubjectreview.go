@@ -19,7 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
+	"github.com/kcp-dev/logicalcluster/v3"
+	v1alpha1 "k8s.io/api/authentication/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	upstreamauthenticationv1alpha1client "k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
 )
 
@@ -36,4 +42,23 @@ type SelfSubjectReviewClusterInterface interface {
 
 type selfSubjectReviewsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamauthenticationv1alpha1client.AuthenticationV1alpha1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *selfSubjectReviewsClusterInterface) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1alpha1client.SelfSubjectReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return c.clientCache.ClusterOrDie(clusterPath).SelfSubjectReviews()
+}
+
+// List returns the entire collection of all SelfSubjectReviews that are available in all clusters.
+func (c *selfSubjectReviewsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.SelfSubjectReviewList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).SelfSubjectReviews().List(ctx, opts)
+}
+
+// Watch begins to watch all SelfSubjectReviews across all clusters.
+func (c *selfSubjectReviewsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).SelfSubjectReviews().Watch(ctx, opts)
 }

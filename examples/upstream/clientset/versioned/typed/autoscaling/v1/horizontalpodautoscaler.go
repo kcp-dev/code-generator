@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamautoscalingv1client "k8s.io/client-go/kubernetes/typed/autoscaling/v1"
@@ -45,4 +46,37 @@ type HorizontalPodAutoscalerClusterInterface interface {
 
 type horizontalPodAutoscalersClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamautoscalingv1client.AutoscalingV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *horizontalPodAutoscalersClusterInterface) Cluster(clusterPath logicalcluster.Path) HorizontalPodAutoscalerNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &horizontalPodAutoscalersNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all HorizontalPodAutoscalers that are available in all clusters.
+func (c *horizontalPodAutoscalersClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*autoscalingv1.HorizontalPodAutoscalerList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).HorizontalPodAutoscalers(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all HorizontalPodAutoscalers across all clusters.
+func (c *horizontalPodAutoscalersClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).HorizontalPodAutoscalers(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// HorizontalPodAutoscalerNamespacer can scope to objects within a namespace, returning a HorizontalPodAutoscalerInterface.
+type HorizontalPodAutoscalerNamespacer interface {
+	Namespace(name string) upstreamautoscalingv1client.HorizontalPodAutoscalerInterface
+}
+
+type horizontalPodAutoscalersNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamautoscalingv1client.AutoscalingV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *horizontalPodAutoscalersNamespacer) Namespace(namespace string) upstreamautoscalingv1client.HorizontalPodAutoscalerInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).HorizontalPodAutoscalers(namespace)
 }

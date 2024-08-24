@@ -20,19 +20,19 @@ limitations under the License.
 package v1alpha3
 
 import (
-	cache "k8s.io/client-go/tools/cache"
-	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
-	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	resourcev1alpha3 "k8s.io/api/resource/v1alpha3"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
+	cache "k8s.io/client-go/tools/cache"
+	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	v1alpha3 "k8s.io/code-generator/examples/upstream/listers/resource/v1alpha3"
+	time "time"
 	"github.com/kcp-dev/logicalcluster/v3"
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	informers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	upstreamresource.k8s.iov1alpha3informers "k8s.io/client-go/informers/v1alpha3/resource.k8s.io"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	versioned "k8s.io/code-generator/examples/upstream/clientset/versioned"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
 	internalinterfaces "k8s.io/code-generator/examples/upstream/informers/externalversions/internalinterfaces"
-	time "time"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 

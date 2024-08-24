@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamstoragev1beta1client "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
@@ -45,4 +46,37 @@ type CSIStorageCapacityClusterInterface interface {
 
 type cSIStorageCapacitiesClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *cSIStorageCapacitiesClusterInterface) Cluster(clusterPath logicalcluster.Path) CSIStorageCapacityNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &cSIStorageCapacitiesNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all CSIStorageCapacities that are available in all clusters.
+func (c *cSIStorageCapacitiesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.CSIStorageCapacityList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIStorageCapacities(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all CSIStorageCapacities across all clusters.
+func (c *cSIStorageCapacitiesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIStorageCapacities(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// CSIStorageCapacityNamespacer can scope to objects within a namespace, returning a CSIStorageCapacityInterface.
+type CSIStorageCapacityNamespacer interface {
+	Namespace(name string) upstreamstoragev1beta1client.CSIStorageCapacityInterface
+}
+
+type cSIStorageCapacitiesNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamstoragev1beta1client.StorageV1beta1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *cSIStorageCapacitiesNamespacer) Namespace(namespace string) upstreamstoragev1beta1client.CSIStorageCapacityInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).CSIStorageCapacities(namespace)
 }

@@ -24,6 +24,7 @@ import (
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
 	"github.com/kcp-dev/logicalcluster/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -45,4 +46,37 @@ type ConfigMapClusterInterface interface {
 
 type configMapsClusterInterface struct {
 	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *configMapsClusterInterface) Cluster(clusterPath logicalcluster.Path) ConfigMapNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &configMapsNamespacer{clientCache: c.clientCache, clusterPath: clusterPath}
+}
+
+// List returns the entire collection of all ConfigMaps that are available in all clusters.
+func (c *configMapsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ConfigMapList, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ConfigMaps(metav1.NamespaceAll).List(ctx, opts)
+}
+
+// Watch begins to watch all ConfigMaps across all clusters.
+func (c *configMapsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ConfigMaps(metav1.NamespaceAll).Watch(ctx, opts)
+}
+
+// ConfigMapNamespacer can scope to objects within a namespace, returning a ConfigMapInterface.
+type ConfigMapNamespacer interface {
+	Namespace(name string) upstreamcorev1client.ConfigMapInterface
+}
+
+type configMapsNamespacer struct {
+	clientCache kcpclient.Cache[*upstreamcorev1client.CoreV1Client]
+	clusterPath logicalcluster.Path
+}
+
+func (n *configMapsNamespacer) Namespace(namespace string) upstreamcorev1client.ConfigMapInterface {
+	return n.clientCache.ClusterOrDie(n.clusterPath).ConfigMaps(namespace)
 }
