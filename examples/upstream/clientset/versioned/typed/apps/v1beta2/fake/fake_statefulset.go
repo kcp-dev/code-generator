@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
+	"k8s.io/client-go/testing"
 	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta2"
 )
+
+var statefulsetsResource = v1beta2.SchemeGroupVersion.WithResource("statefulsets")
+
+var statefulsetsKind = v1beta2.SchemeGroupVersion.WithKind("StatefulSet")
 
 // statefulSetsClusterClient implements statefulSetInterface
 type statefulSetsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var statefulsetsResource = v1beta2.SchemeGroupVersion.WithResource("statefulsets")
-
-var statefulsetsKind = v1beta2.SchemeGroupVersion.WithKind("StatefulSet")
-
-// Get takes name of the statefulSet, and returns the corresponding statefulSet object, and an error if there is any.
-func (c *statefulSetsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.StatefulSet, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(statefulsetsResource, c.ClusterPath, c.Namespace, name), &v1beta2.StatefulSet{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *statefulSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StatefulSetNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta2.StatefulSet), err
+
+	return &statefulSetsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of StatefulSets that match those selectors.
 func (c *statefulSetsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta2.StatefulSetList, err error) {
-	emptyResult := &v1beta2.StatefulSetList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(statefulsetsResource, statefulsetsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(statefulsetsResource, statefulsetsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta2.StatefulSetList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,171 +74,117 @@ func (c *statefulSetsClusterClient) List(ctx context.Context, opts v1.ListOption
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested statefulSets.
-func (c *statefulSetsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(statefulsetsResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested statefulSets across all clusters.
+func (c *statefulSetsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(statefulsetsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a statefulSet and creates it.  Returns the server's representation of the statefulSet, and an error, if there is any.
-func (c *statefulSetsClusterClient) Create(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.CreateOptions) (result *v1beta2.StatefulSet, err error) {
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(statefulsetsResource, c.ns, statefulSet, opts), emptyResult)
+type statefulSetsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *statefulSetsNamespacer) Namespace(namespace string) upstreamappsv1beta2client.StatefulSetInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type statefulSetsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *statefulSetsClient) Create(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.CreateOptions) (*v1beta2.StatefulSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(statefulsetsResource, c.ClusterPath, c.Namespace, statefulSet), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-// Update takes the representation of a statefulSet and updates it. Returns the server's representation of the statefulSet, and an error, if there is any.
-func (c *statefulSetsClusterClient) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(statefulsetsResource, c.ns, statefulSet, opts), emptyResult)
-
+func (c *statefulSetsClient) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.CreateOptions) (*v1beta2.StatefulSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(statefulsetsResource, c.ClusterPath, c.Namespace, statefulSet), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *statefulSetsClusterClient) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts v1.UpdateOptions) (result *v1beta2.StatefulSet, err error) {
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(statefulsetsResource, "status", c.ns, statefulSet, opts), emptyResult)
-
+func (c *statefulSetsClient) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.CreateOptions) (*v1beta2.StatefulSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(statefulsetsResource, c.ClusterPath, "status", c.Namespace, statefulSet), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-// Delete takes name of the statefulSet and deletes it. Returns an error if one occurs.
-func (c *statefulSetsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(statefulsetsResource, c.ns, name, opts), &v1beta2.StatefulSet{})
-
+func (c *statefulSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(statefulsetsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta2.StatefulSet{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *statefulSetsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(statefulsetsResource, c.ns, opts, listOpts)
+func (c *statefulSetsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(statefulsetsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta2.StatefulSetList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched statefulSet.
-func (c *statefulSetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.StatefulSet, err error) {
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(statefulsetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *statefulSetsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta2.StatefulSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(statefulsetsResource, c.ClusterPath, c.Namespace, name), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied statefulSet.
-func (c *statefulSetsClusterClient) Apply(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
-	if statefulSet == nil {
-		return nil, fmt.Errorf("statefulSet provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1beta2.StatefulSet that match those selectors.
+func (c *statefulSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta2.StatefulSetList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(statefulsetsResource, statefulsetsKind, c.ClusterPath, c.Namespace, opts), &v1beta2.StatefulSetList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(statefulSet)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta2.StatefulSetList{ListMeta: obj.(*v1beta2.StatefulSetList).ListMeta}
+	for _, item := range obj.(*v1beta2.StatefulSetList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *statefulSetsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(statefulsetsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *statefulSetsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta2.StatefulSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(statefulsetsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta2.StatefulSet{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta2.StatefulSet), err
+}
+
+func (c *statefulSetsClient) Apply(ctx context.Context, applyConfiguration *appsv1beta2.StatefulSetApplyConfiguration, opts metav1.ApplyOptions) (*v1beta2.StatefulSet, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := statefulSet.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("statefulSet.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(statefulsetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(statefulsetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta2.StatefulSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.StatefulSet), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *statefulSetsClusterClient) ApplyStatus(ctx context.Context, statefulSet *appsv1beta2.StatefulSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.StatefulSet, err error) {
-	if statefulSet == nil {
-		return nil, fmt.Errorf("statefulSet provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(statefulSet)
-	if err != nil {
-		return nil, err
-	}
-	name := statefulSet.Name
-	if name == nil {
-		return nil, fmt.Errorf("statefulSet.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta2.StatefulSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(statefulsetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta2.StatefulSet), err
-}
-
-// GetScale takes name of the statefulSet, and returns the corresponding scale object, and an error if there is any.
-func (c *statefulSetsClusterClient) GetScale(ctx context.Context, statefulSetName string, options v1.GetOptions) (result *v1beta2.Scale, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configMapsResource, c.ClusterPath, c.Namespace, name), &corev1.ConfigMap{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*corev1.ConfigMap), err
-
-	emptyResult := &v1beta2.Scale{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetSubresourceActionWithOptions(statefulsetsResource, c.ns, "scale", statefulSetName, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta2.Scale), err
-}
-
-// UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (c *statefulSetsClusterClient) UpdateScale(ctx context.Context, statefulSetName string, scale *v1beta2.Scale, opts v1.UpdateOptions) (result *v1beta2.Scale, err error) {
-	emptyResult := &v1beta2.Scale{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(statefulsetsResource, "scale", c.ns, scale, opts), &v1beta2.Scale{})
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta2.Scale), err
-}
-
-// ApplyScale takes top resource name and the apply declarative configuration for scale,
-// applies it and returns the applied scale, and an error, if there is any.
-func (c *statefulSetsClusterClient) ApplyScale(ctx context.Context, statefulSetName string, scale *appsv1beta2.ScaleApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.Scale, err error) {
-	if scale == nil {
-		return nil, fmt.Errorf("scale provided to ApplyScale must not be nil")
-	}
-	data, err := json.Marshal(scale)
-	if err != nil {
-		return nil, err
-	}
-	emptyResult := &v1beta2.Scale{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(statefulsetsResource, c.ns, statefulSetName, types.ApplyPatchType, data, opts.ToPatchOptions(), "scale"), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta2.Scale), err
 }

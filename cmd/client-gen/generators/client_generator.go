@@ -431,7 +431,10 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 					inputPath, args.ApplyConfigurationPackage, boilerplate))
 			if args.FakeClient {
 				targetList = append(targetList,
-					fake.TargetForGroup(gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg, group.PackageName, groupGoNames[gv], inputPath, args.ApplyConfigurationPackage, boilerplate))
+					fake.TargetForGroup(args,
+						gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg,
+						group.PackageName, groupGoNames[gv], inputPath,
+						args.ApplyConfigurationPackage, boilerplate))
 			}
 		}
 	}

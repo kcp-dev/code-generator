@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/certificates/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	certificatesv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/certificates/v1beta1"
 )
+
+var certificatesigningrequestsResource = v1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests")
+
+var certificatesigningrequestsKind = v1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest")
 
 // certificateSigningRequestsClusterClient implements certificateSigningRequestInterface
 type certificateSigningRequestsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var certificatesigningrequestsResource = v1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests")
-
-var certificatesigningrequestsKind = v1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest")
-
-// Get takes name of the certificateSigningRequest, and returns the corresponding certificateSigningRequest object, and an error if there is any.
-func (c *certificateSigningRequestsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(certificatesigningrequestsResource, c.ClusterPath, c.Namespace, name), &v1beta1.CertificateSigningRequest{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *certificateSigningRequestsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.CertificateSigningRequestNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
+
+	return &certificateSigningRequestsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of CertificateSigningRequests that match those selectors.
 func (c *certificateSigningRequestsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CertificateSigningRequestList, err error) {
-	emptyResult := &v1beta1.CertificateSigningRequestList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(certificatesigningrequestsResource, certificatesigningrequestsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(certificatesigningrequestsResource, certificatesigningrequestsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.CertificateSigningRequestList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,113 +69,7 @@ func (c *certificateSigningRequestsClusterClient) List(ctx context.Context, opts
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested certificateSigningRequests.
-func (c *certificateSigningRequestsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(certificatesigningrequestsResource, opts))
-}
-
-// Create takes the representation of a certificateSigningRequest and creates it.  Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *certificateSigningRequestsClusterClient) Create(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.CreateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(certificatesigningrequestsResource, certificateSigningRequest, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
-}
-
-// Update takes the representation of a certificateSigningRequest and updates it. Returns the server's representation of the certificateSigningRequest, and an error, if there is any.
-func (c *certificateSigningRequestsClusterClient) Update(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(certificatesigningrequestsResource, certificateSigningRequest, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *certificateSigningRequestsClusterClient) UpdateStatus(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(certificatesigningrequestsResource, "status", certificateSigningRequest, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
-}
-
-// Delete takes name of the certificateSigningRequest and deletes it. Returns an error if one occurs.
-func (c *certificateSigningRequestsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(certificatesigningrequestsResource, name, opts), &v1beta1.CertificateSigningRequest{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *certificateSigningRequestsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(certificatesigningrequestsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.CertificateSigningRequestList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched certificateSigningRequest.
-func (c *certificateSigningRequestsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CertificateSigningRequest, err error) {
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(certificatesigningrequestsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied certificateSigningRequest.
-func (c *certificateSigningRequestsClusterClient) Apply(ctx context.Context, certificateSigningRequest *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	if certificateSigningRequest == nil {
-		return nil, fmt.Errorf("certificateSigningRequest provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(certificateSigningRequest)
-	if err != nil {
-		return nil, err
-	}
-	name := certificateSigningRequest.Name
-	if name == nil {
-		return nil, fmt.Errorf("certificateSigningRequest.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(certificatesigningrequestsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *certificateSigningRequestsClusterClient) ApplyStatus(ctx context.Context, certificateSigningRequest *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CertificateSigningRequest, err error) {
-	if certificateSigningRequest == nil {
-		return nil, fmt.Errorf("certificateSigningRequest provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(certificateSigningRequest)
-	if err != nil {
-		return nil, err
-	}
-	name := certificateSigningRequest.Name
-	if name == nil {
-		return nil, fmt.Errorf("certificateSigningRequest.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.CertificateSigningRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(certificatesigningrequestsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CertificateSigningRequest), err
+// Watch returns a watch.Interface that watches the requested certificateSigningRequests across all clusters.
+func (c *certificateSigningRequestsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(certificatesigningrequestsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	storagev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1"
 )
+
+var storageclassesResource = v1.SchemeGroupVersion.WithResource("storageclasses")
+
+var storageclassesKind = v1.SchemeGroupVersion.WithKind("StorageClass")
 
 // storageClassesClusterClient implements storageClassInterface
 type storageClassesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var storageclassesResource = v1.SchemeGroupVersion.WithResource("storageclasses")
-
-var storageclassesKind = v1.SchemeGroupVersion.WithKind("StorageClass")
-
-// Get takes name of the storageClass, and returns the corresponding storageClass object, and an error if there is any.
-func (c *storageClassesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.StorageClass, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(storageclassesResource, c.ClusterPath, c.Namespace, name), &v1.StorageClass{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *storageClassesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StorageClassNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.StorageClass), err
+
+	return &storageClassesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of StorageClasses that match those selectors.
 func (c *storageClassesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.StorageClassList, err error) {
-	emptyResult := &v1.StorageClassList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(storageclassesResource, storageclassesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(storageclassesResource, storageclassesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.StorageClassList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *storageClassesClusterClient) List(ctx context.Context, opts metav1.List
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested storageClasses.
+// Watch returns a watch.Interface that watches the requested storageClasss across all clusters.
 func (c *storageClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(storageclassesResource, opts))
-}
-
-// Create takes the representation of a storageClass and creates it.  Returns the server's representation of the storageClass, and an error, if there is any.
-func (c *storageClassesClusterClient) Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (result *v1.StorageClass, err error) {
-	emptyResult := &v1.StorageClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(storageclassesResource, storageClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.StorageClass), err
-}
-
-// Update takes the representation of a storageClass and updates it. Returns the server's representation of the storageClass, and an error, if there is any.
-func (c *storageClassesClusterClient) Update(ctx context.Context, storageClass *v1.StorageClass, opts metav1.UpdateOptions) (result *v1.StorageClass, err error) {
-	emptyResult := &v1.StorageClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(storageclassesResource, storageClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.StorageClass), err
-}
-
-// Delete takes name of the storageClass and deletes it. Returns an error if one occurs.
-func (c *storageClassesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(storageclassesResource, name, opts), &v1.StorageClass{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *storageClassesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(storageclassesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.StorageClassList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched storageClass.
-func (c *storageClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.StorageClass, err error) {
-	emptyResult := &v1.StorageClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageclassesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.StorageClass), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied storageClass.
-func (c *storageClassesClusterClient) Apply(ctx context.Context, storageClass *storagev1.StorageClassApplyConfiguration, opts metav1.ApplyOptions) (result *v1.StorageClass, err error) {
-	if storageClass == nil {
-		return nil, fmt.Errorf("storageClass provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(storageClass)
-	if err != nil {
-		return nil, err
-	}
-	name := storageClass.Name
-	if name == nil {
-		return nil, fmt.Errorf("storageClass.Name must be provided to Apply")
-	}
-	emptyResult := &v1.StorageClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageclassesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.StorageClass), err
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(storageclassesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

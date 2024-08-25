@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/apps/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
+	"k8s.io/client-go/testing"
 	appsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta1"
 )
+
+var deploymentsResource = v1beta1.SchemeGroupVersion.WithResource("deployments")
+
+var deploymentsKind = v1beta1.SchemeGroupVersion.WithKind("Deployment")
 
 // deploymentsClusterClient implements deploymentInterface
 type deploymentsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var deploymentsResource = v1beta1.SchemeGroupVersion.WithResource("deployments")
-
-var deploymentsKind = v1beta1.SchemeGroupVersion.WithKind("Deployment")
-
-// Get takes name of the deployment, and returns the corresponding deployment object, and an error if there is any.
-func (c *deploymentsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Deployment, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(deploymentsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Deployment{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *deploymentsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.DeploymentNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.Deployment), err
+
+	return &deploymentsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Deployments that match those selectors.
 func (c *deploymentsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DeploymentList, err error) {
-	emptyResult := &v1beta1.DeploymentList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(deploymentsResource, deploymentsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(deploymentsResource, deploymentsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.DeploymentList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *deploymentsClusterClient) List(ctx context.Context, opts v1.ListOptions
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested deployments.
-func (c *deploymentsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(deploymentsResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested deployments across all clusters.
+func (c *deploymentsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(deploymentsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a deployment and creates it.  Returns the server's representation of the deployment, and an error, if there is any.
-func (c *deploymentsClusterClient) Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (result *v1beta1.Deployment, err error) {
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(deploymentsResource, c.ns, deployment, opts), emptyResult)
+type deploymentsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *deploymentsNamespacer) Namespace(namespace string) upstreamappsv1beta1client.DeploymentInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type deploymentsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *deploymentsClient) Create(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(deploymentsResource, c.ClusterPath, c.Namespace, deployment), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// Update takes the representation of a deployment and updates it. Returns the server's representation of the deployment, and an error, if there is any.
-func (c *deploymentsClusterClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(deploymentsResource, c.ns, deployment, opts), emptyResult)
-
+func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(deploymentsResource, c.ClusterPath, c.Namespace, deployment), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *deploymentsClusterClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (result *v1beta1.Deployment, err error) {
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(deploymentsResource, "status", c.ns, deployment, opts), emptyResult)
-
+func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(deploymentsResource, c.ClusterPath, "status", c.Namespace, deployment), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// Delete takes name of the deployment and deletes it. Returns an error if one occurs.
-func (c *deploymentsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(deploymentsResource, c.ns, name, opts), &v1beta1.Deployment{})
-
+func (c *deploymentsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(deploymentsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Deployment{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *deploymentsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(deploymentsResource, c.ns, opts, listOpts)
+func (c *deploymentsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(deploymentsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.DeploymentList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched deployment.
-func (c *deploymentsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Deployment, err error) {
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(deploymentsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *deploymentsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Deployment, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(deploymentsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied deployment.
-func (c *deploymentsClusterClient) Apply(ctx context.Context, deployment *appsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
-	if deployment == nil {
-		return nil, fmt.Errorf("deployment provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(deployment)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1beta1.Deployment that match those selectors.
+func (c *deploymentsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.DeploymentList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(deploymentsResource, deploymentsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.DeploymentList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := deployment.Name
-	if name == nil {
-		return nil, fmt.Errorf("deployment.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(deploymentsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.DeploymentList{ListMeta: obj.(*v1beta1.DeploymentList).ListMeta}
+	for _, item := range obj.(*v1beta1.DeploymentList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *deploymentsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(deploymentsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *deploymentsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Deployment, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *deploymentsClusterClient) ApplyStatus(ctx context.Context, deployment *appsv1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Deployment, err error) {
-	if deployment == nil {
-		return nil, fmt.Errorf("deployment provided to Apply must not be nil")
+func (c *deploymentsClient) Apply(ctx context.Context, applyConfiguration *appsv1beta1.DeploymentApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Deployment, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(deployment)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := deployment.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("deployment.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1beta1.Deployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(deploymentsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Deployment{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }

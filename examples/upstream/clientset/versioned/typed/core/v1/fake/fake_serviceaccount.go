@@ -24,42 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	authenticationv1 "k8s.io/api/authentication/v1"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var serviceaccountsResource = v1.SchemeGroupVersion.WithResource("serviceaccounts")
+
+var serviceaccountsKind = v1.SchemeGroupVersion.WithKind("ServiceAccount")
 
 // serviceAccountsClusterClient implements serviceAccountInterface
 type serviceAccountsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var serviceaccountsResource = v1.SchemeGroupVersion.WithResource("serviceaccounts")
-
-var serviceaccountsKind = v1.SchemeGroupVersion.WithKind("ServiceAccount")
-
-// Get takes name of the serviceAccount, and returns the corresponding serviceAccount object, and an error if there is any.
-func (c *serviceAccountsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ServiceAccount, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(serviceaccountsResource, c.ClusterPath, c.Namespace, name), &v1.ServiceAccount{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *serviceAccountsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ServiceAccountNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.ServiceAccount), err
+
+	return &serviceAccountsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ServiceAccounts that match those selectors.
 func (c *serviceAccountsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ServiceAccountList, err error) {
-	emptyResult := &v1.ServiceAccountList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(serviceaccountsResource, serviceaccountsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(serviceaccountsResource, serviceaccountsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ServiceAccountList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,96 +74,117 @@ func (c *serviceAccountsClusterClient) List(ctx context.Context, opts metav1.Lis
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested serviceAccounts.
+// Watch returns a watch.Interface that watches the requested serviceAccounts across all clusters.
 func (c *serviceAccountsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(serviceaccountsResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(serviceaccountsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a serviceAccount and creates it.  Returns the server's representation of the serviceAccount, and an error, if there is any.
-func (c *serviceAccountsClusterClient) Create(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (result *v1.ServiceAccount, err error) {
-	emptyResult := &v1.ServiceAccount{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(serviceaccountsResource, c.ns, serviceAccount, opts), emptyResult)
+type serviceAccountsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *serviceAccountsNamespacer) Namespace(namespace string) upstreamcorev1client.ServiceAccountInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type serviceAccountsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *serviceAccountsClient) Create(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(serviceaccountsResource, c.ClusterPath, c.Namespace, serviceAccount), &v1.ServiceAccount{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ServiceAccount), err
 }
 
-// Update takes the representation of a serviceAccount and updates it. Returns the server's representation of the serviceAccount, and an error, if there is any.
-func (c *serviceAccountsClusterClient) Update(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.UpdateOptions) (result *v1.ServiceAccount, err error) {
-	emptyResult := &v1.ServiceAccount{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(serviceaccountsResource, c.ns, serviceAccount, opts), emptyResult)
-
+func (c *serviceAccountsClient) Update(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(serviceaccountsResource, c.ClusterPath, c.Namespace, serviceAccount), &v1.ServiceAccount{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ServiceAccount), err
 }
 
-// Delete takes name of the serviceAccount and deletes it. Returns an error if one occurs.
-func (c *serviceAccountsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(serviceaccountsResource, c.ns, name, opts), &v1.ServiceAccount{})
+func (c *serviceAccountsClient) UpdateStatus(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(serviceaccountsResource, c.ClusterPath, "status", c.Namespace, serviceAccount), &v1.ServiceAccount{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ServiceAccount), err
+}
 
+func (c *serviceAccountsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(serviceaccountsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ServiceAccount{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *serviceAccountsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(serviceaccountsResource, c.ns, opts, listOpts)
+func (c *serviceAccountsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(serviceaccountsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ServiceAccountList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched serviceAccount.
-func (c *serviceAccountsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ServiceAccount, err error) {
-	emptyResult := &v1.ServiceAccount{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(serviceaccountsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *serviceAccountsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ServiceAccount, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(serviceaccountsResource, c.ClusterPath, c.Namespace, name), &v1.ServiceAccount{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ServiceAccount), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied serviceAccount.
-func (c *serviceAccountsClusterClient) Apply(ctx context.Context, serviceAccount *corev1.ServiceAccountApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ServiceAccount, err error) {
-	if serviceAccount == nil {
-		return nil, fmt.Errorf("serviceAccount provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1.ServiceAccount that match those selectors.
+func (c *serviceAccountsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ServiceAccountList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(serviceaccountsResource, serviceaccountsKind, c.ClusterPath, c.Namespace, opts), &v1.ServiceAccountList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(serviceAccount)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ServiceAccountList{ListMeta: obj.(*v1.ServiceAccountList).ListMeta}
+	for _, item := range obj.(*v1.ServiceAccountList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *serviceAccountsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(serviceaccountsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *serviceAccountsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ServiceAccount, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(serviceaccountsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ServiceAccount{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ServiceAccount), err
+}
+
+func (c *serviceAccountsClient) Apply(ctx context.Context, applyConfiguration *corev1.ServiceAccountApplyConfiguration, opts metav1.ApplyOptions) (*v1.ServiceAccount, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := serviceAccount.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("serviceAccount.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.ServiceAccount{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(serviceaccountsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(serviceaccountsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ServiceAccount{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ServiceAccount), err
-}
-
-// CreateToken takes the representation of a tokenRequest and creates it.  Returns the server's representation of the tokenRequest, and an error, if there is any.
-func (c *serviceAccountsClusterClient) CreateToken(ctx context.Context, serviceAccountName string, tokenRequest *authenticationv1.TokenRequest, opts metav1.CreateOptions) (result *authenticationv1.TokenRequest, err error) {
-	emptyResult := &authenticationv1.TokenRequest{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateSubresourceActionWithOptions(serviceaccountsResource, serviceAccountName, "token", c.ns, tokenRequest, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*authenticationv1.TokenRequest), err
 }

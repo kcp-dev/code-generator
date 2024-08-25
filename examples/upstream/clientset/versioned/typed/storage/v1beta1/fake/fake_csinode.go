@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1beta1"
 )
+
+var csinodesResource = v1beta1.SchemeGroupVersion.WithResource("csinodes")
+
+var csinodesKind = v1beta1.SchemeGroupVersion.WithKind("CSINode")
 
 // cSINodesClusterClient implements cSINodeInterface
 type cSINodesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var csinodesResource = v1beta1.SchemeGroupVersion.WithResource("csinodes")
-
-var csinodesKind = v1beta1.SchemeGroupVersion.WithKind("CSINode")
-
-// Get takes name of the cSINode, and returns the corresponding cSINode object, and an error if there is any.
-func (c *cSINodesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CSINode, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(csinodesResource, c.ClusterPath, c.Namespace, name), &v1beta1.CSINode{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *cSINodesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.CSINodeNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.CSINode), err
+
+	return &cSINodesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of CSINodes that match those selectors.
 func (c *cSINodesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CSINodeList, err error) {
-	emptyResult := &v1beta1.CSINodeList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(csinodesResource, csinodesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(csinodesResource, csinodesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.CSINodeList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *cSINodesClusterClient) List(ctx context.Context, opts v1.ListOptions) (
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested cSINodes.
-func (c *cSINodesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(csinodesResource, opts))
-}
-
-// Create takes the representation of a cSINode and creates it.  Returns the server's representation of the cSINode, and an error, if there is any.
-func (c *cSINodesClusterClient) Create(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.CreateOptions) (result *v1beta1.CSINode, err error) {
-	emptyResult := &v1beta1.CSINode{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(csinodesResource, cSINode, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CSINode), err
-}
-
-// Update takes the representation of a cSINode and updates it. Returns the server's representation of the cSINode, and an error, if there is any.
-func (c *cSINodesClusterClient) Update(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.UpdateOptions) (result *v1beta1.CSINode, err error) {
-	emptyResult := &v1beta1.CSINode{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(csinodesResource, cSINode, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CSINode), err
-}
-
-// Delete takes name of the cSINode and deletes it. Returns an error if one occurs.
-func (c *cSINodesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(csinodesResource, name, opts), &v1beta1.CSINode{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *cSINodesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(csinodesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.CSINodeList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched cSINode.
-func (c *cSINodesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSINode, err error) {
-	emptyResult := &v1beta1.CSINode{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(csinodesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CSINode), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied cSINode.
-func (c *cSINodesClusterClient) Apply(ctx context.Context, cSINode *storagev1beta1.CSINodeApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.CSINode, err error) {
-	if cSINode == nil {
-		return nil, fmt.Errorf("cSINode provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(cSINode)
-	if err != nil {
-		return nil, err
-	}
-	name := cSINode.Name
-	if name == nil {
-		return nil, fmt.Errorf("cSINode.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.CSINode{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(csinodesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.CSINode), err
+// Watch returns a watch.Interface that watches the requested cSINodes across all clusters.
+func (c *cSINodesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(csinodesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamrbacv1alpha1client "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
+	"k8s.io/client-go/testing"
 	rbacv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1alpha1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/rbac/v1alpha1"
 )
+
+var rolesResource = v1alpha1.SchemeGroupVersion.WithResource("roles")
+
+var rolesKind = v1alpha1.SchemeGroupVersion.WithKind("Role")
 
 // rolesClusterClient implements roleInterface
 type rolesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var rolesResource = v1alpha1.SchemeGroupVersion.WithResource("roles")
-
-var rolesKind = v1alpha1.SchemeGroupVersion.WithKind("Role")
-
-// Get takes name of the role, and returns the corresponding role object, and an error if there is any.
-func (c *rolesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Role, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(rolesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.Role{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *rolesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.RoleNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.Role), err
+
+	return &rolesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Roles that match those selectors.
 func (c *rolesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.RoleList, err error) {
-	emptyResult := &v1alpha1.RoleList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(rolesResource, rolesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(rolesResource, rolesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.RoleList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,84 +74,117 @@ func (c *rolesClusterClient) List(ctx context.Context, opts v1.ListOptions) (res
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested roles.
-func (c *rolesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(rolesResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested roles across all clusters.
+func (c *rolesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(rolesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a role and creates it.  Returns the server's representation of the role, and an error, if there is any.
-func (c *rolesClusterClient) Create(ctx context.Context, role *v1alpha1.Role, opts v1.CreateOptions) (result *v1alpha1.Role, err error) {
-	emptyResult := &v1alpha1.Role{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(rolesResource, c.ns, role, opts), emptyResult)
+type rolesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *rolesNamespacer) Namespace(namespace string) upstreamrbacv1alpha1client.RoleInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type rolesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *rolesClient) Create(ctx context.Context, role *v1alpha1.Role, opts metav1.CreateOptions) (*v1alpha1.Role, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(rolesResource, c.ClusterPath, c.Namespace, role), &v1alpha1.Role{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.Role), err
 }
 
-// Update takes the representation of a role and updates it. Returns the server's representation of the role, and an error, if there is any.
-func (c *rolesClusterClient) Update(ctx context.Context, role *v1alpha1.Role, opts v1.UpdateOptions) (result *v1alpha1.Role, err error) {
-	emptyResult := &v1alpha1.Role{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(rolesResource, c.ns, role, opts), emptyResult)
-
+func (c *rolesClient) Update(ctx context.Context, role *v1alpha1.Role, opts metav1.CreateOptions) (*v1alpha1.Role, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(rolesResource, c.ClusterPath, c.Namespace, role), &v1alpha1.Role{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.Role), err
 }
 
-// Delete takes name of the role and deletes it. Returns an error if one occurs.
-func (c *rolesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(rolesResource, c.ns, name, opts), &v1alpha1.Role{})
+func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1alpha1.Role, opts metav1.CreateOptions) (*v1alpha1.Role, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(rolesResource, c.ClusterPath, "status", c.Namespace, role), &v1alpha1.Role{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Role), err
+}
 
+func (c *rolesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(rolesResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha1.Role{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *rolesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(rolesResource, c.ns, opts, listOpts)
+func (c *rolesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(rolesResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.RoleList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched role.
-func (c *rolesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Role, err error) {
-	emptyResult := &v1alpha1.Role{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(rolesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *rolesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.Role, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(rolesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.Role{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.Role), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied role.
-func (c *rolesClusterClient) Apply(ctx context.Context, role *rbacv1alpha1.RoleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.Role, err error) {
-	if role == nil {
-		return nil, fmt.Errorf("role provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1alpha1.Role that match those selectors.
+func (c *rolesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.RoleList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(rolesResource, rolesKind, c.ClusterPath, c.Namespace, opts), &v1alpha1.RoleList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(role)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.RoleList{ListMeta: obj.(*v1alpha1.RoleList).ListMeta}
+	for _, item := range obj.(*v1alpha1.RoleList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *rolesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(rolesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *rolesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.Role, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(rolesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1alpha1.Role{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Role), err
+}
+
+func (c *rolesClient) Apply(ctx context.Context, applyConfiguration *rbacv1alpha1.RoleApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.Role, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := role.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("role.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1alpha1.Role{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(rolesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(rolesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1alpha1.Role{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.Role), err
 }

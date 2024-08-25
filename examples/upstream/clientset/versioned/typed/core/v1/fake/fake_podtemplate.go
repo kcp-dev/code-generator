@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var podtemplatesResource = v1.SchemeGroupVersion.WithResource("podtemplates")
+
+var podtemplatesKind = v1.SchemeGroupVersion.WithKind("PodTemplate")
 
 // podTemplatesClusterClient implements podTemplateInterface
 type podTemplatesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var podtemplatesResource = v1.SchemeGroupVersion.WithResource("podtemplates")
-
-var podtemplatesKind = v1.SchemeGroupVersion.WithKind("PodTemplate")
-
-// Get takes name of the podTemplate, and returns the corresponding podTemplate object, and an error if there is any.
-func (c *podTemplatesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PodTemplate, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(podtemplatesResource, c.ClusterPath, c.Namespace, name), &v1.PodTemplate{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *podTemplatesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PodTemplateNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.PodTemplate), err
+
+	return &podTemplatesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of PodTemplates that match those selectors.
 func (c *podTemplatesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PodTemplateList, err error) {
-	emptyResult := &v1.PodTemplateList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(podtemplatesResource, podtemplatesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(podtemplatesResource, podtemplatesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.PodTemplateList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,84 +74,117 @@ func (c *podTemplatesClusterClient) List(ctx context.Context, opts metav1.ListOp
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested podTemplates.
+// Watch returns a watch.Interface that watches the requested podTemplates across all clusters.
 func (c *podTemplatesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(podtemplatesResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(podtemplatesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a podTemplate and creates it.  Returns the server's representation of the podTemplate, and an error, if there is any.
-func (c *podTemplatesClusterClient) Create(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (result *v1.PodTemplate, err error) {
-	emptyResult := &v1.PodTemplate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(podtemplatesResource, c.ns, podTemplate, opts), emptyResult)
+type podTemplatesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *podTemplatesNamespacer) Namespace(namespace string) upstreamcorev1client.PodTemplateInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type podTemplatesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *podTemplatesClient) Create(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(podtemplatesResource, c.ClusterPath, c.Namespace, podTemplate), &v1.PodTemplate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.PodTemplate), err
 }
 
-// Update takes the representation of a podTemplate and updates it. Returns the server's representation of the podTemplate, and an error, if there is any.
-func (c *podTemplatesClusterClient) Update(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.UpdateOptions) (result *v1.PodTemplate, err error) {
-	emptyResult := &v1.PodTemplate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(podtemplatesResource, c.ns, podTemplate, opts), emptyResult)
-
+func (c *podTemplatesClient) Update(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(podtemplatesResource, c.ClusterPath, c.Namespace, podTemplate), &v1.PodTemplate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.PodTemplate), err
 }
 
-// Delete takes name of the podTemplate and deletes it. Returns an error if one occurs.
-func (c *podTemplatesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(podtemplatesResource, c.ns, name, opts), &v1.PodTemplate{})
+func (c *podTemplatesClient) UpdateStatus(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(podtemplatesResource, c.ClusterPath, "status", c.Namespace, podTemplate), &v1.PodTemplate{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PodTemplate), err
+}
 
+func (c *podTemplatesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(podtemplatesResource, c.ClusterPath, c.Namespace, name, opts), &v1.PodTemplate{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *podTemplatesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(podtemplatesResource, c.ns, opts, listOpts)
+func (c *podTemplatesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(podtemplatesResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.PodTemplateList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched podTemplate.
-func (c *podTemplatesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PodTemplate, err error) {
-	emptyResult := &v1.PodTemplate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(podtemplatesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *podTemplatesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.PodTemplate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(podtemplatesResource, c.ClusterPath, c.Namespace, name), &v1.PodTemplate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.PodTemplate), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied podTemplate.
-func (c *podTemplatesClusterClient) Apply(ctx context.Context, podTemplate *corev1.PodTemplateApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PodTemplate, err error) {
-	if podTemplate == nil {
-		return nil, fmt.Errorf("podTemplate provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1.PodTemplate that match those selectors.
+func (c *podTemplatesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.PodTemplateList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(podtemplatesResource, podtemplatesKind, c.ClusterPath, c.Namespace, opts), &v1.PodTemplateList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(podTemplate)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.PodTemplateList{ListMeta: obj.(*v1.PodTemplateList).ListMeta}
+	for _, item := range obj.(*v1.PodTemplateList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *podTemplatesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(podtemplatesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *podTemplatesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.PodTemplate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(podtemplatesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.PodTemplate{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PodTemplate), err
+}
+
+func (c *podTemplatesClient) Apply(ctx context.Context, applyConfiguration *corev1.PodTemplateApplyConfiguration, opts metav1.ApplyOptions) (*v1.PodTemplate, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := podTemplate.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("podTemplate.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.PodTemplate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(podtemplatesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(podtemplatesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.PodTemplate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.PodTemplate), err
 }

@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	storagev1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1beta1"
 )
+
+var volumeattributesclassesResource = v1beta1.SchemeGroupVersion.WithResource("volumeattributesclasses")
+
+var volumeattributesclassesKind = v1beta1.SchemeGroupVersion.WithKind("VolumeAttributesClass")
 
 // volumeAttributesClassesClusterClient implements volumeAttributesClassInterface
 type volumeAttributesClassesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var volumeattributesclassesResource = v1beta1.SchemeGroupVersion.WithResource("volumeattributesclasses")
-
-var volumeattributesclassesKind = v1beta1.SchemeGroupVersion.WithKind("VolumeAttributesClass")
-
-// Get takes name of the volumeAttributesClass, and returns the corresponding volumeAttributesClass object, and an error if there is any.
-func (c *volumeAttributesClassesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.VolumeAttributesClass, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(volumeattributesclassesResource, c.ClusterPath, c.Namespace, name), &v1beta1.VolumeAttributesClass{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *volumeAttributesClassesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.VolumeAttributesClassNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.VolumeAttributesClass), err
+
+	return &volumeAttributesClassesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of VolumeAttributesClasses that match those selectors.
 func (c *volumeAttributesClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.VolumeAttributesClassList, err error) {
-	emptyResult := &v1beta1.VolumeAttributesClassList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(volumeattributesclassesResource, volumeattributesclassesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(volumeattributesclassesResource, volumeattributesclassesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.VolumeAttributesClassList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *volumeAttributesClassesClusterClient) List(ctx context.Context, opts v1
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested volumeAttributesClasses.
-func (c *volumeAttributesClassesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(volumeattributesclassesResource, opts))
-}
-
-// Create takes the representation of a volumeAttributesClass and creates it.  Returns the server's representation of the volumeAttributesClass, and an error, if there is any.
-func (c *volumeAttributesClassesClusterClient) Create(ctx context.Context, volumeAttributesClass *v1beta1.VolumeAttributesClass, opts v1.CreateOptions) (result *v1beta1.VolumeAttributesClass, err error) {
-	emptyResult := &v1beta1.VolumeAttributesClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(volumeattributesclassesResource, volumeAttributesClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.VolumeAttributesClass), err
-}
-
-// Update takes the representation of a volumeAttributesClass and updates it. Returns the server's representation of the volumeAttributesClass, and an error, if there is any.
-func (c *volumeAttributesClassesClusterClient) Update(ctx context.Context, volumeAttributesClass *v1beta1.VolumeAttributesClass, opts v1.UpdateOptions) (result *v1beta1.VolumeAttributesClass, err error) {
-	emptyResult := &v1beta1.VolumeAttributesClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(volumeattributesclassesResource, volumeAttributesClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.VolumeAttributesClass), err
-}
-
-// Delete takes name of the volumeAttributesClass and deletes it. Returns an error if one occurs.
-func (c *volumeAttributesClassesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(volumeattributesclassesResource, name, opts), &v1beta1.VolumeAttributesClass{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *volumeAttributesClassesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(volumeattributesclassesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.VolumeAttributesClassList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched volumeAttributesClass.
-func (c *volumeAttributesClassesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.VolumeAttributesClass, err error) {
-	emptyResult := &v1beta1.VolumeAttributesClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(volumeattributesclassesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.VolumeAttributesClass), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied volumeAttributesClass.
-func (c *volumeAttributesClassesClusterClient) Apply(ctx context.Context, volumeAttributesClass *storagev1beta1.VolumeAttributesClassApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.VolumeAttributesClass, err error) {
-	if volumeAttributesClass == nil {
-		return nil, fmt.Errorf("volumeAttributesClass provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(volumeAttributesClass)
-	if err != nil {
-		return nil, err
-	}
-	name := volumeAttributesClass.Name
-	if name == nil {
-		return nil, fmt.Errorf("volumeAttributesClass.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.VolumeAttributesClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(volumeattributesclassesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.VolumeAttributesClass), err
+// Watch returns a watch.Interface that watches the requested volumeAttributesClasss across all clusters.
+func (c *volumeAttributesClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(volumeattributesclassesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

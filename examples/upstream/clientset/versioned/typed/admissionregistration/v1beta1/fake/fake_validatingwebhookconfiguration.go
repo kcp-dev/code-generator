@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	admissionregistrationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1beta1"
 )
+
+var validatingwebhookconfigurationsResource = v1beta1.SchemeGroupVersion.WithResource("validatingwebhookconfigurations")
+
+var validatingwebhookconfigurationsKind = v1beta1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration")
 
 // validatingWebhookConfigurationsClusterClient implements validatingWebhookConfigurationInterface
 type validatingWebhookConfigurationsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var validatingwebhookconfigurationsResource = v1beta1.SchemeGroupVersion.WithResource("validatingwebhookconfigurations")
-
-var validatingwebhookconfigurationsKind = v1beta1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration")
-
-// Get takes name of the validatingWebhookConfiguration, and returns the corresponding validatingWebhookConfiguration object, and an error if there is any.
-func (c *validatingWebhookConfigurationsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ValidatingWebhookConfiguration, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingwebhookconfigurationsResource, c.ClusterPath, c.Namespace, name), &v1beta1.ValidatingWebhookConfiguration{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingWebhookConfigurationsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ValidatingWebhookConfigurationNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.ValidatingWebhookConfiguration), err
+
+	return &validatingWebhookConfigurationsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ValidatingWebhookConfigurations that match those selectors.
 func (c *validatingWebhookConfigurationsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ValidatingWebhookConfigurationList, err error) {
-	emptyResult := &v1beta1.ValidatingWebhookConfigurationList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(validatingwebhookconfigurationsResource, validatingwebhookconfigurationsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(validatingwebhookconfigurationsResource, validatingwebhookconfigurationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.ValidatingWebhookConfigurationList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *validatingWebhookConfigurationsClusterClient) List(ctx context.Context,
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested validatingWebhookConfigurations.
-func (c *validatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingwebhookconfigurationsResource, opts))
-}
-
-// Create takes the representation of a validatingWebhookConfiguration and creates it.  Returns the server's representation of the validatingWebhookConfiguration, and an error, if there is any.
-func (c *validatingWebhookConfigurationsClusterClient) Create(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.CreateOptions) (result *v1beta1.ValidatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.ValidatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(validatingwebhookconfigurationsResource, validatingWebhookConfiguration, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingWebhookConfiguration), err
-}
-
-// Update takes the representation of a validatingWebhookConfiguration and updates it. Returns the server's representation of the validatingWebhookConfiguration, and an error, if there is any.
-func (c *validatingWebhookConfigurationsClusterClient) Update(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.UpdateOptions) (result *v1beta1.ValidatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.ValidatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(validatingwebhookconfigurationsResource, validatingWebhookConfiguration, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingWebhookConfiguration), err
-}
-
-// Delete takes name of the validatingWebhookConfiguration and deletes it. Returns an error if one occurs.
-func (c *validatingWebhookConfigurationsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(validatingwebhookconfigurationsResource, name, opts), &v1beta1.ValidatingWebhookConfiguration{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *validatingWebhookConfigurationsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(validatingwebhookconfigurationsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.ValidatingWebhookConfigurationList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched validatingWebhookConfiguration.
-func (c *validatingWebhookConfigurationsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ValidatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.ValidatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingwebhookconfigurationsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingWebhookConfiguration), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied validatingWebhookConfiguration.
-func (c *validatingWebhookConfigurationsClusterClient) Apply(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1beta1.ValidatingWebhookConfigurationApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.ValidatingWebhookConfiguration, err error) {
-	if validatingWebhookConfiguration == nil {
-		return nil, fmt.Errorf("validatingWebhookConfiguration provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(validatingWebhookConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	name := validatingWebhookConfiguration.Name
-	if name == nil {
-		return nil, fmt.Errorf("validatingWebhookConfiguration.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.ValidatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingwebhookconfigurationsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingWebhookConfiguration), err
+// Watch returns a watch.Interface that watches the requested validatingWebhookConfigurations across all clusters.
+func (c *validatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(validatingwebhookconfigurationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

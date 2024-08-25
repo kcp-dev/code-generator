@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/coordination/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcoordinationv1alpha1client "k8s.io/client-go/kubernetes/typed/coordination/v1alpha1"
+	"k8s.io/client-go/testing"
 	coordinationv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/coordination/v1alpha1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/coordination/v1alpha1"
 )
+
+var leasecandidatesResource = v1alpha1.SchemeGroupVersion.WithResource("leasecandidates")
+
+var leasecandidatesKind = v1alpha1.SchemeGroupVersion.WithKind("LeaseCandidate")
 
 // leaseCandidatesClusterClient implements leaseCandidateInterface
 type leaseCandidatesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var leasecandidatesResource = v1alpha1.SchemeGroupVersion.WithResource("leasecandidates")
-
-var leasecandidatesKind = v1alpha1.SchemeGroupVersion.WithKind("LeaseCandidate")
-
-// Get takes name of the leaseCandidate, and returns the corresponding leaseCandidate object, and an error if there is any.
-func (c *leaseCandidatesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.LeaseCandidate, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(leasecandidatesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.LeaseCandidate{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *leaseCandidatesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.LeaseCandidateNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.LeaseCandidate), err
+
+	return &leaseCandidatesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of LeaseCandidates that match those selectors.
 func (c *leaseCandidatesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.LeaseCandidateList, err error) {
-	emptyResult := &v1alpha1.LeaseCandidateList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(leasecandidatesResource, leasecandidatesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(leasecandidatesResource, leasecandidatesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.LeaseCandidateList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,84 +74,117 @@ func (c *leaseCandidatesClusterClient) List(ctx context.Context, opts v1.ListOpt
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested leaseCandidates.
-func (c *leaseCandidatesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(leasecandidatesResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested leaseCandidates across all clusters.
+func (c *leaseCandidatesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(leasecandidatesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a leaseCandidate and creates it.  Returns the server's representation of the leaseCandidate, and an error, if there is any.
-func (c *leaseCandidatesClusterClient) Create(ctx context.Context, leaseCandidate *v1alpha1.LeaseCandidate, opts v1.CreateOptions) (result *v1alpha1.LeaseCandidate, err error) {
-	emptyResult := &v1alpha1.LeaseCandidate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(leasecandidatesResource, c.ns, leaseCandidate, opts), emptyResult)
+type leaseCandidatesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *leaseCandidatesNamespacer) Namespace(namespace string) upstreamcoordinationv1alpha1client.LeaseCandidateInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type leaseCandidatesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *leaseCandidatesClient) Create(ctx context.Context, leaseCandidate *v1alpha1.LeaseCandidate, opts metav1.CreateOptions) (*v1alpha1.LeaseCandidate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(leasecandidatesResource, c.ClusterPath, c.Namespace, leaseCandidate), &v1alpha1.LeaseCandidate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.LeaseCandidate), err
 }
 
-// Update takes the representation of a leaseCandidate and updates it. Returns the server's representation of the leaseCandidate, and an error, if there is any.
-func (c *leaseCandidatesClusterClient) Update(ctx context.Context, leaseCandidate *v1alpha1.LeaseCandidate, opts v1.UpdateOptions) (result *v1alpha1.LeaseCandidate, err error) {
-	emptyResult := &v1alpha1.LeaseCandidate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(leasecandidatesResource, c.ns, leaseCandidate, opts), emptyResult)
-
+func (c *leaseCandidatesClient) Update(ctx context.Context, leaseCandidate *v1alpha1.LeaseCandidate, opts metav1.CreateOptions) (*v1alpha1.LeaseCandidate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(leasecandidatesResource, c.ClusterPath, c.Namespace, leaseCandidate), &v1alpha1.LeaseCandidate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.LeaseCandidate), err
 }
 
-// Delete takes name of the leaseCandidate and deletes it. Returns an error if one occurs.
-func (c *leaseCandidatesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(leasecandidatesResource, c.ns, name, opts), &v1alpha1.LeaseCandidate{})
+func (c *leaseCandidatesClient) UpdateStatus(ctx context.Context, leaseCandidate *v1alpha1.LeaseCandidate, opts metav1.CreateOptions) (*v1alpha1.LeaseCandidate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(leasecandidatesResource, c.ClusterPath, "status", c.Namespace, leaseCandidate), &v1alpha1.LeaseCandidate{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.LeaseCandidate), err
+}
 
+func (c *leaseCandidatesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(leasecandidatesResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha1.LeaseCandidate{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *leaseCandidatesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(leasecandidatesResource, c.ns, opts, listOpts)
+func (c *leaseCandidatesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(leasecandidatesResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.LeaseCandidateList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched leaseCandidate.
-func (c *leaseCandidatesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.LeaseCandidate, err error) {
-	emptyResult := &v1alpha1.LeaseCandidate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(leasecandidatesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *leaseCandidatesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.LeaseCandidate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(leasecandidatesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.LeaseCandidate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.LeaseCandidate), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied leaseCandidate.
-func (c *leaseCandidatesClusterClient) Apply(ctx context.Context, leaseCandidate *coordinationv1alpha1.LeaseCandidateApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.LeaseCandidate, err error) {
-	if leaseCandidate == nil {
-		return nil, fmt.Errorf("leaseCandidate provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1alpha1.LeaseCandidate that match those selectors.
+func (c *leaseCandidatesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.LeaseCandidateList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(leasecandidatesResource, leasecandidatesKind, c.ClusterPath, c.Namespace, opts), &v1alpha1.LeaseCandidateList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(leaseCandidate)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.LeaseCandidateList{ListMeta: obj.(*v1alpha1.LeaseCandidateList).ListMeta}
+	for _, item := range obj.(*v1alpha1.LeaseCandidateList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *leaseCandidatesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(leasecandidatesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *leaseCandidatesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.LeaseCandidate, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(leasecandidatesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1alpha1.LeaseCandidate{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.LeaseCandidate), err
+}
+
+func (c *leaseCandidatesClient) Apply(ctx context.Context, applyConfiguration *coordinationv1alpha1.LeaseCandidateApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.LeaseCandidate, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := leaseCandidate.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("leaseCandidate.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1alpha1.LeaseCandidate{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(leasecandidatesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(leasecandidatesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1alpha1.LeaseCandidate{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha1.LeaseCandidate), err
 }

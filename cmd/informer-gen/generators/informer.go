@@ -71,7 +71,7 @@ func (g *informerGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, "kcpcache \"github.com/kcp-dev/apimachinery/v2/pkg/cache\"")
 
 	// Sorry :(
-	group := strings.ToLower(g.groupVersion.Group.String())
+	group := strings.ToLower(g.groupGoName)
 	if group == "" {
 		group = "core"
 	}
@@ -80,7 +80,7 @@ func (g *informerGenerator) Imports(c *generator.Context) (imports []string) {
 		imports = append(imports, imp)
 	}
 	if g.singleClusterInformersPackagePath != "" {
-		imp := "upstream" + strings.ToLower(group) + g.groupVersion.Version.String() + "informers \"" + g.singleClusterInformersPackagePath + "/" + strings.ToLower(g.groupVersion.Version.String()) + "/" + strings.ToLower(group) + "\""
+		imp := "upstream" + group + g.groupVersion.Version.String() + "informers \"" + g.singleClusterInformersPackagePath + "/" + strings.ToLower(g.groupVersion.Version.String()) + "/" + strings.ToLower(group) + "\""
 		imports = append(imports, imp)
 	}
 	return
@@ -101,7 +101,7 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		return err
 	}
 
-	group := strings.ToLower(g.groupVersion.Group.String())
+	group := strings.ToLower(g.groupGoName)
 	if group == "" {
 		group = "core"
 	}
@@ -132,7 +132,7 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		"v1ListOptions":                   c.Universe.Type(v1ListOptions),
 		"version":                         namer.IC(g.groupVersion.Version.String()),
 		"watchInterface":                  c.Universe.Type(watchInterface),
-		"upstreamInformers":               "upstream" + strings.ToLower(group) + strings.ToLower(g.groupVersion.Version.String()) + "informers." + t.Name.Name + "Informer",
+		"upstreamInformers":               "upstream" + group + strings.ToLower(g.groupVersion.Version.String()) + "informers." + t.Name.Name + "Informer",
 	}
 
 	//sw.Do(typeInformerInterface, m)

@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	apiserverinternalv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apiserverinternal/v1alpha1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apiserverinternal/v1alpha1"
 )
+
+var storageversionsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversions")
+
+var storageversionsKind = v1alpha1.SchemeGroupVersion.WithKind("StorageVersion")
 
 // storageVersionsClusterClient implements storageVersionInterface
 type storageVersionsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var storageversionsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversions")
-
-var storageversionsKind = v1alpha1.SchemeGroupVersion.WithKind("StorageVersion")
-
-// Get takes name of the storageVersion, and returns the corresponding storageVersion object, and an error if there is any.
-func (c *storageVersionsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.StorageVersion, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(storageversionsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.StorageVersion{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *storageVersionsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StorageVersionNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.StorageVersion), err
+
+	return &storageVersionsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of StorageVersions that match those selectors.
 func (c *storageVersionsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionList, err error) {
-	emptyResult := &v1alpha1.StorageVersionList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(storageversionsResource, storageversionsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(storageversionsResource, storageversionsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.StorageVersionList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,113 +69,7 @@ func (c *storageVersionsClusterClient) List(ctx context.Context, opts v1.ListOpt
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested storageVersions.
-func (c *storageVersionsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(storageversionsResource, opts))
-}
-
-// Create takes the representation of a storageVersion and creates it.  Returns the server's representation of the storageVersion, and an error, if there is any.
-func (c *storageVersionsClusterClient) Create(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.CreateOptions) (result *v1alpha1.StorageVersion, err error) {
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(storageversionsResource, storageVersion, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
-}
-
-// Update takes the representation of a storageVersion and updates it. Returns the server's representation of the storageVersion, and an error, if there is any.
-func (c *storageVersionsClusterClient) Update(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(storageversionsResource, storageVersion, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *storageVersionsClusterClient) UpdateStatus(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.UpdateOptions) (result *v1alpha1.StorageVersion, err error) {
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(storageversionsResource, "status", storageVersion, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
-}
-
-// Delete takes name of the storageVersion and deletes it. Returns an error if one occurs.
-func (c *storageVersionsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(storageversionsResource, name, opts), &v1alpha1.StorageVersion{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *storageVersionsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(storageversionsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.StorageVersionList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched storageVersion.
-func (c *storageVersionsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.StorageVersion, err error) {
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageversionsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied storageVersion.
-func (c *storageVersionsClusterClient) Apply(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
-	if storageVersion == nil {
-		return nil, fmt.Errorf("storageVersion provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(storageVersion)
-	if err != nil {
-		return nil, err
-	}
-	name := storageVersion.Name
-	if name == nil {
-		return nil, fmt.Errorf("storageVersion.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageversionsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *storageVersionsClusterClient) ApplyStatus(ctx context.Context, storageVersion *apiserverinternalv1alpha1.StorageVersionApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.StorageVersion, err error) {
-	if storageVersion == nil {
-		return nil, fmt.Errorf("storageVersion provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(storageVersion)
-	if err != nil {
-		return nil, err
-	}
-	name := storageVersion.Name
-	if name == nil {
-		return nil, fmt.Errorf("storageVersion.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.StorageVersion{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(storageversionsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.StorageVersion), err
+// Watch returns a watch.Interface that watches the requested storageVersions across all clusters.
+func (c *storageVersionsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(storageversionsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

@@ -22,27 +22,54 @@ import (
 	"context"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/authentication/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authentication/v1alpha1"
 )
+
+var selfsubjectreviewsResource = v1alpha1.SchemeGroupVersion.WithResource("selfsubjectreviews")
+
+var selfsubjectreviewsKind = v1alpha1.SchemeGroupVersion.WithKind("SelfSubjectReview")
 
 // selfSubjectReviewsClusterClient implements selfSubjectReviewInterface
 type selfSubjectReviewsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var selfsubjectreviewsResource = v1alpha1.SchemeGroupVersion.WithResource("selfsubjectreviews")
-
-var selfsubjectreviewsKind = v1alpha1.SchemeGroupVersion.WithKind("SelfSubjectReview")
-
-// Create takes the representation of a selfSubjectReview and creates it.  Returns the server's representation of the selfSubjectReview, and an error, if there is any.
-func (c *selfSubjectReviewsClusterClient) Create(ctx context.Context, selfSubjectReview *v1alpha1.SelfSubjectReview, opts v1.CreateOptions) (result *v1alpha1.SelfSubjectReview, err error) {
-	emptyResult := &v1alpha1.SelfSubjectReview{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(selfsubjectreviewsResource, selfSubjectReview, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
+// Cluster scopes the client down to a particular cluster.
+func (c *selfSubjectReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.SelfSubjectReviewNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.SelfSubjectReview), err
+
+	return &selfSubjectReviewsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of SelfSubjectReviews that match those selectors.
+func (c *selfSubjectReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.SelfSubjectReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(selfsubjectreviewsResource, selfsubjectreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.SelfSubjectReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.SelfSubjectReviewList{ListMeta: obj.(*v1alpha1.SelfSubjectReviewList).ListMeta}
+	for _, item := range obj.(*v1alpha1.SelfSubjectReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested selfSubjectReviews across all clusters.
+func (c *selfSubjectReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(selfsubjectreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

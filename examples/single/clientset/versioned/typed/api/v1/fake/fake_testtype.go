@@ -24,41 +24,40 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
 	v1 "k8s.io/code-generator/examples/single/api/v1"
 	apiv1 "k8s.io/code-generator/examples/single/applyconfiguration/api/v1"
+	kcp "k8s.io/code-generator/examples/single/clientset/versioned/typed/api/v1"
 )
+
+var testtypesResource = v1.SchemeGroupVersion.WithResource("testtypes")
+
+var testtypesKind = v1.SchemeGroupVersion.WithKind("TestType")
 
 // testTypesClusterClient implements testTypeInterface
 type testTypesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var testtypesResource = v1.SchemeGroupVersion.WithResource("testtypes")
-
-var testtypesKind = v1.SchemeGroupVersion.WithKind("TestType")
-
-// Get takes name of the testType, and returns the corresponding testType object, and an error if there is any.
-func (c *testTypesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.TestType, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(testtypesResource, c.ClusterPath, c.Namespace, name), &v1.TestType{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *testTypesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.TestTypeNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.TestType), err
+
+	return &testTypesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of TestTypes that match those selectors.
 func (c *testTypesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.TestTypeList, err error) {
-	emptyResult := &v1.TestTypeList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(testtypesResource, testtypesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(testtypesResource, testtypesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.TestTypeList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +73,117 @@ func (c *testTypesClusterClient) List(ctx context.Context, opts metav1.ListOptio
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested testTypes.
+// Watch returns a watch.Interface that watches the requested testTypes across all clusters.
 func (c *testTypesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(testtypesResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(testtypesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a testType and creates it.  Returns the server's representation of the testType, and an error, if there is any.
-func (c *testTypesClusterClient) Create(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (result *v1.TestType, err error) {
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(testtypesResource, c.ns, testType, opts), emptyResult)
+type testTypesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *testTypesNamespacer) Namespace(namespace string) upstreamexamplev1client.TestTypeInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type testTypesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *testTypesClient) Create(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(testtypesResource, c.ClusterPath, c.Namespace, testType), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// Update takes the representation of a testType and updates it. Returns the server's representation of the testType, and an error, if there is any.
-func (c *testTypesClusterClient) Update(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (result *v1.TestType, err error) {
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(testtypesResource, c.ns, testType, opts), emptyResult)
-
+func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(testtypesResource, c.ClusterPath, c.Namespace, testType), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *testTypesClusterClient) UpdateStatus(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (result *v1.TestType, err error) {
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(testtypesResource, "status", c.ns, testType, opts), emptyResult)
-
+func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(testtypesResource, c.ClusterPath, "status", c.Namespace, testType), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// Delete takes name of the testType and deletes it. Returns an error if one occurs.
-func (c *testTypesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(testtypesResource, c.ns, name, opts), &v1.TestType{})
-
+func (c *testTypesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(testtypesResource, c.ClusterPath, c.Namespace, name, opts), &v1.TestType{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *testTypesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(testtypesResource, c.ns, opts, listOpts)
+func (c *testTypesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(testtypesResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.TestTypeList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched testType.
-func (c *testTypesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.TestType, err error) {
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(testtypesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *testTypesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.TestType, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(testtypesResource, c.ClusterPath, c.Namespace, name), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied testType.
-func (c *testTypesClusterClient) Apply(ctx context.Context, testType *apiv1.TestTypeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.TestType, err error) {
-	if testType == nil {
-		return nil, fmt.Errorf("testType provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(testType)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.TestType that match those selectors.
+func (c *testTypesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.TestTypeList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(testtypesResource, testtypesKind, c.ClusterPath, c.Namespace, opts), &v1.TestTypeList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := testType.Name
-	if name == nil {
-		return nil, fmt.Errorf("testType.Name must be provided to Apply")
-	}
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(testtypesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.TestTypeList{ListMeta: obj.(*v1.TestTypeList).ListMeta}
+	for _, item := range obj.(*v1.TestTypeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *testTypesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(testtypesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *testTypesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.TestType, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(testtypesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *testTypesClusterClient) ApplyStatus(ctx context.Context, testType *apiv1.TestTypeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.TestType, err error) {
-	if testType == nil {
-		return nil, fmt.Errorf("testType provided to Apply must not be nil")
+func (c *testTypesClient) Apply(ctx context.Context, applyConfiguration *apiv1.TestTypeApplyConfiguration, opts metav1.ApplyOptions) (*v1.TestType, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(testType)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := testType.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("testType.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.TestType{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(testtypesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(testtypesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.TestType{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }

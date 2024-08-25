@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var resourcequotasResource = v1.SchemeGroupVersion.WithResource("resourcequotas")
+
+var resourcequotasKind = v1.SchemeGroupVersion.WithKind("ResourceQuota")
 
 // resourceQuotasClusterClient implements resourceQuotaInterface
 type resourceQuotasClusterClient struct {
 	*kcptesting.Fake
 }
 
-var resourcequotasResource = v1.SchemeGroupVersion.WithResource("resourcequotas")
-
-var resourcequotasKind = v1.SchemeGroupVersion.WithKind("ResourceQuota")
-
-// Get takes name of the resourceQuota, and returns the corresponding resourceQuota object, and an error if there is any.
-func (c *resourceQuotasClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ResourceQuota, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourcequotasResource, c.ClusterPath, c.Namespace, name), &v1.ResourceQuota{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *resourceQuotasClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ResourceQuotaNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.ResourceQuota), err
+
+	return &resourceQuotasNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ResourceQuotas that match those selectors.
 func (c *resourceQuotasClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ResourceQuotaList, err error) {
-	emptyResult := &v1.ResourceQuotaList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(resourcequotasResource, resourcequotasKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourcequotasResource, resourcequotasKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ResourceQuotaList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *resourceQuotasClusterClient) List(ctx context.Context, opts metav1.List
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested resourceQuotas.
+// Watch returns a watch.Interface that watches the requested resourceQuotas across all clusters.
 func (c *resourceQuotasClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(resourcequotasResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourcequotasResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a resourceQuota and creates it.  Returns the server's representation of the resourceQuota, and an error, if there is any.
-func (c *resourceQuotasClusterClient) Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (result *v1.ResourceQuota, err error) {
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(resourcequotasResource, c.ns, resourceQuota, opts), emptyResult)
+type resourceQuotasNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *resourceQuotasNamespacer) Namespace(namespace string) upstreamcorev1client.ResourceQuotaInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type resourceQuotasClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *resourceQuotasClient) Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(resourcequotasResource, c.ClusterPath, c.Namespace, resourceQuota), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// Update takes the representation of a resourceQuota and updates it. Returns the server's representation of the resourceQuota, and an error, if there is any.
-func (c *resourceQuotasClusterClient) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (result *v1.ResourceQuota, err error) {
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(resourcequotasResource, c.ns, resourceQuota, opts), emptyResult)
-
+func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourcequotasResource, c.ClusterPath, c.Namespace, resourceQuota), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *resourceQuotasClusterClient) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (result *v1.ResourceQuota, err error) {
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(resourcequotasResource, "status", c.ns, resourceQuota, opts), emptyResult)
-
+func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourcequotasResource, c.ClusterPath, "status", c.Namespace, resourceQuota), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// Delete takes name of the resourceQuota and deletes it. Returns an error if one occurs.
-func (c *resourceQuotasClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(resourcequotasResource, c.ns, name, opts), &v1.ResourceQuota{})
-
+func (c *resourceQuotasClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourcequotasResource, c.ClusterPath, c.Namespace, name, opts), &v1.ResourceQuota{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *resourceQuotasClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(resourcequotasResource, c.ns, opts, listOpts)
+func (c *resourceQuotasClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(resourcequotasResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ResourceQuotaList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched resourceQuota.
-func (c *resourceQuotasClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ResourceQuota, err error) {
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourcequotasResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *resourceQuotasClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ResourceQuota, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourcequotasResource, c.ClusterPath, c.Namespace, name), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied resourceQuota.
-func (c *resourceQuotasClusterClient) Apply(ctx context.Context, resourceQuota *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ResourceQuota, err error) {
-	if resourceQuota == nil {
-		return nil, fmt.Errorf("resourceQuota provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(resourceQuota)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.ResourceQuota that match those selectors.
+func (c *resourceQuotasClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ResourceQuotaList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourcequotasResource, resourcequotasKind, c.ClusterPath, c.Namespace, opts), &v1.ResourceQuotaList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := resourceQuota.Name
-	if name == nil {
-		return nil, fmt.Errorf("resourceQuota.Name must be provided to Apply")
-	}
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourcequotasResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ResourceQuotaList{ListMeta: obj.(*v1.ResourceQuotaList).ListMeta}
+	for _, item := range obj.(*v1.ResourceQuotaList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *resourceQuotasClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourcequotasResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *resourceQuotasClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ResourceQuota, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourcequotasResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *resourceQuotasClusterClient) ApplyStatus(ctx context.Context, resourceQuota *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ResourceQuota, err error) {
-	if resourceQuota == nil {
-		return nil, fmt.Errorf("resourceQuota provided to Apply must not be nil")
+func (c *resourceQuotasClient) Apply(ctx context.Context, applyConfiguration *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (*v1.ResourceQuota, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(resourceQuota)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := resourceQuota.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("resourceQuota.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.ResourceQuota{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourcequotasResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourcequotasResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ResourceQuota{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }

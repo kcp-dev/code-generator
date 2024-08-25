@@ -22,27 +22,54 @@ import (
 	"context"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/authorization/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authorization/v1beta1"
 )
+
+var subjectaccessreviewsResource = v1beta1.SchemeGroupVersion.WithResource("subjectaccessreviews")
+
+var subjectaccessreviewsKind = v1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview")
 
 // subjectAccessReviewsClusterClient implements subjectAccessReviewInterface
 type subjectAccessReviewsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var subjectaccessreviewsResource = v1beta1.SchemeGroupVersion.WithResource("subjectaccessreviews")
-
-var subjectaccessreviewsKind = v1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview")
-
-// Create takes the representation of a subjectAccessReview and creates it.  Returns the server's representation of the subjectAccessReview, and an error, if there is any.
-func (c *subjectAccessReviewsClusterClient) Create(ctx context.Context, subjectAccessReview *v1beta1.SubjectAccessReview, opts v1.CreateOptions) (result *v1beta1.SubjectAccessReview, err error) {
-	emptyResult := &v1beta1.SubjectAccessReview{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(subjectaccessreviewsResource, subjectAccessReview, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
+// Cluster scopes the client down to a particular cluster.
+func (c *subjectAccessReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.SubjectAccessReviewNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.SubjectAccessReview), err
+
+	return &subjectAccessReviewsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of SubjectAccessReviews that match those selectors.
+func (c *subjectAccessReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.SubjectAccessReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(subjectaccessreviewsResource, subjectaccessreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.SubjectAccessReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.SubjectAccessReviewList{ListMeta: obj.(*v1beta1.SubjectAccessReviewList).ListMeta}
+	for _, item := range obj.(*v1beta1.SubjectAccessReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested subjectAccessReviews across all clusters.
+func (c *subjectAccessReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(subjectaccessreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

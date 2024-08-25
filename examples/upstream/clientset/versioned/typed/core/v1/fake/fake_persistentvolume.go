@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var persistentvolumesResource = v1.SchemeGroupVersion.WithResource("persistentvolumes")
+
+var persistentvolumesKind = v1.SchemeGroupVersion.WithKind("PersistentVolume")
 
 // persistentVolumesClusterClient implements persistentVolumeInterface
 type persistentVolumesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var persistentvolumesResource = v1.SchemeGroupVersion.WithResource("persistentvolumes")
-
-var persistentvolumesKind = v1.SchemeGroupVersion.WithKind("PersistentVolume")
-
-// Get takes name of the persistentVolume, and returns the corresponding persistentVolume object, and an error if there is any.
-func (c *persistentVolumesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PersistentVolume, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(persistentvolumesResource, c.ClusterPath, c.Namespace, name), &v1.PersistentVolume{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *persistentVolumesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PersistentVolumeNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.PersistentVolume), err
+
+	return &persistentVolumesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of PersistentVolumes that match those selectors.
 func (c *persistentVolumesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PersistentVolumeList, err error) {
-	emptyResult := &v1.PersistentVolumeList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(persistentvolumesResource, persistentvolumesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(persistentvolumesResource, persistentvolumesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.PersistentVolumeList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,113 +69,7 @@ func (c *persistentVolumesClusterClient) List(ctx context.Context, opts metav1.L
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested persistentVolumes.
+// Watch returns a watch.Interface that watches the requested persistentVolumes across all clusters.
 func (c *persistentVolumesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(persistentvolumesResource, opts))
-}
-
-// Create takes the representation of a persistentVolume and creates it.  Returns the server's representation of the persistentVolume, and an error, if there is any.
-func (c *persistentVolumesClusterClient) Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (result *v1.PersistentVolume, err error) {
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(persistentvolumesResource, persistentVolume, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
-}
-
-// Update takes the representation of a persistentVolume and updates it. Returns the server's representation of the persistentVolume, and an error, if there is any.
-func (c *persistentVolumesClusterClient) Update(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(persistentvolumesResource, persistentVolume, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *persistentVolumesClusterClient) UpdateStatus(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (result *v1.PersistentVolume, err error) {
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(persistentvolumesResource, "status", persistentVolume, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
-}
-
-// Delete takes name of the persistentVolume and deletes it. Returns an error if one occurs.
-func (c *persistentVolumesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(persistentvolumesResource, name, opts), &v1.PersistentVolume{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *persistentVolumesClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(persistentvolumesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.PersistentVolumeList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched persistentVolume.
-func (c *persistentVolumesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PersistentVolume, err error) {
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(persistentvolumesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied persistentVolume.
-func (c *persistentVolumesClusterClient) Apply(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
-	if persistentVolume == nil {
-		return nil, fmt.Errorf("persistentVolume provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(persistentVolume)
-	if err != nil {
-		return nil, err
-	}
-	name := persistentVolume.Name
-	if name == nil {
-		return nil, fmt.Errorf("persistentVolume.Name must be provided to Apply")
-	}
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(persistentvolumesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *persistentVolumesClusterClient) ApplyStatus(ctx context.Context, persistentVolume *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (result *v1.PersistentVolume, err error) {
-	if persistentVolume == nil {
-		return nil, fmt.Errorf("persistentVolume provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(persistentVolume)
-	if err != nil {
-		return nil, err
-	}
-	name := persistentVolume.Name
-	if name == nil {
-		return nil, fmt.Errorf("persistentVolume.Name must be provided to Apply")
-	}
-	emptyResult := &v1.PersistentVolume{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(persistentvolumesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.PersistentVolume), err
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(persistentvolumesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

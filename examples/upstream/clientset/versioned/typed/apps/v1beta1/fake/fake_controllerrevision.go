@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/apps/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
+	"k8s.io/client-go/testing"
 	appsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta1"
 )
+
+var controllerrevisionsResource = v1beta1.SchemeGroupVersion.WithResource("controllerrevisions")
+
+var controllerrevisionsKind = v1beta1.SchemeGroupVersion.WithKind("ControllerRevision")
 
 // controllerRevisionsClusterClient implements controllerRevisionInterface
 type controllerRevisionsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var controllerrevisionsResource = v1beta1.SchemeGroupVersion.WithResource("controllerrevisions")
-
-var controllerrevisionsKind = v1beta1.SchemeGroupVersion.WithKind("ControllerRevision")
-
-// Get takes name of the controllerRevision, and returns the corresponding controllerRevision object, and an error if there is any.
-func (c *controllerRevisionsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ControllerRevision, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, name), &v1beta1.ControllerRevision{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *controllerRevisionsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ControllerRevisionNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.ControllerRevision), err
+
+	return &controllerRevisionsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ControllerRevisions that match those selectors.
 func (c *controllerRevisionsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ControllerRevisionList, err error) {
-	emptyResult := &v1beta1.ControllerRevisionList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(controllerrevisionsResource, controllerrevisionsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(controllerrevisionsResource, controllerrevisionsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.ControllerRevisionList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,84 +74,117 @@ func (c *controllerRevisionsClusterClient) List(ctx context.Context, opts v1.Lis
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested controllerRevisions.
-func (c *controllerRevisionsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(controllerrevisionsResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested controllerRevisions across all clusters.
+func (c *controllerRevisionsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(controllerrevisionsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a controllerRevision and creates it.  Returns the server's representation of the controllerRevision, and an error, if there is any.
-func (c *controllerRevisionsClusterClient) Create(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts v1.CreateOptions) (result *v1beta1.ControllerRevision, err error) {
-	emptyResult := &v1beta1.ControllerRevision{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(controllerrevisionsResource, c.ns, controllerRevision, opts), emptyResult)
+type controllerRevisionsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *controllerRevisionsNamespacer) Namespace(namespace string) upstreamappsv1beta1client.ControllerRevisionInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type controllerRevisionsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *controllerRevisionsClient) Create(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.CreateOptions) (*v1beta1.ControllerRevision, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, controllerRevision), &v1beta1.ControllerRevision{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-// Update takes the representation of a controllerRevision and updates it. Returns the server's representation of the controllerRevision, and an error, if there is any.
-func (c *controllerRevisionsClusterClient) Update(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts v1.UpdateOptions) (result *v1beta1.ControllerRevision, err error) {
-	emptyResult := &v1beta1.ControllerRevision{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(controllerrevisionsResource, c.ns, controllerRevision, opts), emptyResult)
-
+func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.CreateOptions) (*v1beta1.ControllerRevision, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, controllerRevision), &v1beta1.ControllerRevision{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-// Delete takes name of the controllerRevision and deletes it. Returns an error if one occurs.
-func (c *controllerRevisionsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(controllerrevisionsResource, c.ns, name, opts), &v1beta1.ControllerRevision{})
+func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.CreateOptions) (*v1beta1.ControllerRevision, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(controllerrevisionsResource, c.ClusterPath, "status", c.Namespace, controllerRevision), &v1beta1.ControllerRevision{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.ControllerRevision), err
+}
 
+func (c *controllerRevisionsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(controllerrevisionsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.ControllerRevision{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *controllerRevisionsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(controllerrevisionsResource, c.ns, opts, listOpts)
+func (c *controllerRevisionsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ControllerRevisionList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched controllerRevision.
-func (c *controllerRevisionsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerRevision, err error) {
-	emptyResult := &v1beta1.ControllerRevision{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(controllerrevisionsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *controllerRevisionsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.ControllerRevision, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, name), &v1beta1.ControllerRevision{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied controllerRevision.
-func (c *controllerRevisionsClusterClient) Apply(ctx context.Context, controllerRevision *appsv1beta1.ControllerRevisionApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.ControllerRevision, err error) {
-	if controllerRevision == nil {
-		return nil, fmt.Errorf("controllerRevision provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1beta1.ControllerRevision that match those selectors.
+func (c *controllerRevisionsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.ControllerRevisionList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(controllerrevisionsResource, controllerrevisionsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.ControllerRevisionList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(controllerRevision)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.ControllerRevisionList{ListMeta: obj.(*v1beta1.ControllerRevisionList).ListMeta}
+	for _, item := range obj.(*v1beta1.ControllerRevisionList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *controllerRevisionsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *controllerRevisionsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.ControllerRevision, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.ControllerRevision{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.ControllerRevision), err
+}
+
+func (c *controllerRevisionsClient) Apply(ctx context.Context, applyConfiguration *appsv1beta1.ControllerRevisionApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.ControllerRevision, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := controllerRevision.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("controllerRevision.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1beta1.ControllerRevision{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(controllerrevisionsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.ControllerRevision{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.ControllerRevision), err
 }

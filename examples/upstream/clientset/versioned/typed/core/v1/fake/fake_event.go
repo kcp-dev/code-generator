@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var eventsResource = v1.SchemeGroupVersion.WithResource("events")
+
+var eventsKind = v1.SchemeGroupVersion.WithKind("Event")
 
 // eventsClusterClient implements eventInterface
 type eventsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var eventsResource = v1.SchemeGroupVersion.WithResource("events")
-
-var eventsKind = v1.SchemeGroupVersion.WithKind("Event")
-
-// Get takes name of the event, and returns the corresponding event object, and an error if there is any.
-func (c *eventsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Event, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(eventsResource, c.ClusterPath, c.Namespace, name), &v1.Event{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *eventsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.EventNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.Event), err
+
+	return &eventsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Events that match those selectors.
 func (c *eventsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.EventList, err error) {
-	emptyResult := &v1.EventList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(eventsResource, eventsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(eventsResource, eventsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.EventList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,84 +74,117 @@ func (c *eventsClusterClient) List(ctx context.Context, opts metav1.ListOptions)
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested events.
+// Watch returns a watch.Interface that watches the requested events across all clusters.
 func (c *eventsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(eventsResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(eventsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a event and creates it.  Returns the server's representation of the event, and an error, if there is any.
-func (c *eventsClusterClient) Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (result *v1.Event, err error) {
-	emptyResult := &v1.Event{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(eventsResource, c.ns, event, opts), emptyResult)
+type eventsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *eventsNamespacer) Namespace(namespace string) upstreamcorev1client.EventInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type eventsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *eventsClient) Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1.Event{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Event), err
 }
 
-// Update takes the representation of a event and updates it. Returns the server's representation of the event, and an error, if there is any.
-func (c *eventsClusterClient) Update(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (result *v1.Event, err error) {
-	emptyResult := &v1.Event{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(eventsResource, c.ns, event, opts), emptyResult)
-
+func (c *eventsClient) Update(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1.Event{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Event), err
 }
 
-// Delete takes name of the event and deletes it. Returns an error if one occurs.
-func (c *eventsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(eventsResource, c.ns, name, opts), &v1.Event{})
+func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(eventsResource, c.ClusterPath, "status", c.Namespace, event), &v1.Event{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Event), err
+}
 
+func (c *eventsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(eventsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Event{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *eventsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(eventsResource, c.ns, opts, listOpts)
+func (c *eventsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(eventsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.EventList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched event.
-func (c *eventsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Event, err error) {
-	emptyResult := &v1.Event{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(eventsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *eventsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Event, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(eventsResource, c.ClusterPath, c.Namespace, name), &v1.Event{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Event), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied event.
-func (c *eventsClusterClient) Apply(ctx context.Context, event *corev1.EventApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Event, err error) {
-	if event == nil {
-		return nil, fmt.Errorf("event provided to Apply must not be nil")
+// List takes label and field selectors, and returns the list of v1.Event that match those selectors.
+func (c *eventsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.EventList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(eventsResource, eventsKind, c.ClusterPath, c.Namespace, opts), &v1.EventList{})
+	if obj == nil {
+		return nil, err
 	}
-	data, err := json.Marshal(event)
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.EventList{ListMeta: obj.(*v1.EventList).ListMeta}
+	for _, item := range obj.(*v1.EventList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *eventsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(eventsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *eventsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Event, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Event{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Event), err
+}
+
+func (c *eventsClient) Apply(ctx context.Context, applyConfiguration *corev1.EventApplyConfiguration, opts metav1.ApplyOptions) (*v1.Event, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := event.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("event.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.Event{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(eventsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Event{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Event), err
 }

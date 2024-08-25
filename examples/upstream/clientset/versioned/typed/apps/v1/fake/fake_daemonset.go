@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"k8s.io/client-go/testing"
 	appsv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1"
 )
+
+var daemonsetsResource = v1.SchemeGroupVersion.WithResource("daemonsets")
+
+var daemonsetsKind = v1.SchemeGroupVersion.WithKind("DaemonSet")
 
 // daemonSetsClusterClient implements daemonSetInterface
 type daemonSetsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var daemonsetsResource = v1.SchemeGroupVersion.WithResource("daemonsets")
-
-var daemonsetsKind = v1.SchemeGroupVersion.WithKind("DaemonSet")
-
-// Get takes name of the daemonSet, and returns the corresponding daemonSet object, and an error if there is any.
-func (c *daemonSetsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.DaemonSet, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(daemonsetsResource, c.ClusterPath, c.Namespace, name), &v1.DaemonSet{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *daemonSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.DaemonSetNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.DaemonSet), err
+
+	return &daemonSetsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of DaemonSets that match those selectors.
 func (c *daemonSetsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.DaemonSetList, err error) {
-	emptyResult := &v1.DaemonSetList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(daemonsetsResource, daemonsetsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(daemonsetsResource, daemonsetsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.DaemonSetList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *daemonSetsClusterClient) List(ctx context.Context, opts metav1.ListOpti
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested daemonSets.
+// Watch returns a watch.Interface that watches the requested daemonSets across all clusters.
 func (c *daemonSetsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(daemonsetsResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(daemonsetsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a daemonSet and creates it.  Returns the server's representation of the daemonSet, and an error, if there is any.
-func (c *daemonSetsClusterClient) Create(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (result *v1.DaemonSet, err error) {
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(daemonsetsResource, c.ns, daemonSet, opts), emptyResult)
+type daemonSetsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *daemonSetsNamespacer) Namespace(namespace string) upstreamappsv1client.DaemonSetInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type daemonSetsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *daemonSetsClient) Create(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(daemonsetsResource, c.ClusterPath, c.Namespace, daemonSet), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }
 
-// Update takes the representation of a daemonSet and updates it. Returns the server's representation of the daemonSet, and an error, if there is any.
-func (c *daemonSetsClusterClient) Update(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (result *v1.DaemonSet, err error) {
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(daemonsetsResource, c.ns, daemonSet, opts), emptyResult)
-
+func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(daemonsetsResource, c.ClusterPath, c.Namespace, daemonSet), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *daemonSetsClusterClient) UpdateStatus(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (result *v1.DaemonSet, err error) {
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(daemonsetsResource, "status", c.ns, daemonSet, opts), emptyResult)
-
+func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(daemonsetsResource, c.ClusterPath, "status", c.Namespace, daemonSet), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }
 
-// Delete takes name of the daemonSet and deletes it. Returns an error if one occurs.
-func (c *daemonSetsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(daemonsetsResource, c.ns, name, opts), &v1.DaemonSet{})
-
+func (c *daemonSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(daemonsetsResource, c.ClusterPath, c.Namespace, name, opts), &v1.DaemonSet{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *daemonSetsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(daemonsetsResource, c.ns, opts, listOpts)
+func (c *daemonSetsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(daemonsetsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.DaemonSetList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched daemonSet.
-func (c *daemonSetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DaemonSet, err error) {
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(daemonsetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *daemonSetsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.DaemonSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(daemonsetsResource, c.ClusterPath, c.Namespace, name), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied daemonSet.
-func (c *daemonSetsClusterClient) Apply(ctx context.Context, daemonSet *appsv1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (result *v1.DaemonSet, err error) {
-	if daemonSet == nil {
-		return nil, fmt.Errorf("daemonSet provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(daemonSet)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.DaemonSet that match those selectors.
+func (c *daemonSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.DaemonSetList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(daemonsetsResource, daemonsetsKind, c.ClusterPath, c.Namespace, opts), &v1.DaemonSetList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := daemonSet.Name
-	if name == nil {
-		return nil, fmt.Errorf("daemonSet.Name must be provided to Apply")
-	}
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(daemonsetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.DaemonSetList{ListMeta: obj.(*v1.DaemonSetList).ListMeta}
+	for _, item := range obj.(*v1.DaemonSetList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *daemonSetsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(daemonsetsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *daemonSetsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.DaemonSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(daemonsetsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *daemonSetsClusterClient) ApplyStatus(ctx context.Context, daemonSet *appsv1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (result *v1.DaemonSet, err error) {
-	if daemonSet == nil {
-		return nil, fmt.Errorf("daemonSet provided to Apply must not be nil")
+func (c *daemonSetsClient) Apply(ctx context.Context, applyConfiguration *appsv1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (*v1.DaemonSet, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(daemonSet)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := daemonSet.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("daemonSet.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.DaemonSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(daemonsetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(daemonsetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.DaemonSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.DaemonSet), err
 }

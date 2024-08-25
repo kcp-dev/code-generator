@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	rbacv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1alpha1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/rbac/v1alpha1"
 )
+
+var clusterrolebindingsResource = v1alpha1.SchemeGroupVersion.WithResource("clusterrolebindings")
+
+var clusterrolebindingsKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
 
 // clusterRoleBindingsClusterClient implements clusterRoleBindingInterface
 type clusterRoleBindingsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var clusterrolebindingsResource = v1alpha1.SchemeGroupVersion.WithResource("clusterrolebindings")
-
-var clusterrolebindingsKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
-
-// Get takes name of the clusterRoleBinding, and returns the corresponding clusterRoleBinding object, and an error if there is any.
-func (c *clusterRoleBindingsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterRoleBinding, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(clusterrolebindingsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.ClusterRoleBinding{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *clusterRoleBindingsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ClusterRoleBindingNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.ClusterRoleBinding), err
+
+	return &clusterRoleBindingsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ClusterRoleBindings that match those selectors.
 func (c *clusterRoleBindingsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterRoleBindingList, err error) {
-	emptyResult := &v1alpha1.ClusterRoleBindingList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(clusterrolebindingsResource, clusterrolebindingsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(clusterrolebindingsResource, clusterrolebindingsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ClusterRoleBindingList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *clusterRoleBindingsClusterClient) List(ctx context.Context, opts v1.Lis
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested clusterRoleBindings.
-func (c *clusterRoleBindingsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(clusterrolebindingsResource, opts))
-}
-
-// Create takes the representation of a clusterRoleBinding and creates it.  Returns the server's representation of the clusterRoleBinding, and an error, if there is any.
-func (c *clusterRoleBindingsClusterClient) Create(ctx context.Context, clusterRoleBinding *v1alpha1.ClusterRoleBinding, opts v1.CreateOptions) (result *v1alpha1.ClusterRoleBinding, err error) {
-	emptyResult := &v1alpha1.ClusterRoleBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(clusterrolebindingsResource, clusterRoleBinding, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterRoleBinding), err
-}
-
-// Update takes the representation of a clusterRoleBinding and updates it. Returns the server's representation of the clusterRoleBinding, and an error, if there is any.
-func (c *clusterRoleBindingsClusterClient) Update(ctx context.Context, clusterRoleBinding *v1alpha1.ClusterRoleBinding, opts v1.UpdateOptions) (result *v1alpha1.ClusterRoleBinding, err error) {
-	emptyResult := &v1alpha1.ClusterRoleBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(clusterrolebindingsResource, clusterRoleBinding, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterRoleBinding), err
-}
-
-// Delete takes name of the clusterRoleBinding and deletes it. Returns an error if one occurs.
-func (c *clusterRoleBindingsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(clusterrolebindingsResource, name, opts), &v1alpha1.ClusterRoleBinding{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *clusterRoleBindingsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(clusterrolebindingsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterRoleBindingList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched clusterRoleBinding.
-func (c *clusterRoleBindingsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterRoleBinding, err error) {
-	emptyResult := &v1alpha1.ClusterRoleBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(clusterrolebindingsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterRoleBinding), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied clusterRoleBinding.
-func (c *clusterRoleBindingsClusterClient) Apply(ctx context.Context, clusterRoleBinding *rbacv1alpha1.ClusterRoleBindingApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterRoleBinding, err error) {
-	if clusterRoleBinding == nil {
-		return nil, fmt.Errorf("clusterRoleBinding provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(clusterRoleBinding)
-	if err != nil {
-		return nil, err
-	}
-	name := clusterRoleBinding.Name
-	if name == nil {
-		return nil, fmt.Errorf("clusterRoleBinding.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.ClusterRoleBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(clusterrolebindingsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterRoleBinding), err
+// Watch returns a watch.Interface that watches the requested clusterRoleBindings across all clusters.
+func (c *clusterRoleBindingsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(clusterrolebindingsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

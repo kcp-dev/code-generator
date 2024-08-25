@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/certificates/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	certificatesv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/certificates/v1alpha1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/certificates/v1alpha1"
 )
+
+var clustertrustbundlesResource = v1alpha1.SchemeGroupVersion.WithResource("clustertrustbundles")
+
+var clustertrustbundlesKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterTrustBundle")
 
 // clusterTrustBundlesClusterClient implements clusterTrustBundleInterface
 type clusterTrustBundlesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var clustertrustbundlesResource = v1alpha1.SchemeGroupVersion.WithResource("clustertrustbundles")
-
-var clustertrustbundlesKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterTrustBundle")
-
-// Get takes name of the clusterTrustBundle, and returns the corresponding clusterTrustBundle object, and an error if there is any.
-func (c *clusterTrustBundlesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterTrustBundle, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(clustertrustbundlesResource, c.ClusterPath, c.Namespace, name), &v1alpha1.ClusterTrustBundle{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *clusterTrustBundlesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ClusterTrustBundleNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.ClusterTrustBundle), err
+
+	return &clusterTrustBundlesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ClusterTrustBundles that match those selectors.
 func (c *clusterTrustBundlesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterTrustBundleList, err error) {
-	emptyResult := &v1alpha1.ClusterTrustBundleList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(clustertrustbundlesResource, clustertrustbundlesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(clustertrustbundlesResource, clustertrustbundlesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ClusterTrustBundleList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *clusterTrustBundlesClusterClient) List(ctx context.Context, opts v1.Lis
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested clusterTrustBundles.
-func (c *clusterTrustBundlesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(clustertrustbundlesResource, opts))
-}
-
-// Create takes the representation of a clusterTrustBundle and creates it.  Returns the server's representation of the clusterTrustBundle, and an error, if there is any.
-func (c *clusterTrustBundlesClusterClient) Create(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts v1.CreateOptions) (result *v1alpha1.ClusterTrustBundle, err error) {
-	emptyResult := &v1alpha1.ClusterTrustBundle{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(clustertrustbundlesResource, clusterTrustBundle, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterTrustBundle), err
-}
-
-// Update takes the representation of a clusterTrustBundle and updates it. Returns the server's representation of the clusterTrustBundle, and an error, if there is any.
-func (c *clusterTrustBundlesClusterClient) Update(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts v1.UpdateOptions) (result *v1alpha1.ClusterTrustBundle, err error) {
-	emptyResult := &v1alpha1.ClusterTrustBundle{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(clustertrustbundlesResource, clusterTrustBundle, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterTrustBundle), err
-}
-
-// Delete takes name of the clusterTrustBundle and deletes it. Returns an error if one occurs.
-func (c *clusterTrustBundlesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(clustertrustbundlesResource, name, opts), &v1alpha1.ClusterTrustBundle{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *clusterTrustBundlesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(clustertrustbundlesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterTrustBundleList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched clusterTrustBundle.
-func (c *clusterTrustBundlesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterTrustBundle, err error) {
-	emptyResult := &v1alpha1.ClusterTrustBundle{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(clustertrustbundlesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterTrustBundle), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied clusterTrustBundle.
-func (c *clusterTrustBundlesClusterClient) Apply(ctx context.Context, clusterTrustBundle *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterTrustBundle, err error) {
-	if clusterTrustBundle == nil {
-		return nil, fmt.Errorf("clusterTrustBundle provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(clusterTrustBundle)
-	if err != nil {
-		return nil, err
-	}
-	name := clusterTrustBundle.Name
-	if name == nil {
-		return nil, fmt.Errorf("clusterTrustBundle.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.ClusterTrustBundle{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(clustertrustbundlesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ClusterTrustBundle), err
+// Watch returns a watch.Interface that watches the requested clusterTrustBundles across all clusters.
+func (c *clusterTrustBundlesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(clustertrustbundlesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

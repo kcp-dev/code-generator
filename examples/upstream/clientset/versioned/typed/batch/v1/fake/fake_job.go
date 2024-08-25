@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
+	"k8s.io/client-go/testing"
 	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/batch/v1"
 )
+
+var jobsResource = v1.SchemeGroupVersion.WithResource("jobs")
+
+var jobsKind = v1.SchemeGroupVersion.WithKind("Job")
 
 // jobsClusterClient implements jobInterface
 type jobsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var jobsResource = v1.SchemeGroupVersion.WithResource("jobs")
-
-var jobsKind = v1.SchemeGroupVersion.WithKind("Job")
-
-// Get takes name of the job, and returns the corresponding job object, and an error if there is any.
-func (c *jobsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Job, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(jobsResource, c.ClusterPath, c.Namespace, name), &v1.Job{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *jobsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.JobNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.Job), err
+
+	return &jobsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Jobs that match those selectors.
 func (c *jobsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.JobList, err error) {
-	emptyResult := &v1.JobList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(jobsResource, jobsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(jobsResource, jobsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.JobList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *jobsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested jobs.
+// Watch returns a watch.Interface that watches the requested jobs across all clusters.
 func (c *jobsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(jobsResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(jobsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a job and creates it.  Returns the server's representation of the job, and an error, if there is any.
-func (c *jobsClusterClient) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (result *v1.Job, err error) {
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(jobsResource, c.ns, job, opts), emptyResult)
+type jobsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *jobsNamespacer) Namespace(namespace string) upstreambatchv1client.JobInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type jobsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *jobsClient) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(jobsResource, c.ClusterPath, c.Namespace, job), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// Update takes the representation of a job and updates it. Returns the server's representation of the job, and an error, if there is any.
-func (c *jobsClusterClient) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(jobsResource, c.ns, job, opts), emptyResult)
-
+func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(jobsResource, c.ClusterPath, c.Namespace, job), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *jobsClusterClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (result *v1.Job, err error) {
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(jobsResource, "status", c.ns, job, opts), emptyResult)
-
+func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(jobsResource, c.ClusterPath, "status", c.Namespace, job), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// Delete takes name of the job and deletes it. Returns an error if one occurs.
-func (c *jobsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(jobsResource, c.ns, name, opts), &v1.Job{})
-
+func (c *jobsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(jobsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Job{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *jobsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(jobsResource, c.ns, opts, listOpts)
+func (c *jobsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(jobsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.JobList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched job.
-func (c *jobsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Job, err error) {
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(jobsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *jobsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Job, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(jobsResource, c.ClusterPath, c.Namespace, name), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied job.
-func (c *jobsClusterClient) Apply(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
-	if job == nil {
-		return nil, fmt.Errorf("job provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(job)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.Job that match those selectors.
+func (c *jobsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.JobList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(jobsResource, jobsKind, c.ClusterPath, c.Namespace, opts), &v1.JobList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := job.Name
-	if name == nil {
-		return nil, fmt.Errorf("job.Name must be provided to Apply")
-	}
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(jobsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.JobList{ListMeta: obj.(*v1.JobList).ListMeta}
+	for _, item := range obj.(*v1.JobList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *jobsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(jobsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *jobsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Job, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(jobsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *jobsClusterClient) ApplyStatus(ctx context.Context, job *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Job, err error) {
-	if job == nil {
-		return nil, fmt.Errorf("job provided to Apply must not be nil")
+func (c *jobsClient) Apply(ctx context.Context, applyConfiguration *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (*v1.Job, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(job)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := job.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("job.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.Job{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(jobsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(jobsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Job{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Job), err
 }

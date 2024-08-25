@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/networking/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	networkingv1alpha1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1alpha1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1alpha1"
 )
+
+var servicecidrsResource = v1alpha1.SchemeGroupVersion.WithResource("servicecidrs")
+
+var servicecidrsKind = v1alpha1.SchemeGroupVersion.WithKind("ServiceCIDR")
 
 // serviceCIDRsClusterClient implements serviceCIDRInterface
 type serviceCIDRsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var servicecidrsResource = v1alpha1.SchemeGroupVersion.WithResource("servicecidrs")
-
-var servicecidrsKind = v1alpha1.SchemeGroupVersion.WithKind("ServiceCIDR")
-
-// Get takes name of the serviceCIDR, and returns the corresponding serviceCIDR object, and an error if there is any.
-func (c *serviceCIDRsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(servicecidrsResource, c.ClusterPath, c.Namespace, name), &v1alpha1.ServiceCIDR{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *serviceCIDRsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ServiceCIDRNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha1.ServiceCIDR), err
+
+	return &serviceCIDRsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ServiceCIDRs that match those selectors.
 func (c *serviceCIDRsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ServiceCIDRList, err error) {
-	emptyResult := &v1alpha1.ServiceCIDRList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(servicecidrsResource, servicecidrsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(servicecidrsResource, servicecidrsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ServiceCIDRList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,113 +69,7 @@ func (c *serviceCIDRsClusterClient) List(ctx context.Context, opts v1.ListOption
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested serviceCIDRs.
-func (c *serviceCIDRsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(servicecidrsResource, opts))
-}
-
-// Create takes the representation of a serviceCIDR and creates it.  Returns the server's representation of the serviceCIDR, and an error, if there is any.
-func (c *serviceCIDRsClusterClient) Create(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts v1.CreateOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(servicecidrsResource, serviceCIDR, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
-}
-
-// Update takes the representation of a serviceCIDR and updates it. Returns the server's representation of the serviceCIDR, and an error, if there is any.
-func (c *serviceCIDRsClusterClient) Update(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts v1.UpdateOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(servicecidrsResource, serviceCIDR, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *serviceCIDRsClusterClient) UpdateStatus(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts v1.UpdateOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(servicecidrsResource, "status", serviceCIDR, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
-}
-
-// Delete takes name of the serviceCIDR and deletes it. Returns an error if one occurs.
-func (c *serviceCIDRsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(servicecidrsResource, name, opts), &v1alpha1.ServiceCIDR{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *serviceCIDRsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(servicecidrsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ServiceCIDRList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched serviceCIDR.
-func (c *serviceCIDRsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ServiceCIDR, err error) {
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(servicecidrsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied serviceCIDR.
-func (c *serviceCIDRsClusterClient) Apply(ctx context.Context, serviceCIDR *networkingv1alpha1.ServiceCIDRApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	if serviceCIDR == nil {
-		return nil, fmt.Errorf("serviceCIDR provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(serviceCIDR)
-	if err != nil {
-		return nil, err
-	}
-	name := serviceCIDR.Name
-	if name == nil {
-		return nil, fmt.Errorf("serviceCIDR.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(servicecidrsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *serviceCIDRsClusterClient) ApplyStatus(ctx context.Context, serviceCIDR *networkingv1alpha1.ServiceCIDRApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ServiceCIDR, err error) {
-	if serviceCIDR == nil {
-		return nil, fmt.Errorf("serviceCIDR provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(serviceCIDR)
-	if err != nil {
-		return nil, err
-	}
-	name := serviceCIDR.Name
-	if name == nil {
-		return nil, fmt.Errorf("serviceCIDR.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.ServiceCIDR{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(servicecidrsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ServiceCIDR), err
+// Watch returns a watch.Interface that watches the requested serviceCIDRs across all clusters.
+func (c *serviceCIDRsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(servicecidrsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

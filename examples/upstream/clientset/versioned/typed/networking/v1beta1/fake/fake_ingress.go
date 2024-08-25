@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamnetworkingv1beta1client "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
+	"k8s.io/client-go/testing"
 	networkingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1beta1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1beta1"
 )
+
+var ingressesResource = v1beta1.SchemeGroupVersion.WithResource("ingresses")
+
+var ingressesKind = v1beta1.SchemeGroupVersion.WithKind("Ingress")
 
 // ingressesClusterClient implements ingressInterface
 type ingressesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var ingressesResource = v1beta1.SchemeGroupVersion.WithResource("ingresses")
-
-var ingressesKind = v1beta1.SchemeGroupVersion.WithKind("Ingress")
-
-// Get takes name of the ingress, and returns the corresponding ingress object, and an error if there is any.
-func (c *ingressesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Ingress, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ingressesResource, c.ClusterPath, c.Namespace, name), &v1beta1.Ingress{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *ingressesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.IngressNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.Ingress), err
+
+	return &ingressesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Ingresses that match those selectors.
 func (c *ingressesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IngressList, err error) {
-	emptyResult := &v1beta1.IngressList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(ingressesResource, ingressesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(ingressesResource, ingressesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.IngressList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *ingressesClusterClient) List(ctx context.Context, opts v1.ListOptions) 
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested ingresses.
-func (c *ingressesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(ingressesResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested ingresss across all clusters.
+func (c *ingressesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(ingressesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a ingress and creates it.  Returns the server's representation of the ingress, and an error, if there is any.
-func (c *ingressesClusterClient) Create(ctx context.Context, ingress *v1beta1.Ingress, opts v1.CreateOptions) (result *v1beta1.Ingress, err error) {
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(ingressesResource, c.ns, ingress, opts), emptyResult)
+type ingressesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *ingressesNamespacer) Namespace(namespace string) upstreamnetworkingv1beta1client.IngressInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type ingressesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *ingressesClient) Create(ctx context.Context, ingress *v1beta1.Ingress, opts metav1.CreateOptions) (*v1beta1.Ingress, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(ingressesResource, c.ClusterPath, c.Namespace, ingress), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }
 
-// Update takes the representation of a ingress and updates it. Returns the server's representation of the ingress, and an error, if there is any.
-func (c *ingressesClusterClient) Update(ctx context.Context, ingress *v1beta1.Ingress, opts v1.UpdateOptions) (result *v1beta1.Ingress, err error) {
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(ingressesResource, c.ns, ingress, opts), emptyResult)
-
+func (c *ingressesClient) Update(ctx context.Context, ingress *v1beta1.Ingress, opts metav1.CreateOptions) (*v1beta1.Ingress, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(ingressesResource, c.ClusterPath, c.Namespace, ingress), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *ingressesClusterClient) UpdateStatus(ctx context.Context, ingress *v1beta1.Ingress, opts v1.UpdateOptions) (result *v1beta1.Ingress, err error) {
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(ingressesResource, "status", c.ns, ingress, opts), emptyResult)
-
+func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1beta1.Ingress, opts metav1.CreateOptions) (*v1beta1.Ingress, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(ingressesResource, c.ClusterPath, "status", c.Namespace, ingress), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }
 
-// Delete takes name of the ingress and deletes it. Returns an error if one occurs.
-func (c *ingressesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(ingressesResource, c.ns, name, opts), &v1beta1.Ingress{})
-
+func (c *ingressesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(ingressesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Ingress{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *ingressesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(ingressesResource, c.ns, opts, listOpts)
+func (c *ingressesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(ingressesResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.IngressList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched ingress.
-func (c *ingressesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Ingress, err error) {
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(ingressesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *ingressesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Ingress, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ingressesResource, c.ClusterPath, c.Namespace, name), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied ingress.
-func (c *ingressesClusterClient) Apply(ctx context.Context, ingress *networkingv1beta1.IngressApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Ingress, err error) {
-	if ingress == nil {
-		return nil, fmt.Errorf("ingress provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(ingress)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1beta1.Ingress that match those selectors.
+func (c *ingressesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.IngressList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(ingressesResource, ingressesKind, c.ClusterPath, c.Namespace, opts), &v1beta1.IngressList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := ingress.Name
-	if name == nil {
-		return nil, fmt.Errorf("ingress.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(ingressesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.IngressList{ListMeta: obj.(*v1beta1.IngressList).ListMeta}
+	for _, item := range obj.(*v1beta1.IngressList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *ingressesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(ingressesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *ingressesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Ingress, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(ingressesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *ingressesClusterClient) ApplyStatus(ctx context.Context, ingress *networkingv1beta1.IngressApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.Ingress, err error) {
-	if ingress == nil {
-		return nil, fmt.Errorf("ingress provided to Apply must not be nil")
+func (c *ingressesClient) Apply(ctx context.Context, applyConfiguration *networkingv1beta1.IngressApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Ingress, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(ingress)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := ingress.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("ingress.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1beta1.Ingress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(ingressesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(ingressesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Ingress{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta1.Ingress), err
 }

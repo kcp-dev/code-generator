@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
+	"k8s.io/client-go/testing"
 	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
+
+var resourceclaimsResource = v1alpha3.SchemeGroupVersion.WithResource("resourceclaims")
+
+var resourceclaimsKind = v1alpha3.SchemeGroupVersion.WithKind("ResourceClaim")
 
 // resourceClaimsClusterClient implements resourceClaimInterface
 type resourceClaimsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var resourceclaimsResource = v1alpha3.SchemeGroupVersion.WithResource("resourceclaims")
-
-var resourceclaimsKind = v1alpha3.SchemeGroupVersion.WithKind("ResourceClaim")
-
-// Get takes name of the resourceClaim, and returns the corresponding resourceClaim object, and an error if there is any.
-func (c *resourceClaimsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha3.ResourceClaim, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourceclaimsResource, c.ClusterPath, c.Namespace, name), &v1alpha3.ResourceClaim{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *resourceClaimsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ResourceClaimNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1alpha3.ResourceClaim), err
+
+	return &resourceClaimsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ResourceClaims that match those selectors.
 func (c *resourceClaimsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.ResourceClaimList, err error) {
-	emptyResult := &v1alpha3.ResourceClaimList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(resourceclaimsResource, resourceclaimsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourceclaimsResource, resourceclaimsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha3.ResourceClaimList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *resourceClaimsClusterClient) List(ctx context.Context, opts v1.ListOpti
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested resourceClaims.
-func (c *resourceClaimsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(resourceclaimsResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested resourceClaims across all clusters.
+func (c *resourceClaimsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourceclaimsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a resourceClaim and creates it.  Returns the server's representation of the resourceClaim, and an error, if there is any.
-func (c *resourceClaimsClusterClient) Create(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.CreateOptions) (result *v1alpha3.ResourceClaim, err error) {
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(resourceclaimsResource, c.ns, resourceClaim, opts), emptyResult)
+type resourceClaimsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *resourceClaimsNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.ResourceClaimInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type resourceClaimsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *resourceClaimsClient) Create(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.CreateOptions) (*v1alpha3.ResourceClaim, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(resourceclaimsResource, c.ClusterPath, c.Namespace, resourceClaim), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-// Update takes the representation of a resourceClaim and updates it. Returns the server's representation of the resourceClaim, and an error, if there is any.
-func (c *resourceClaimsClusterClient) Update(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.UpdateOptions) (result *v1alpha3.ResourceClaim, err error) {
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(resourceclaimsResource, c.ns, resourceClaim, opts), emptyResult)
-
+func (c *resourceClaimsClient) Update(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.CreateOptions) (*v1alpha3.ResourceClaim, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourceclaimsResource, c.ClusterPath, c.Namespace, resourceClaim), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *resourceClaimsClusterClient) UpdateStatus(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts v1.UpdateOptions) (result *v1alpha3.ResourceClaim, err error) {
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(resourceclaimsResource, "status", c.ns, resourceClaim, opts), emptyResult)
-
+func (c *resourceClaimsClient) UpdateStatus(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.CreateOptions) (*v1alpha3.ResourceClaim, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourceclaimsResource, c.ClusterPath, "status", c.Namespace, resourceClaim), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-// Delete takes name of the resourceClaim and deletes it. Returns an error if one occurs.
-func (c *resourceClaimsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(resourceclaimsResource, c.ns, name, opts), &v1alpha3.ResourceClaim{})
-
+func (c *resourceClaimsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourceclaimsResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.ResourceClaim{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *resourceClaimsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(resourceclaimsResource, c.ns, opts, listOpts)
+func (c *resourceClaimsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(resourceclaimsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha3.ResourceClaimList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched resourceClaim.
-func (c *resourceClaimsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha3.ResourceClaim, err error) {
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourceclaimsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *resourceClaimsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha3.ResourceClaim, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourceclaimsResource, c.ClusterPath, c.Namespace, name), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied resourceClaim.
-func (c *resourceClaimsClusterClient) Apply(ctx context.Context, resourceClaim *resourcev1alpha3.ResourceClaimApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaim, err error) {
-	if resourceClaim == nil {
-		return nil, fmt.Errorf("resourceClaim provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(resourceClaim)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1alpha3.ResourceClaim that match those selectors.
+func (c *resourceClaimsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.ResourceClaimList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourceclaimsResource, resourceclaimsKind, c.ClusterPath, c.Namespace, opts), &v1alpha3.ResourceClaimList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := resourceClaim.Name
-	if name == nil {
-		return nil, fmt.Errorf("resourceClaim.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourceclaimsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha3.ResourceClaimList{ListMeta: obj.(*v1alpha3.ResourceClaimList).ListMeta}
+	for _, item := range obj.(*v1alpha3.ResourceClaimList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *resourceClaimsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourceclaimsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *resourceClaimsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha3.ResourceClaim, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourceclaimsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *resourceClaimsClusterClient) ApplyStatus(ctx context.Context, resourceClaim *resourcev1alpha3.ResourceClaimApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha3.ResourceClaim, err error) {
-	if resourceClaim == nil {
-		return nil, fmt.Errorf("resourceClaim provided to Apply must not be nil")
+func (c *resourceClaimsClient) Apply(ctx context.Context, applyConfiguration *resourcev1alpha3.ResourceClaimApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.ResourceClaim, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(resourceClaim)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := resourceClaim.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("resourceClaim.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1alpha3.ResourceClaim{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(resourceclaimsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourceclaimsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1alpha3.ResourceClaim{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaim), err
 }

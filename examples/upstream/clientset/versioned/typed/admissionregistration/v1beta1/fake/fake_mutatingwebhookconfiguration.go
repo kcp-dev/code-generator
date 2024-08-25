@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	admissionregistrationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1beta1"
 )
+
+var mutatingwebhookconfigurationsResource = v1beta1.SchemeGroupVersion.WithResource("mutatingwebhookconfigurations")
+
+var mutatingwebhookconfigurationsKind = v1beta1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration")
 
 // mutatingWebhookConfigurationsClusterClient implements mutatingWebhookConfigurationInterface
 type mutatingWebhookConfigurationsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var mutatingwebhookconfigurationsResource = v1beta1.SchemeGroupVersion.WithResource("mutatingwebhookconfigurations")
-
-var mutatingwebhookconfigurationsKind = v1beta1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration")
-
-// Get takes name of the mutatingWebhookConfiguration, and returns the corresponding mutatingWebhookConfiguration object, and an error if there is any.
-func (c *mutatingWebhookConfigurationsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.MutatingWebhookConfiguration, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(mutatingwebhookconfigurationsResource, c.ClusterPath, c.Namespace, name), &v1beta1.MutatingWebhookConfiguration{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *mutatingWebhookConfigurationsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.MutatingWebhookConfigurationNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.MutatingWebhookConfiguration), err
+
+	return &mutatingWebhookConfigurationsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of MutatingWebhookConfigurations that match those selectors.
 func (c *mutatingWebhookConfigurationsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.MutatingWebhookConfigurationList, err error) {
-	emptyResult := &v1beta1.MutatingWebhookConfigurationList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(mutatingwebhookconfigurationsResource, mutatingwebhookconfigurationsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(mutatingwebhookconfigurationsResource, mutatingwebhookconfigurationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.MutatingWebhookConfigurationList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *mutatingWebhookConfigurationsClusterClient) List(ctx context.Context, o
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested mutatingWebhookConfigurations.
-func (c *mutatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(mutatingwebhookconfigurationsResource, opts))
-}
-
-// Create takes the representation of a mutatingWebhookConfiguration and creates it.  Returns the server's representation of the mutatingWebhookConfiguration, and an error, if there is any.
-func (c *mutatingWebhookConfigurationsClusterClient) Create(ctx context.Context, mutatingWebhookConfiguration *v1beta1.MutatingWebhookConfiguration, opts v1.CreateOptions) (result *v1beta1.MutatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.MutatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(mutatingwebhookconfigurationsResource, mutatingWebhookConfiguration, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.MutatingWebhookConfiguration), err
-}
-
-// Update takes the representation of a mutatingWebhookConfiguration and updates it. Returns the server's representation of the mutatingWebhookConfiguration, and an error, if there is any.
-func (c *mutatingWebhookConfigurationsClusterClient) Update(ctx context.Context, mutatingWebhookConfiguration *v1beta1.MutatingWebhookConfiguration, opts v1.UpdateOptions) (result *v1beta1.MutatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.MutatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(mutatingwebhookconfigurationsResource, mutatingWebhookConfiguration, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.MutatingWebhookConfiguration), err
-}
-
-// Delete takes name of the mutatingWebhookConfiguration and deletes it. Returns an error if one occurs.
-func (c *mutatingWebhookConfigurationsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(mutatingwebhookconfigurationsResource, name, opts), &v1beta1.MutatingWebhookConfiguration{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *mutatingWebhookConfigurationsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(mutatingwebhookconfigurationsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.MutatingWebhookConfigurationList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched mutatingWebhookConfiguration.
-func (c *mutatingWebhookConfigurationsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.MutatingWebhookConfiguration, err error) {
-	emptyResult := &v1beta1.MutatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(mutatingwebhookconfigurationsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.MutatingWebhookConfiguration), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied mutatingWebhookConfiguration.
-func (c *mutatingWebhookConfigurationsClusterClient) Apply(ctx context.Context, mutatingWebhookConfiguration *admissionregistrationv1beta1.MutatingWebhookConfigurationApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.MutatingWebhookConfiguration, err error) {
-	if mutatingWebhookConfiguration == nil {
-		return nil, fmt.Errorf("mutatingWebhookConfiguration provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(mutatingWebhookConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	name := mutatingWebhookConfiguration.Name
-	if name == nil {
-		return nil, fmt.Errorf("mutatingWebhookConfiguration.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.MutatingWebhookConfiguration{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(mutatingwebhookconfigurationsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.MutatingWebhookConfiguration), err
+// Watch returns a watch.Interface that watches the requested mutatingWebhookConfigurations across all clusters.
+func (c *mutatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(mutatingwebhookconfigurationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

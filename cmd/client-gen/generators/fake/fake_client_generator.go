@@ -30,7 +30,7 @@ import (
 	clientgentypes "k8s.io/code-generator/cmd/client-gen/types"
 )
 
-func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, inputPkg string, applyBuilderPackage string, boilerplate []byte) generator.Target {
+func TargetForGroup(args *args.Args, gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, inputPkg string, applyBuilderPackage string, boilerplate []byte) generator.Target {
 	// TODO: should make this a function, called by here and in client-generator.go
 	subdir := []string{"typed", strings.ToLower(groupPkgName), strings.ToLower(gv.Version.NonEmpty())}
 	outputDir := filepath.Join(clientsetDir, filepath.Join(subdir...), "fake")
@@ -57,14 +57,16 @@ func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: "fake_" + strings.ToLower(c.Namers["private"].Name(t)) + ".go",
 					},
-					outputPackage:             outputPkg,
-					inputPackage:              inputPkg,
-					group:                     gv.Group.NonEmpty(),
-					version:                   gv.Version.String(),
-					groupGoName:               groupGoName,
-					typeToMatch:               t,
-					imports:                   generator.NewImportTracker(),
-					applyConfigurationPackage: applyBuilderPackage,
+					outputPackage:                        outputPkg,
+					inputPackage:                         inputPkg,
+					group:                                gv.Group.NonEmpty(),
+					version:                              gv.Version.String(),
+					groupGoName:                          groupGoName,
+					typeToMatch:                          t,
+					imports:                              generator.NewImportTracker(),
+					applyConfigurationPackage:            applyBuilderPackage,
+					typedClientPackage:                   realClientPkg,
+					singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
 				})
 			}
 

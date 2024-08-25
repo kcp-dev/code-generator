@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
+	"k8s.io/client-go/testing"
 	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta2"
 )
+
+var replicasetsResource = v1beta2.SchemeGroupVersion.WithResource("replicasets")
+
+var replicasetsKind = v1beta2.SchemeGroupVersion.WithKind("ReplicaSet")
 
 // replicaSetsClusterClient implements replicaSetInterface
 type replicaSetsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var replicasetsResource = v1beta2.SchemeGroupVersion.WithResource("replicasets")
-
-var replicasetsKind = v1beta2.SchemeGroupVersion.WithKind("ReplicaSet")
-
-// Get takes name of the replicaSet, and returns the corresponding replicaSet object, and an error if there is any.
-func (c *replicaSetsClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.ReplicaSet, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(replicasetsResource, c.ClusterPath, c.Namespace, name), &v1beta2.ReplicaSet{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *replicaSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ReplicaSetNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta2.ReplicaSet), err
+
+	return &replicaSetsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ReplicaSets that match those selectors.
 func (c *replicaSetsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta2.ReplicaSetList, err error) {
-	emptyResult := &v1beta2.ReplicaSetList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(replicasetsResource, replicasetsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(replicasetsResource, replicasetsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta2.ReplicaSetList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *replicaSetsClusterClient) List(ctx context.Context, opts v1.ListOptions
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested replicaSets.
-func (c *replicaSetsClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(replicasetsResource, c.ns, opts))
-
+// Watch returns a watch.Interface that watches the requested replicaSets across all clusters.
+func (c *replicaSetsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(replicasetsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a replicaSet and creates it.  Returns the server's representation of the replicaSet, and an error, if there is any.
-func (c *replicaSetsClusterClient) Create(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.CreateOptions) (result *v1beta2.ReplicaSet, err error) {
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(replicasetsResource, c.ns, replicaSet, opts), emptyResult)
+type replicaSetsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *replicaSetsNamespacer) Namespace(namespace string) upstreamappsv1beta2client.ReplicaSetInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type replicaSetsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *replicaSetsClient) Create(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts metav1.CreateOptions) (*v1beta2.ReplicaSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(replicasetsResource, c.ClusterPath, c.Namespace, replicaSet), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }
 
-// Update takes the representation of a replicaSet and updates it. Returns the server's representation of the replicaSet, and an error, if there is any.
-func (c *replicaSetsClusterClient) Update(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (result *v1beta2.ReplicaSet, err error) {
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(replicasetsResource, c.ns, replicaSet, opts), emptyResult)
-
+func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts metav1.CreateOptions) (*v1beta2.ReplicaSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(replicasetsResource, c.ClusterPath, c.Namespace, replicaSet), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *replicaSetsClusterClient) UpdateStatus(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (result *v1beta2.ReplicaSet, err error) {
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(replicasetsResource, "status", c.ns, replicaSet, opts), emptyResult)
-
+func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts metav1.CreateOptions) (*v1beta2.ReplicaSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicasetsResource, c.ClusterPath, "status", c.Namespace, replicaSet), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }
 
-// Delete takes name of the replicaSet and deletes it. Returns an error if one occurs.
-func (c *replicaSetsClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(replicasetsResource, c.ns, name, opts), &v1beta2.ReplicaSet{})
-
+func (c *replicaSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(replicasetsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta2.ReplicaSet{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *replicaSetsClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(replicasetsResource, c.ns, opts, listOpts)
+func (c *replicaSetsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(replicasetsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta2.ReplicaSetList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched replicaSet.
-func (c *replicaSetsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.ReplicaSet, err error) {
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(replicasetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *replicaSetsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta2.ReplicaSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(replicasetsResource, c.ClusterPath, c.Namespace, name), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied replicaSet.
-func (c *replicaSetsClusterClient) Apply(ctx context.Context, replicaSet *appsv1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.ReplicaSet, err error) {
-	if replicaSet == nil {
-		return nil, fmt.Errorf("replicaSet provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(replicaSet)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1beta2.ReplicaSet that match those selectors.
+func (c *replicaSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta2.ReplicaSetList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(replicasetsResource, replicasetsKind, c.ClusterPath, c.Namespace, opts), &v1beta2.ReplicaSetList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := replicaSet.Name
-	if name == nil {
-		return nil, fmt.Errorf("replicaSet.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(replicasetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta2.ReplicaSetList{ListMeta: obj.(*v1beta2.ReplicaSetList).ListMeta}
+	for _, item := range obj.(*v1beta2.ReplicaSetList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *replicaSetsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(replicasetsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *replicaSetsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta2.ReplicaSet, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *replicaSetsClusterClient) ApplyStatus(ctx context.Context, replicaSet *appsv1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (result *v1beta2.ReplicaSet, err error) {
-	if replicaSet == nil {
-		return nil, fmt.Errorf("replicaSet provided to Apply must not be nil")
+func (c *replicaSetsClient) Apply(ctx context.Context, applyConfiguration *appsv1beta2.ReplicaSetApplyConfiguration, opts metav1.ApplyOptions) (*v1beta2.ReplicaSet, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(replicaSet)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := replicaSet.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("replicaSet.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1beta2.ReplicaSet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(replicasetsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta2.ReplicaSet{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1beta2.ReplicaSet), err
 }

@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var servicesResource = v1.SchemeGroupVersion.WithResource("services")
+
+var servicesKind = v1.SchemeGroupVersion.WithKind("Service")
 
 // servicesClusterClient implements serviceInterface
 type servicesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var servicesResource = v1.SchemeGroupVersion.WithResource("services")
-
-var servicesKind = v1.SchemeGroupVersion.WithKind("Service")
-
-// Get takes name of the service, and returns the corresponding service object, and an error if there is any.
-func (c *servicesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Service, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(servicesResource, c.ClusterPath, c.Namespace, name), &v1.Service{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *servicesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ServiceNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.Service), err
+
+	return &servicesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Services that match those selectors.
 func (c *servicesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ServiceList, err error) {
-	emptyResult := &v1.ServiceList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(servicesResource, servicesKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(servicesResource, servicesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ServiceList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,113 +74,117 @@ func (c *servicesClusterClient) List(ctx context.Context, opts metav1.ListOption
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested services.
+// Watch returns a watch.Interface that watches the requested services across all clusters.
 func (c *servicesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(servicesResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(servicesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a service and creates it.  Returns the server's representation of the service, and an error, if there is any.
-func (c *servicesClusterClient) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (result *v1.Service, err error) {
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(servicesResource, c.ns, service, opts), emptyResult)
+type servicesNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *servicesNamespacer) Namespace(namespace string) upstreamcorev1client.ServiceInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type servicesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *servicesClient) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(servicesResource, c.ClusterPath, c.Namespace, service), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// Update takes the representation of a service and updates it. Returns the server's representation of the service, and an error, if there is any.
-func (c *servicesClusterClient) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(servicesResource, c.ns, service, opts), emptyResult)
-
+func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(servicesResource, c.ClusterPath, c.Namespace, service), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *servicesClusterClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(servicesResource, "status", c.ns, service, opts), emptyResult)
-
+func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(servicesResource, c.ClusterPath, "status", c.Namespace, service), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// Delete takes name of the service and deletes it. Returns an error if one occurs.
-func (c *servicesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(servicesResource, c.ns, name, opts), &v1.Service{})
-
+func (c *servicesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(servicesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Service{})
 	return err
 }
 
-// Patch applies the patch and returns the patched service.
-func (c *servicesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Service, err error) {
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(servicesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
+func (c *servicesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(servicesResource, c.ClusterPath, c.Namespace, listOpts)
 
+	_, err := c.Fake.Invokes(action, &v1.ServiceList{})
+	return err
+}
+
+func (c *servicesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Service, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(servicesResource, c.ClusterPath, c.Namespace, name), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied service.
-func (c *servicesClusterClient) Apply(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
-	if service == nil {
-		return nil, fmt.Errorf("service provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(service)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.Service that match those selectors.
+func (c *servicesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ServiceList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(servicesResource, servicesKind, c.ClusterPath, c.Namespace, opts), &v1.ServiceList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := service.Name
-	if name == nil {
-		return nil, fmt.Errorf("service.Name must be provided to Apply")
-	}
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(servicesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ServiceList{ListMeta: obj.(*v1.ServiceList).ListMeta}
+	for _, item := range obj.(*v1.ServiceList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *servicesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(servicesResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *servicesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Service, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(servicesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *servicesClusterClient) ApplyStatus(ctx context.Context, service *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Service, err error) {
-	if service == nil {
-		return nil, fmt.Errorf("service provided to Apply must not be nil")
+func (c *servicesClient) Apply(ctx context.Context, applyConfiguration *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (*v1.Service, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(service)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := service.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("service.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.Service{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(servicesResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(servicesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Service{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.Service), err
 }

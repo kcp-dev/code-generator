@@ -24,41 +24,41 @@ import (
 	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
+	"k8s.io/client-go/testing"
 	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/batch/v1"
 )
+
+var cronjobsResource = v1.SchemeGroupVersion.WithResource("cronjobs")
+
+var cronjobsKind = v1.SchemeGroupVersion.WithKind("CronJob")
 
 // cronJobsClusterClient implements cronJobInterface
 type cronJobsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var cronjobsResource = v1.SchemeGroupVersion.WithResource("cronjobs")
-
-var cronjobsKind = v1.SchemeGroupVersion.WithKind("CronJob")
-
-// Get takes name of the cronJob, and returns the corresponding cronJob object, and an error if there is any.
-func (c *cronJobsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CronJob, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(cronjobsResource, c.ClusterPath, c.Namespace, name), &v1.CronJob{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *cronJobsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.CronJobNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.CronJob), err
+
+	return &cronJobsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of CronJobs that match those selectors.
 func (c *cronJobsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CronJobList, err error) {
-	emptyResult := &v1.CronJobList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(cronjobsResource, cronjobsKind, c.ns, opts), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(cronjobsResource, cronjobsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.CronJobList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -74,121 +74,117 @@ func (c *cronJobsClusterClient) List(ctx context.Context, opts metav1.ListOption
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested cronJobs.
+// Watch returns a watch.Interface that watches the requested cronJobs across all clusters.
 func (c *cronJobsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(cronjobsResource, c.ns, opts))
-
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(cronjobsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
 
-// Create takes the representation of a cronJob and creates it.  Returns the server's representation of the cronJob, and an error, if there is any.
-func (c *cronJobsClusterClient) Create(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (result *v1.CronJob, err error) {
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(cronjobsResource, c.ns, cronJob, opts), emptyResult)
+type cronJobsNamespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
 
+func (n *cronJobsNamespacer) Namespace(namespace string) upstreambatchv1client.CronJobInterface {
+	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+}
+
+type cronJobsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+	Namespace   string
+}
+
+func (c *cronJobsClient) Create(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (*v1.CronJob, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(cronjobsResource, c.ClusterPath, c.Namespace, cronJob), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }
 
-// Update takes the representation of a cronJob and updates it. Returns the server's representation of the cronJob, and an error, if there is any.
-func (c *cronJobsClusterClient) Update(ctx context.Context, cronJob *v1.CronJob, opts metav1.UpdateOptions) (result *v1.CronJob, err error) {
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(cronjobsResource, c.ns, cronJob, opts), emptyResult)
-
+func (c *cronJobsClient) Update(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (*v1.CronJob, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(cronjobsResource, c.ClusterPath, c.Namespace, cronJob), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *cronJobsClusterClient) UpdateStatus(ctx context.Context, cronJob *v1.CronJob, opts metav1.UpdateOptions) (result *v1.CronJob, err error) {
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(cronjobsResource, "status", c.ns, cronJob, opts), emptyResult)
-
+func (c *cronJobsClient) UpdateStatus(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (*v1.CronJob, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(cronjobsResource, c.ClusterPath, "status", c.Namespace, cronJob), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }
 
-// Delete takes name of the cronJob and deletes it. Returns an error if one occurs.
-func (c *cronJobsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(cronjobsResource, c.ns, name, opts), &v1.CronJob{})
-
+func (c *cronJobsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(cronjobsResource, c.ClusterPath, c.Namespace, name, opts), &v1.CronJob{})
 	return err
 }
 
-// DeleteCollection deletes a collection of objects.
-func (c *cronJobsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(cronjobsResource, c.ns, opts, listOpts)
+func (c *cronJobsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewDeleteCollectionAction(cronjobsResource, c.ClusterPath, c.Namespace, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.CronJobList{})
 	return err
 }
 
-// Patch applies the patch and returns the patched cronJob.
-func (c *cronJobsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CronJob, err error) {
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(cronjobsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
+func (c *cronJobsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.CronJob, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(cronjobsResource, c.ClusterPath, c.Namespace, name), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }
 
-// Apply takes the given apply declarative configuration, applies it and returns the applied cronJob.
-func (c *cronJobsClusterClient) Apply(ctx context.Context, cronJob *batchv1.CronJobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CronJob, err error) {
-	if cronJob == nil {
-		return nil, fmt.Errorf("cronJob provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(cronJob)
-	if err != nil {
+// List takes label and field selectors, and returns the list of v1.CronJob that match those selectors.
+func (c *cronJobsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.CronJobList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(cronjobsResource, cronjobsKind, c.ClusterPath, c.Namespace, opts), &v1.CronJobList{})
+	if obj == nil {
 		return nil, err
 	}
-	name := cronJob.Name
-	if name == nil {
-		return nil, fmt.Errorf("cronJob.Name must be provided to Apply")
-	}
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(cronjobsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
 
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.CronJobList{ListMeta: obj.(*v1.CronJobList).ListMeta}
+	for _, item := range obj.(*v1.CronJobList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *cronJobsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(cronjobsResource, c.ClusterPath, c.Namespace, opts))
+}
+
+func (c *cronJobsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.CronJob, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(cronjobsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }
 
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *cronJobsClusterClient) ApplyStatus(ctx context.Context, cronJob *batchv1.CronJobApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CronJob, err error) {
-	if cronJob == nil {
-		return nil, fmt.Errorf("cronJob provided to Apply must not be nil")
+func (c *cronJobsClient) Apply(ctx context.Context, applyConfiguration *batchv1.CronJobApplyConfiguration, opts metav1.ApplyOptions) (*v1.CronJob, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
-	data, err := json.Marshal(cronJob)
+	data, err := json.Marshal(applyConfiguration)
 	if err != nil {
 		return nil, err
 	}
-	name := cronJob.Name
+	name := applyConfiguration.Name
 	if name == nil {
-		return nil, fmt.Errorf("cronJob.Name must be provided to Apply")
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	emptyResult := &v1.CronJob{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(cronjobsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(cronjobsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.CronJob{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 	return obj.(*v1.CronJob), err
 }

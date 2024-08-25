@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	storagev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/storage/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1"
 )
+
+var csidriversResource = v1.SchemeGroupVersion.WithResource("csidrivers")
+
+var csidriversKind = v1.SchemeGroupVersion.WithKind("CSIDriver")
 
 // cSIDriversClusterClient implements cSIDriverInterface
 type cSIDriversClusterClient struct {
 	*kcptesting.Fake
 }
 
-var csidriversResource = v1.SchemeGroupVersion.WithResource("csidrivers")
-
-var csidriversKind = v1.SchemeGroupVersion.WithKind("CSIDriver")
-
-// Get takes name of the cSIDriver, and returns the corresponding cSIDriver object, and an error if there is any.
-func (c *cSIDriversClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CSIDriver, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(csidriversResource, c.ClusterPath, c.Namespace, name), &v1.CSIDriver{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *cSIDriversClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.CSIDriverNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.CSIDriver), err
+
+	return &cSIDriversNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of CSIDrivers that match those selectors.
 func (c *cSIDriversClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.CSIDriverList, err error) {
-	emptyResult := &v1.CSIDriverList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(csidriversResource, csidriversKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(csidriversResource, csidriversKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.CSIDriverList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *cSIDriversClusterClient) List(ctx context.Context, opts metav1.ListOpti
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested cSIDrivers.
+// Watch returns a watch.Interface that watches the requested cSIDrivers across all clusters.
 func (c *cSIDriversClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(csidriversResource, opts))
-}
-
-// Create takes the representation of a cSIDriver and creates it.  Returns the server's representation of the cSIDriver, and an error, if there is any.
-func (c *cSIDriversClusterClient) Create(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.CreateOptions) (result *v1.CSIDriver, err error) {
-	emptyResult := &v1.CSIDriver{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(csidriversResource, cSIDriver, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.CSIDriver), err
-}
-
-// Update takes the representation of a cSIDriver and updates it. Returns the server's representation of the cSIDriver, and an error, if there is any.
-func (c *cSIDriversClusterClient) Update(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.UpdateOptions) (result *v1.CSIDriver, err error) {
-	emptyResult := &v1.CSIDriver{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(csidriversResource, cSIDriver, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.CSIDriver), err
-}
-
-// Delete takes name of the cSIDriver and deletes it. Returns an error if one occurs.
-func (c *cSIDriversClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(csidriversResource, name, opts), &v1.CSIDriver{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *cSIDriversClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(csidriversResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.CSIDriverList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched cSIDriver.
-func (c *cSIDriversClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CSIDriver, err error) {
-	emptyResult := &v1.CSIDriver{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(csidriversResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.CSIDriver), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied cSIDriver.
-func (c *cSIDriversClusterClient) Apply(ctx context.Context, cSIDriver *storagev1.CSIDriverApplyConfiguration, opts metav1.ApplyOptions) (result *v1.CSIDriver, err error) {
-	if cSIDriver == nil {
-		return nil, fmt.Errorf("cSIDriver provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(cSIDriver)
-	if err != nil {
-		return nil, err
-	}
-	name := cSIDriver.Name
-	if name == nil {
-		return nil, fmt.Errorf("cSIDriver.Name must be provided to Apply")
-	}
-	emptyResult := &v1.CSIDriver{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(csidriversResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.CSIDriver), err
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(csidriversResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

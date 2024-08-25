@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
+
+var namespacesResource = v1.SchemeGroupVersion.WithResource("namespaces")
+
+var namespacesKind = v1.SchemeGroupVersion.WithKind("Namespace")
 
 // namespacesClusterClient implements namespaceInterface
 type namespacesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var namespacesResource = v1.SchemeGroupVersion.WithResource("namespaces")
-
-var namespacesKind = v1.SchemeGroupVersion.WithKind("Namespace")
-
-// Get takes name of the namespace, and returns the corresponding namespace object, and an error if there is any.
-func (c *namespacesClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Namespace, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(namespacesResource, c.ClusterPath, c.Namespace, name), &v1.Namespace{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *namespacesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.NamespaceNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.Namespace), err
+
+	return &namespacesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of Namespaces that match those selectors.
 func (c *namespacesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NamespaceList, err error) {
-	emptyResult := &v1.NamespaceList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(namespacesResource, namespacesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(namespacesResource, namespacesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.NamespaceList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,105 +69,7 @@ func (c *namespacesClusterClient) List(ctx context.Context, opts metav1.ListOpti
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested namespaces.
+// Watch returns a watch.Interface that watches the requested namespaces across all clusters.
 func (c *namespacesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(namespacesResource, opts))
-}
-
-// Create takes the representation of a namespace and creates it.  Returns the server's representation of the namespace, and an error, if there is any.
-func (c *namespacesClusterClient) Create(ctx context.Context, namespace *v1.Namespace, opts metav1.CreateOptions) (result *v1.Namespace, err error) {
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(namespacesResource, namespace, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
-}
-
-// Update takes the representation of a namespace and updates it. Returns the server's representation of the namespace, and an error, if there is any.
-func (c *namespacesClusterClient) Update(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(namespacesResource, namespace, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *namespacesClusterClient) UpdateStatus(ctx context.Context, namespace *v1.Namespace, opts metav1.UpdateOptions) (result *v1.Namespace, err error) {
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(namespacesResource, "status", namespace, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
-}
-
-// Delete takes name of the namespace and deletes it. Returns an error if one occurs.
-func (c *namespacesClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(namespacesResource, name, opts), &v1.Namespace{})
-	return err
-}
-
-// Patch applies the patch and returns the patched namespace.
-func (c *namespacesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Namespace, err error) {
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(namespacesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied namespace.
-func (c *namespacesClusterClient) Apply(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
-	if namespace == nil {
-		return nil, fmt.Errorf("namespace provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(namespace)
-	if err != nil {
-		return nil, err
-	}
-	name := namespace.Name
-	if name == nil {
-		return nil, fmt.Errorf("namespace.Name must be provided to Apply")
-	}
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(namespacesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *namespacesClusterClient) ApplyStatus(ctx context.Context, namespace *corev1.NamespaceApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Namespace, err error) {
-	if namespace == nil {
-		return nil, fmt.Errorf("namespace provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(namespace)
-	if err != nil {
-		return nil, err
-	}
-	name := namespace.Name
-	if name == nil {
-		return nil, fmt.Errorf("namespace.Name must be provided to Apply")
-	}
-	emptyResult := &v1.Namespace{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(namespacesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Namespace), err
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(namespacesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	admissionregistrationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1beta1"
 )
+
+var validatingadmissionpoliciesResource = v1beta1.SchemeGroupVersion.WithResource("validatingadmissionpolicies")
+
+var validatingadmissionpoliciesKind = v1beta1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicy")
 
 // validatingAdmissionPoliciesClusterClient implements validatingAdmissionPolicyInterface
 type validatingAdmissionPoliciesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var validatingadmissionpoliciesResource = v1beta1.SchemeGroupVersion.WithResource("validatingadmissionpolicies")
-
-var validatingadmissionpoliciesKind = v1beta1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicy")
-
-// Get takes name of the validatingAdmissionPolicy, and returns the corresponding validatingAdmissionPolicy object, and an error if there is any.
-func (c *validatingAdmissionPoliciesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingadmissionpoliciesResource, c.ClusterPath, c.Namespace, name), &v1beta1.ValidatingAdmissionPolicy{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingAdmissionPoliciesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ValidatingAdmissionPolicyNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
+
+	return &validatingAdmissionPoliciesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ValidatingAdmissionPolicies that match those selectors.
 func (c *validatingAdmissionPoliciesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ValidatingAdmissionPolicyList, err error) {
-	emptyResult := &v1beta1.ValidatingAdmissionPolicyList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(validatingadmissionpoliciesResource, validatingadmissionpoliciesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(validatingadmissionpoliciesResource, validatingadmissionpoliciesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.ValidatingAdmissionPolicyList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,113 +69,7 @@ func (c *validatingAdmissionPoliciesClusterClient) List(ctx context.Context, opt
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested validatingAdmissionPolicies.
-func (c *validatingAdmissionPoliciesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingadmissionpoliciesResource, opts))
-}
-
-// Create takes the representation of a validatingAdmissionPolicy and creates it.  Returns the server's representation of the validatingAdmissionPolicy, and an error, if there is any.
-func (c *validatingAdmissionPoliciesClusterClient) Create(ctx context.Context, validatingAdmissionPolicy *v1beta1.ValidatingAdmissionPolicy, opts v1.CreateOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(validatingadmissionpoliciesResource, validatingAdmissionPolicy, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
-}
-
-// Update takes the representation of a validatingAdmissionPolicy and updates it. Returns the server's representation of the validatingAdmissionPolicy, and an error, if there is any.
-func (c *validatingAdmissionPoliciesClusterClient) Update(ctx context.Context, validatingAdmissionPolicy *v1beta1.ValidatingAdmissionPolicy, opts v1.UpdateOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(validatingadmissionpoliciesResource, validatingAdmissionPolicy, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *validatingAdmissionPoliciesClusterClient) UpdateStatus(ctx context.Context, validatingAdmissionPolicy *v1beta1.ValidatingAdmissionPolicy, opts v1.UpdateOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(validatingadmissionpoliciesResource, "status", validatingAdmissionPolicy, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
-}
-
-// Delete takes name of the validatingAdmissionPolicy and deletes it. Returns an error if one occurs.
-func (c *validatingAdmissionPoliciesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(validatingadmissionpoliciesResource, name, opts), &v1beta1.ValidatingAdmissionPolicy{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *validatingAdmissionPoliciesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(validatingadmissionpoliciesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.ValidatingAdmissionPolicyList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched validatingAdmissionPolicy.
-func (c *validatingAdmissionPoliciesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpoliciesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied validatingAdmissionPolicy.
-func (c *validatingAdmissionPoliciesClusterClient) Apply(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1beta1.ValidatingAdmissionPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	if validatingAdmissionPolicy == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicy provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(validatingAdmissionPolicy)
-	if err != nil {
-		return nil, err
-	}
-	name := validatingAdmissionPolicy.Name
-	if name == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicy.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpoliciesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *validatingAdmissionPoliciesClusterClient) ApplyStatus(ctx context.Context, validatingAdmissionPolicy *admissionregistrationv1beta1.ValidatingAdmissionPolicyApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.ValidatingAdmissionPolicy, err error) {
-	if validatingAdmissionPolicy == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicy provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(validatingAdmissionPolicy)
-	if err != nil {
-		return nil, err
-	}
-	name := validatingAdmissionPolicy.Name
-	if name == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicy.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.ValidatingAdmissionPolicy{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpoliciesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ValidatingAdmissionPolicy), err
+// Watch returns a watch.Interface that watches the requested validatingAdmissionPolicys across all clusters.
+func (c *validatingAdmissionPoliciesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(validatingadmissionpoliciesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

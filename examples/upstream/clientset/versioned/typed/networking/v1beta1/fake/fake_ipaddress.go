@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	networkingv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1beta1"
 )
+
+var ipaddressesResource = v1beta1.SchemeGroupVersion.WithResource("ipaddresses")
+
+var ipaddressesKind = v1beta1.SchemeGroupVersion.WithKind("IPAddress")
 
 // iPAddressesClusterClient implements iPAddressInterface
 type iPAddressesClusterClient struct {
 	*kcptesting.Fake
 }
 
-var ipaddressesResource = v1beta1.SchemeGroupVersion.WithResource("ipaddresses")
-
-var ipaddressesKind = v1beta1.SchemeGroupVersion.WithKind("IPAddress")
-
-// Get takes name of the iPAddress, and returns the corresponding iPAddress object, and an error if there is any.
-func (c *iPAddressesClusterClient) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.IPAddress, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ipaddressesResource, c.ClusterPath, c.Namespace, name), &v1beta1.IPAddress{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *iPAddressesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.IPAddressNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1beta1.IPAddress), err
+
+	return &iPAddressesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of IPAddresses that match those selectors.
 func (c *iPAddressesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IPAddressList, err error) {
-	emptyResult := &v1beta1.IPAddressList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(ipaddressesResource, ipaddressesKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(ipaddressesResource, ipaddressesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.IPAddressList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *iPAddressesClusterClient) List(ctx context.Context, opts v1.ListOptions
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested iPAddresses.
-func (c *iPAddressesClusterClient) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(ipaddressesResource, opts))
-}
-
-// Create takes the representation of a iPAddress and creates it.  Returns the server's representation of the iPAddress, and an error, if there is any.
-func (c *iPAddressesClusterClient) Create(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.CreateOptions) (result *v1beta1.IPAddress, err error) {
-	emptyResult := &v1beta1.IPAddress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(ipaddressesResource, iPAddress, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.IPAddress), err
-}
-
-// Update takes the representation of a iPAddress and updates it. Returns the server's representation of the iPAddress, and an error, if there is any.
-func (c *iPAddressesClusterClient) Update(ctx context.Context, iPAddress *v1beta1.IPAddress, opts v1.UpdateOptions) (result *v1beta1.IPAddress, err error) {
-	emptyResult := &v1beta1.IPAddress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(ipaddressesResource, iPAddress, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.IPAddress), err
-}
-
-// Delete takes name of the iPAddress and deletes it. Returns an error if one occurs.
-func (c *iPAddressesClusterClient) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(ipaddressesResource, name, opts), &v1beta1.IPAddress{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *iPAddressesClusterClient) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(ipaddressesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.IPAddressList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched iPAddress.
-func (c *iPAddressesClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.IPAddress, err error) {
-	emptyResult := &v1beta1.IPAddress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(ipaddressesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.IPAddress), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied iPAddress.
-func (c *iPAddressesClusterClient) Apply(ctx context.Context, iPAddress *networkingv1beta1.IPAddressApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.IPAddress, err error) {
-	if iPAddress == nil {
-		return nil, fmt.Errorf("iPAddress provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(iPAddress)
-	if err != nil {
-		return nil, err
-	}
-	name := iPAddress.Name
-	if name == nil {
-		return nil, fmt.Errorf("iPAddress.Name must be provided to Apply")
-	}
-	emptyResult := &v1beta1.IPAddress{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(ipaddressesResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.IPAddress), err
+// Watch returns a watch.Interface that watches the requested iPAddresss across all clusters.
+func (c *iPAddressesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(ipaddressesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

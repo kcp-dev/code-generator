@@ -20,44 +20,40 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
-	admissionregistrationv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/testing"
+	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1"
 )
+
+var validatingadmissionpolicybindingsResource = v1.SchemeGroupVersion.WithResource("validatingadmissionpolicybindings")
+
+var validatingadmissionpolicybindingsKind = v1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicyBinding")
 
 // validatingAdmissionPolicyBindingsClusterClient implements validatingAdmissionPolicyBindingInterface
 type validatingAdmissionPolicyBindingsClusterClient struct {
 	*kcptesting.Fake
 }
 
-var validatingadmissionpolicybindingsResource = v1.SchemeGroupVersion.WithResource("validatingadmissionpolicybindings")
-
-var validatingadmissionpolicybindingsKind = v1.SchemeGroupVersion.WithKind("ValidatingAdmissionPolicyBinding")
-
-// Get takes name of the validatingAdmissionPolicyBinding, and returns the corresponding validatingAdmissionPolicyBinding object, and an error if there is any.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingAdmissionPolicyBinding, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(validatingadmissionpolicybindingsResource, c.ClusterPath, c.Namespace, name), &v1.ValidatingAdmissionPolicyBinding{})
-	if obj == nil {
-		return nil, err
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingAdmissionPolicyBindingsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ValidatingAdmissionPolicyBindingNamespacer {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return obj.(*v1.ValidatingAdmissionPolicyBinding), err
+
+	return &validatingAdmissionPolicyBindingsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
 // List takes label and field selectors, and returns the list of ValidatingAdmissionPolicyBindings that match those selectors.
 func (c *validatingAdmissionPolicyBindingsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingAdmissionPolicyBindingList, err error) {
-	emptyResult := &v1.ValidatingAdmissionPolicyBindingList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(validatingadmissionpolicybindingsResource, validatingadmissionpolicybindingsKind, opts), emptyResult)
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(validatingadmissionpolicybindingsResource, validatingadmissionpolicybindingsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ValidatingAdmissionPolicyBindingList{})
 	if obj == nil {
-		return emptyResult, err
+		return nil, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -73,78 +69,7 @@ func (c *validatingAdmissionPolicyBindingsClusterClient) List(ctx context.Contex
 	return list, err
 }
 
-// Watch returns a watch.Interface that watches the requested validatingAdmissionPolicyBindings.
+// Watch returns a watch.Interface that watches the requested validatingAdmissionPolicyBindings across all clusters.
 func (c *validatingAdmissionPolicyBindingsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(validatingadmissionpolicybindingsResource, opts))
-}
-
-// Create takes the representation of a validatingAdmissionPolicyBinding and creates it.  Returns the server's representation of the validatingAdmissionPolicyBinding, and an error, if there is any.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Create(ctx context.Context, validatingAdmissionPolicyBinding *v1.ValidatingAdmissionPolicyBinding, opts metav1.CreateOptions) (result *v1.ValidatingAdmissionPolicyBinding, err error) {
-	emptyResult := &v1.ValidatingAdmissionPolicyBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(validatingadmissionpolicybindingsResource, validatingAdmissionPolicyBinding, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ValidatingAdmissionPolicyBinding), err
-}
-
-// Update takes the representation of a validatingAdmissionPolicyBinding and updates it. Returns the server's representation of the validatingAdmissionPolicyBinding, and an error, if there is any.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Update(ctx context.Context, validatingAdmissionPolicyBinding *v1.ValidatingAdmissionPolicyBinding, opts metav1.UpdateOptions) (result *v1.ValidatingAdmissionPolicyBinding, err error) {
-	emptyResult := &v1.ValidatingAdmissionPolicyBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(validatingadmissionpolicybindingsResource, validatingAdmissionPolicyBinding, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ValidatingAdmissionPolicyBinding), err
-}
-
-// Delete takes name of the validatingAdmissionPolicyBinding and deletes it. Returns an error if one occurs.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(validatingadmissionpolicybindingsResource, name, opts), &v1.ValidatingAdmissionPolicyBinding{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *validatingAdmissionPolicyBindingsClusterClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(validatingadmissionpolicybindingsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.ValidatingAdmissionPolicyBindingList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched validatingAdmissionPolicyBinding.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingAdmissionPolicyBinding, err error) {
-	emptyResult := &v1.ValidatingAdmissionPolicyBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpolicybindingsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ValidatingAdmissionPolicyBinding), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied validatingAdmissionPolicyBinding.
-func (c *validatingAdmissionPolicyBindingsClusterClient) Apply(ctx context.Context, validatingAdmissionPolicyBinding *admissionregistrationv1.ValidatingAdmissionPolicyBindingApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ValidatingAdmissionPolicyBinding, err error) {
-	if validatingAdmissionPolicyBinding == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicyBinding provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(validatingAdmissionPolicyBinding)
-	if err != nil {
-		return nil, err
-	}
-	name := validatingAdmissionPolicyBinding.Name
-	if name == nil {
-		return nil, fmt.Errorf("validatingAdmissionPolicyBinding.Name must be provided to Apply")
-	}
-	emptyResult := &v1.ValidatingAdmissionPolicyBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(validatingadmissionpolicybindingsResource, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ValidatingAdmissionPolicyBinding), err
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(validatingadmissionpolicybindingsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
