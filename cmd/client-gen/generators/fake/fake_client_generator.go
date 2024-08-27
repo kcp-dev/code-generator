@@ -67,6 +67,8 @@ func TargetForGroup(args *args.Args, gv clientgentypes.GroupVersion, typeList []
 					applyConfigurationPackage:            applyBuilderPackage,
 					typedClientPackage:                   realClientPkg,
 					singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
+					singleClusterApplyConfigPackagePath:  args.SingleClusterApplyConfigPackagePath,
+					staticFakeExpansions:                 args.StaticFakesExpansions,
 				})
 			}
 

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	policyv1beta1 "k8s.io/client-go/applyconfigurations/policy/v1beta1"
 	upstreampolicyv1beta1client "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 	"k8s.io/client-go/testing"
-	policyv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/policy/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/policy/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type evictionsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *evictionsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.EvictionNamespacer {
+func (c *evictionsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.EvictionNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type evictionsNamespacer struct {
 }
 
 func (n *evictionsNamespacer) Namespace(namespace string) upstreampolicyv1beta1client.EvictionInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &evictionsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type evictionsClient struct {
@@ -102,7 +102,7 @@ func (c *evictionsClient) Create(ctx context.Context, eviction *v1beta1.Eviction
 	return obj.(*v1beta1.Eviction), err
 }
 
-func (c *evictionsClient) Update(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.CreateOptions) (*v1beta1.Eviction, error) {
+func (c *evictionsClient) Update(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.UpdateOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(evictionsResource, c.ClusterPath, c.Namespace, eviction), &v1beta1.Eviction{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *evictionsClient) Update(ctx context.Context, eviction *v1beta1.Eviction
 	return obj.(*v1beta1.Eviction), err
 }
 
-func (c *evictionsClient) UpdateStatus(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.CreateOptions) (*v1beta1.Eviction, error) {
+func (c *evictionsClient) UpdateStatus(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.UpdateOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(evictionsResource, c.ClusterPath, "status", c.Namespace, eviction), &v1beta1.Eviction{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *evictionsClient) UpdateStatus(ctx context.Context, eviction *v1beta1.Ev
 	return obj.(*v1beta1.Eviction), err
 }
 
-func (c *evictionsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *evictionsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(evictionsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Eviction{})
 	return err
 }

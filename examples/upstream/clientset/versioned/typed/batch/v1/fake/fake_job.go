@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	batchv1 "k8s.io/client-go/applyconfigurations/batch/v1"
 	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
 	"k8s.io/client-go/testing"
-	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/batch/v1"
 )
 
@@ -46,7 +46,7 @@ type jobsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *jobsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.JobNamespacer {
+func (c *jobsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.JobNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type jobsNamespacer struct {
 }
 
 func (n *jobsNamespacer) Namespace(namespace string) upstreambatchv1client.JobInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &jobsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type jobsClient struct {
@@ -102,7 +102,7 @@ func (c *jobsClient) Create(ctx context.Context, job *v1.Job, opts metav1.Create
 	return obj.(*v1.Job), err
 }
 
-func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(jobsResource, c.ClusterPath, c.Namespace, job), &v1.Job{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.Create
 	return obj.(*v1.Job), err
 }
 
-func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(jobsResource, c.ClusterPath, "status", c.Namespace, job), &v1.Job{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.
 	return obj.(*v1.Job), err
 }
 
-func (c *jobsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *jobsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(jobsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Job{})
 	return err
 }

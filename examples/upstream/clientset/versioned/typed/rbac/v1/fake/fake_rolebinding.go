@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	rbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	upstreamrbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/testing"
-	rbacv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/rbac/v1"
 )
 
@@ -46,7 +46,7 @@ type roleBindingsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *roleBindingsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.RoleBindingNamespacer {
+func (c *roleBindingsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.RoleBindingNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type roleBindingsNamespacer struct {
 }
 
 func (n *roleBindingsNamespacer) Namespace(namespace string) upstreamrbacv1client.RoleBindingInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &roleBindingsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type roleBindingsClient struct {
@@ -102,7 +102,7 @@ func (c *roleBindingsClient) Create(ctx context.Context, roleBinding *v1.RoleBin
 	return obj.(*v1.RoleBinding), err
 }
 
-func (c *roleBindingsClient) Update(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.CreateOptions) (*v1.RoleBinding, error) {
+func (c *roleBindingsClient) Update(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.UpdateOptions) (*v1.RoleBinding, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(rolebindingsResource, c.ClusterPath, c.Namespace, roleBinding), &v1.RoleBinding{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *roleBindingsClient) Update(ctx context.Context, roleBinding *v1.RoleBin
 	return obj.(*v1.RoleBinding), err
 }
 
-func (c *roleBindingsClient) UpdateStatus(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.CreateOptions) (*v1.RoleBinding, error) {
+func (c *roleBindingsClient) UpdateStatus(ctx context.Context, roleBinding *v1.RoleBinding, opts metav1.UpdateOptions) (*v1.RoleBinding, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(rolebindingsResource, c.ClusterPath, "status", c.Namespace, roleBinding), &v1.RoleBinding{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *roleBindingsClient) UpdateStatus(ctx context.Context, roleBinding *v1.R
 	return obj.(*v1.RoleBinding), err
 }
 
-func (c *roleBindingsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *roleBindingsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(rolebindingsResource, c.ClusterPath, c.Namespace, name, opts), &v1.RoleBinding{})
 	return err
 }

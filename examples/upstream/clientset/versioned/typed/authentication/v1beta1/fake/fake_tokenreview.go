@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/authentication/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authentication/v1beta1"
 )
 
 var tokenreviewsResource = v1beta1.SchemeGroupVersion.WithResource("tokenreviews")
@@ -38,38 +30,4 @@ var tokenreviewsKind = v1beta1.SchemeGroupVersion.WithKind("TokenReview")
 // tokenReviewsClusterClient implements tokenReviewInterface
 type tokenReviewsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *tokenReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.TokenReviewNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &tokenReviewsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of TokenReviews that match those selectors.
-func (c *tokenReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.TokenReviewList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(tokenreviewsResource, tokenreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.TokenReviewList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.TokenReviewList{ListMeta: obj.(*v1beta1.TokenReviewList).ListMeta}
-	for _, item := range obj.(*v1beta1.TokenReviewList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested tokenReviews across all clusters.
-func (c *tokenReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(tokenreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

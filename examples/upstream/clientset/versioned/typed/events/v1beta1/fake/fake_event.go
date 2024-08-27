@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	eventsv1beta1 "k8s.io/client-go/applyconfigurations/events/v1beta1"
 	upstreameventsv1beta1client "k8s.io/client-go/kubernetes/typed/events/v1beta1"
 	"k8s.io/client-go/testing"
-	eventsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/events/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/events/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type eventsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *eventsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.EventNamespacer {
+func (c *eventsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.EventNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type eventsNamespacer struct {
 }
 
 func (n *eventsNamespacer) Namespace(namespace string) upstreameventsv1beta1client.EventInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &eventsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type eventsClient struct {
@@ -102,7 +102,7 @@ func (c *eventsClient) Create(ctx context.Context, event *v1beta1.Event, opts me
 	return obj.(*v1beta1.Event), err
 }
 
-func (c *eventsClient) Update(ctx context.Context, event *v1beta1.Event, opts metav1.CreateOptions) (*v1beta1.Event, error) {
+func (c *eventsClient) Update(ctx context.Context, event *v1beta1.Event, opts metav1.UpdateOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1beta1.Event{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *eventsClient) Update(ctx context.Context, event *v1beta1.Event, opts me
 	return obj.(*v1beta1.Event), err
 }
 
-func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1beta1.Event, opts metav1.CreateOptions) (*v1beta1.Event, error) {
+func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1beta1.Event, opts metav1.UpdateOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(eventsResource, c.ClusterPath, "status", c.Namespace, event), &v1beta1.Event{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1beta1.Event, o
 	return obj.(*v1beta1.Event), err
 }
 
-func (c *eventsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *eventsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(eventsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Event{})
 	return err
 }

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	coordinationv1beta1 "k8s.io/client-go/applyconfigurations/coordination/v1beta1"
 	upstreamcoordinationv1beta1client "k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	"k8s.io/client-go/testing"
-	coordinationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/coordination/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/coordination/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type leasesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *leasesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.LeaseNamespacer {
+func (c *leasesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.LeaseNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type leasesNamespacer struct {
 }
 
 func (n *leasesNamespacer) Namespace(namespace string) upstreamcoordinationv1beta1client.LeaseInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &leasesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type leasesClient struct {
@@ -102,7 +102,7 @@ func (c *leasesClient) Create(ctx context.Context, lease *v1beta1.Lease, opts me
 	return obj.(*v1beta1.Lease), err
 }
 
-func (c *leasesClient) Update(ctx context.Context, lease *v1beta1.Lease, opts metav1.CreateOptions) (*v1beta1.Lease, error) {
+func (c *leasesClient) Update(ctx context.Context, lease *v1beta1.Lease, opts metav1.UpdateOptions) (*v1beta1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(leasesResource, c.ClusterPath, c.Namespace, lease), &v1beta1.Lease{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *leasesClient) Update(ctx context.Context, lease *v1beta1.Lease, opts me
 	return obj.(*v1beta1.Lease), err
 }
 
-func (c *leasesClient) UpdateStatus(ctx context.Context, lease *v1beta1.Lease, opts metav1.CreateOptions) (*v1beta1.Lease, error) {
+func (c *leasesClient) UpdateStatus(ctx context.Context, lease *v1beta1.Lease, opts metav1.UpdateOptions) (*v1beta1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(leasesResource, c.ClusterPath, "status", c.Namespace, lease), &v1beta1.Lease{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *leasesClient) UpdateStatus(ctx context.Context, lease *v1beta1.Lease, o
 	return obj.(*v1beta1.Lease), err
 }
 
-func (c *leasesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *leasesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(leasesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Lease{})
 	return err
 }

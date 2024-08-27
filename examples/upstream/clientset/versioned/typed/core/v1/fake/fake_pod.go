@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type podsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PodNamespacer {
+func (c *podsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.PodNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type podsNamespacer struct {
 }
 
 func (n *podsNamespacer) Namespace(namespace string) upstreamcorev1client.PodInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &podsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type podsClient struct {
@@ -102,7 +102,7 @@ func (c *podsClient) Create(ctx context.Context, pod *v1.Pod, opts metav1.Create
 	return obj.(*v1.Pod), err
 }
 
-func (c *podsClient) Update(ctx context.Context, pod *v1.Pod, opts metav1.CreateOptions) (*v1.Pod, error) {
+func (c *podsClient) Update(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (*v1.Pod, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(podsResource, c.ClusterPath, c.Namespace, pod), &v1.Pod{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *podsClient) Update(ctx context.Context, pod *v1.Pod, opts metav1.Create
 	return obj.(*v1.Pod), err
 }
 
-func (c *podsClient) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.CreateOptions) (*v1.Pod, error) {
+func (c *podsClient) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.UpdateOptions) (*v1.Pod, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(podsResource, c.ClusterPath, "status", c.Namespace, pod), &v1.Pod{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *podsClient) UpdateStatus(ctx context.Context, pod *v1.Pod, opts metav1.
 	return obj.(*v1.Pod), err
 }
 
-func (c *podsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *podsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(podsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Pod{})
 	return err
 }

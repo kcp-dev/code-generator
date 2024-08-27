@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type replicationControllersClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *replicationControllersClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ReplicationControllerNamespacer {
+func (c *replicationControllersClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ReplicationControllerNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type replicationControllersNamespacer struct {
 }
 
 func (n *replicationControllersNamespacer) Namespace(namespace string) upstreamcorev1client.ReplicationControllerInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &replicationControllersClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type replicationControllersClient struct {
@@ -102,7 +102,7 @@ func (c *replicationControllersClient) Create(ctx context.Context, replicationCo
 	return obj.(*v1.ReplicationController), err
 }
 
-func (c *replicationControllersClient) Update(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.CreateOptions) (*v1.ReplicationController, error) {
+func (c *replicationControllersClient) Update(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, replicationController), &v1.ReplicationController{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *replicationControllersClient) Update(ctx context.Context, replicationCo
 	return obj.(*v1.ReplicationController), err
 }
 
-func (c *replicationControllersClient) UpdateStatus(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.CreateOptions) (*v1.ReplicationController, error) {
+func (c *replicationControllersClient) UpdateStatus(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicationcontrollersResource, c.ClusterPath, "status", c.Namespace, replicationController), &v1.ReplicationController{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *replicationControllersClient) UpdateStatus(ctx context.Context, replica
 	return obj.(*v1.ReplicationController), err
 }
 
-func (c *replicationControllersClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *replicationControllersClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(replicationcontrollersResource, c.ClusterPath, c.Namespace, name, opts), &v1.ReplicationController{})
 	return err
 }

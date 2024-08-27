@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	resourcev1alpha3 "k8s.io/client-go/applyconfigurations/resource/v1alpha3"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	"k8s.io/client-go/testing"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
 
@@ -46,7 +46,7 @@ type resourceClaimTemplatesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *resourceClaimTemplatesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ResourceClaimTemplateNamespacer {
+func (c *resourceClaimTemplatesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ResourceClaimTemplateNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type resourceClaimTemplatesNamespacer struct {
 }
 
 func (n *resourceClaimTemplatesNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.ResourceClaimTemplateInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &resourceClaimTemplatesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type resourceClaimTemplatesClient struct {
@@ -102,7 +102,7 @@ func (c *resourceClaimTemplatesClient) Create(ctx context.Context, resourceClaim
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }
 
-func (c *resourceClaimTemplatesClient) Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.CreateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
+func (c *resourceClaimTemplatesClient) Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, resourceClaimTemplate), &v1alpha3.ResourceClaimTemplate{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *resourceClaimTemplatesClient) Update(ctx context.Context, resourceClaim
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }
 
-func (c *resourceClaimTemplatesClient) UpdateStatus(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.CreateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
+func (c *resourceClaimTemplatesClient) UpdateStatus(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourceclaimtemplatesResource, c.ClusterPath, "status", c.Namespace, resourceClaimTemplate), &v1alpha3.ResourceClaimTemplate{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *resourceClaimTemplatesClient) UpdateStatus(ctx context.Context, resourc
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }
 
-func (c *resourceClaimTemplatesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *resourceClaimTemplatesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.ResourceClaimTemplate{})
 	return err
 }

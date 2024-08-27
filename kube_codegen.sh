@@ -467,7 +467,9 @@ function kube::codegen::gen_client() {
     local single_cluster_listers_package_path=""
     local single_cluster_informers_package_path=""
     local single_cluster_typed_client_package_path=""
+    local single_cluster_apply_configuration_package_path=""
     local static_expansions_listers=""
+    local static_fakes_expansions=""
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -539,8 +541,16 @@ function kube::codegen::gen_client() {
                 single_cluster_typed_client_package_path="$2"
                 shift 2
                 ;;
+            "--single-cluster-apply-configuration-package-path")
+                single_cluster_apply_configuration_package_path="$2"
+                shift 2
+                ;;
             "--static-expansions-listers")
                 static_expansions_listers="$2"
+                shift 2
+                ;;
+            "--static-fakes-expansions")
+                static_fakes_expansions="$2"
                 shift 2
                 ;;
             *)
@@ -658,6 +668,8 @@ function kube::codegen::gen_client() {
         --clientset-name "${clientset_versioned_name}" \
         --apply-configuration-package "${applyconfig_pkg}" \
         --single-cluster-typed-client-package-path "${single_cluster_typed_client_package_path}" \
+        --single-cluster-apply-configuration-package-path "${single_cluster_apply_configuration_package_path}" \
+        --static-fakes-expansions "${static_fakes_expansions}" \
         --input-base "$(cd "${in_dir}" && pwd -P)" `# must be absolute path or Go import path"` \
         --plural-exceptions "${plural_exceptions}" \
         "${inputs[@]}"

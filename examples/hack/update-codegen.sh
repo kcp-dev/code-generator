@@ -96,5 +96,7 @@ kube::codegen::gen_client \
     --single-cluster-listers-package-path "k8s.io/client-go/listers" \
     --single-cluster-informers-package-path "k8s.io/client-go/informers" \
     --single-cluster-typed-client-package-path "k8s.io/client-go/kubernetes/typed" \
+    --single-cluster-apply-configuration-package-path "k8s.io/client-go/applyconfigurations/" \
+    --static-fakes-expansions "k8s.io/api/events/v1.Event:StaticFakesClientSetEventExpansion" \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
     "$(go list -m -json k8s.io/api | jq --raw-output .Dir )"

@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1beta1"
 )
 
 var validatingadmissionpoliciesResource = v1beta1.SchemeGroupVersion.WithResource("validatingadmissionpolicies")
@@ -38,38 +30,4 @@ var validatingadmissionpoliciesKind = v1beta1.SchemeGroupVersion.WithKind("Valid
 // validatingAdmissionPoliciesClusterClient implements validatingAdmissionPolicyInterface
 type validatingAdmissionPoliciesClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *validatingAdmissionPoliciesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ValidatingAdmissionPolicyNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &validatingAdmissionPoliciesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of ValidatingAdmissionPolicies that match those selectors.
-func (c *validatingAdmissionPoliciesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ValidatingAdmissionPolicyList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(validatingadmissionpoliciesResource, validatingadmissionpoliciesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.ValidatingAdmissionPolicyList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.ValidatingAdmissionPolicyList{ListMeta: obj.(*v1beta1.ValidatingAdmissionPolicyList).ListMeta}
-	for _, item := range obj.(*v1beta1.ValidatingAdmissionPolicyList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested validatingAdmissionPolicys across all clusters.
-func (c *validatingAdmissionPoliciesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(validatingadmissionpoliciesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

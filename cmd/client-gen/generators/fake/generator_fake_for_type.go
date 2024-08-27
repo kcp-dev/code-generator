@@ -27,8 +27,10 @@ import (
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
+	"k8s.io/klog/v2"
 
 	"k8s.io/code-generator/cmd/client-gen/generators/util"
+	"k8s.io/code-generator/pkg/static"
 )
 
 // genFakeForType produces a file for each top-level type.
@@ -44,6 +46,8 @@ type genFakeForType struct {
 	applyConfigurationPackage            string
 	typedClientPackage                   string
 	singleClusterTypedClientsPackagePath string
+	singleClusterApplyConfigPackagePath  string
+	staticFakeExpansions                 []string
 }
 
 var _ generator.Generator = &genFakeForType{}
@@ -69,23 +73,6 @@ func (g *genFakeForType) Imports(c *generator.Context) (imports []string) {
 
 	imports = append(imports, "kcp "+"\""+g.typedClientPackage+"\"")
 	return imports
-}
-
-// Ideally, we'd like genStatus to return true if there is a subresource path
-// registered for "status" in the API server, but we do not have that
-// information, so genStatus returns true if the type has a status field.
-func genStatus(t *types.Type) bool {
-	// Default to true if we have a Status member
-	hasStatus := false
-	for _, m := range t.Members {
-		if m.Name == "Status" {
-			hasStatus = true
-			break
-		}
-	}
-
-	tags := util.MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
-	return hasStatus && !tags.NoStatus
 }
 
 // GenerateType makes the body of a file implementing the individual typed client for type t.
@@ -154,38 +141,56 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 	generateApply := len(g.applyConfigurationPackage) > 0
 
 	_, gvString := util.ParsePathGroupVersion(g.inputPackage)
-	m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
+	if g.singleClusterTypedClientsPackagePath != "" {
+		m["inputApplyConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), t.Name.Name+"ApplyConfiguration")
+	} else {
+		m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
+	}
+
 	m["kcpClusterResultType"] = types.Ref(g.typedClientPackage, t.Name.Name)
 	m["upstreamClientInterface"] = "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + t.Name.Name + "Interface"
 
 	namespaced := !tags.NonNamespaced
 
+	// Global structs for the types.
 	sw.Do(resource, m)
 	sw.Do(kind, m)
 
 	sw.Do(structClusterGeneric, m)
 
-	sw.Do(methodClusterClusterTemplate, m)
-	sw.Do(methodClusterListTemplate, m)
-
-	sw.Do(methodClusterWatchTemplate, m)
-
 	if namespaced {
+		sw.Do(methodNamespacedClusterClusterTemplate, m)
+		sw.Do(methodNamespacedClusterListTemplate, m)
+
+		sw.Do(methodNamespacedClusterWatchTemplate, m)
 		sw.Do(structNamespacer, m)
 		sw.Do(methodNamespacerNamespaceTemplate, m)
 
-		sw.Do(structClient, m)
-		sw.Do(methodClientCreateTemplate, m)
-		sw.Do(methodClientUpdateTemplate, m)
-		sw.Do(methodClientUpdateStatusTemplate, m)
-		sw.Do(methodClientDeleteTemplate, m)
-		sw.Do(methodClientDeleteCollectionTemplate, m)
-		sw.Do(methodClientGetTemplate, m)
-		sw.Do(methodClientListTemplate, m)
-		sw.Do(methodClientWatchTemplate, m)
-		sw.Do(methodClientPatchTemplate, m)
+		sw.Do(structNamespacedClient, m)
+		sw.Do(methodNamespacedClientCreateTemplate, m)
+		sw.Do(methodNamespacedClientUpdateTemplate, m)
+		sw.Do(methodNamespacedClientUpdateStatusTemplate, m)
+		sw.Do(methodNamespacedClientDeleteTemplate, m)
+		sw.Do(methodNamespacedClientDeleteCollectionTemplate, m)
+		sw.Do(methodNamespacedClientGetTemplate, m)
+		sw.Do(methodNamespacedClientListTemplate, m)
+		sw.Do(methodNamespacedClientWatchTemplate, m)
+		sw.Do(methodNamespacedClientPatchTemplate, m)
 		if generateApply {
-			sw.Do(methodClientApplyTemplate, m)
+			sw.Do(methodNamespacedClientApplyTemplate, m)
+		}
+	} else {
+		// Non namespaced types.
+	}
+
+	if len(g.staticFakeExpansions) > 0 {
+		for _, expansion := range g.staticFakeExpansions {
+			source, target := strings.Split(expansion, ":")[0], strings.Split(expansion, ":")[1]
+			if source == t.String() {
+				klog.Infof("Found fake expansion override for %s", t.String())
+				override := static.GetClientSetFakeExpansions(target)
+				sw.Do(override, m)
+			}
 		}
 	}
 
@@ -225,7 +230,7 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 
 		if e.HasVerb("list") {
 
-			sw.Do(adjustTemplate(e.VerbName, e.VerbType, methodClusterListTemplate), m)
+			sw.Do(adjustTemplate(e.VerbName, e.VerbType, methodNamespacedClusterListTemplate), m)
 		}
 
 	}
@@ -256,9 +261,9 @@ var kind = `
 var $.type|allLowercasePlural$Kind = $.SchemeGroupVersion|raw$.WithKind("$.type|singularKind$")
 `
 
-var methodClusterClusterTemplate = `
+var methodNamespacedClusterClusterTemplate = `
 // Cluster scopes the client down to a particular cluster.
-func (c *$.type|privatePlural$ClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.$.kcpClusterResultType|public$Namespacer {
+func (c *$.type|privatePlural$ClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.$.kcpClusterResultType|public$Namespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -266,7 +271,7 @@ func (c *$.type|privatePlural$ClusterClient) Cluster(clusterPath logicalcluster.
 	return &$.type|privatePlural$Namespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 `
-var methodClusterListTemplate = `
+var methodNamespacedClusterListTemplate = `
 // List takes label and field selectors, and returns the list of $.type|publicPlural$ that match those selectors.
 func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &$.type|raw$List{})
@@ -288,7 +293,7 @@ func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.Li
 }
 `
 
-var methodClusterWatchTemplate = `
+var methodNamespacedClusterWatchTemplate = `
 // Watch returns a watch.Interface that watches the requested $.type|private$s across all clusters.
 func (c *$.type|privatePlural$ClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction($.type|allLowercasePlural$Resource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
@@ -304,11 +309,11 @@ type $.type|privatePlural$Namespacer struct {
 
 var methodNamespacerNamespaceTemplate = `
 func (n *$.type|privatePlural$Namespacer) Namespace(namespace string) $.upstreamClientInterface$ {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &$.type|privatePlural$Client{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 `
 
-var structClient = `
+var structNamespacedClient = `
 type $.type|privatePlural$Client struct {
 	*kcptesting.Fake
 	ClusterPath logicalcluster.Path
@@ -316,7 +321,7 @@ type $.type|privatePlural$Client struct {
 }
 `
 
-var methodClientCreateTemplate = `
+var methodNamespacedClientCreateTemplate = `
 func (c *$.type|privatePlural$Client) Create(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.CreateOptions) (*$.type|raw$, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
 	if obj == nil {
@@ -326,8 +331,8 @@ func (c *$.type|privatePlural$Client) Create(ctx context.Context, $.type|private
 }
 `
 
-var methodClientUpdateTemplate = `
-func (c *$.type|privatePlural$Client) Update(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.CreateOptions) (*$.type|raw$, error) {
+var methodNamespacedClientUpdateTemplate = `
+func (c *$.type|privatePlural$Client) Update(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.UpdateOptions) (*$.type|raw$, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
 	if obj == nil {
 		return nil, err
@@ -336,8 +341,8 @@ func (c *$.type|privatePlural$Client) Update(ctx context.Context, $.type|private
 }
 `
 
-var methodClientUpdateStatusTemplate = `
-func (c *$.type|privatePlural$Client) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.CreateOptions) (*$.type|raw$, error) {
+var methodNamespacedClientUpdateStatusTemplate = `
+func (c *$.type|privatePlural$Client) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.UpdateOptions) (*$.type|raw$, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "status", c.Namespace, $.type|private$), &$.type|raw${})
 	if obj == nil {
 		return nil, err
@@ -346,14 +351,14 @@ func (c *$.type|privatePlural$Client) UpdateStatus(ctx context.Context, $.type|p
 }
 `
 
-var methodClientDeleteTemplate = `
-func (c *$.type|privatePlural$Client) Delete(ctx context.Context, name string, opts metav1.CreateOptions)  error {
+var methodNamespacedClientDeleteTemplate = `
+func (c *$.type|privatePlural$Client) Delete(ctx context.Context, name string, opts metav1.DeleteOptions)  error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, opts), &$.type|raw${})
 	return err
 }
 `
 
-var methodClientDeleteCollectionTemplate = `
+var methodNamespacedClientDeleteCollectionTemplate = `
 func (c *$.type|privatePlural$Client) DeleteCollection(ctx context.Context,  opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := kcptesting.NewDeleteCollectionAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, listOpts)
 
@@ -362,7 +367,7 @@ func (c *$.type|privatePlural$Client) DeleteCollection(ctx context.Context,  opt
 }
 `
 
-var methodClientGetTemplate = `
+var methodNamespacedClientGetTemplate = `
 func (c *$.type|privatePlural$Client) Get(ctx context.Context, name string, options metav1.GetOptions) (*$.type|raw$, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name), &$.type|raw${})
 	if obj == nil {
@@ -372,7 +377,7 @@ func (c *$.type|privatePlural$Client) Get(ctx context.Context, name string, opti
 }
 `
 
-var methodClientListTemplate = `
+var methodNamespacedClientListTemplate = `
 // List takes label and field selectors, and returns the list of $.type|raw$ that match those selectors.
 func (c *$.type|privatePlural$Client) List(ctx context.Context, opts metav1.ListOptions) (*$.type|raw$List, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ClusterPath, c.Namespace, opts), &$.type|raw$List{})
@@ -393,12 +398,12 @@ func (c *$.type|privatePlural$Client) List(ctx context.Context, opts metav1.List
 	return list, err
 }
 `
-var methodClientWatchTemplate = `
+var methodNamespacedClientWatchTemplate = `
 func (c *$.type|privatePlural$Client) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, opts))
 }
 `
-var methodClientPatchTemplate = `
+var methodNamespacedClientPatchTemplate = `
 func (c *$.type|privatePlural$Client) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*$.type|raw$, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &$.type|raw${})
 	if obj == nil {
@@ -410,7 +415,7 @@ func (c *$.type|privatePlural$Client) Patch(ctx context.Context, name string, pt
 
 //TODO: Apply config needs to be core based.
 
-var methodClientApplyTemplate = `
+var methodNamespacedClientApplyTemplate = `
 func (c *$.type|privatePlural$Client) Apply(ctx context.Context, applyConfiguration *$.inputApplyConfig|raw$, opts metav1.ApplyOptions) (*$.resultType|raw$, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")

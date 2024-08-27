@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/scheduling/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/scheduling/v1alpha1"
 )
 
 var priorityclassesResource = v1alpha1.SchemeGroupVersion.WithResource("priorityclasses")
@@ -38,38 +30,4 @@ var priorityclassesKind = v1alpha1.SchemeGroupVersion.WithKind("PriorityClass")
 // priorityClassesClusterClient implements priorityClassInterface
 type priorityClassesClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *priorityClassesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PriorityClassNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &priorityClassesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of PriorityClasses that match those selectors.
-func (c *priorityClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.PriorityClassList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(priorityclassesResource, priorityclassesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.PriorityClassList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.PriorityClassList{ListMeta: obj.(*v1alpha1.PriorityClassList).ListMeta}
-	for _, item := range obj.(*v1alpha1.PriorityClassList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested priorityClasss across all clusters.
-func (c *priorityClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(priorityclassesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

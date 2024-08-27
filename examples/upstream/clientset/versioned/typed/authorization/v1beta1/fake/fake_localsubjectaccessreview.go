@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	authorizationv1beta1 "k8s.io/client-go/applyconfigurations/authorization/v1beta1"
 	upstreamauthorizationv1beta1client "k8s.io/client-go/kubernetes/typed/authorization/v1beta1"
 	"k8s.io/client-go/testing"
-	authorizationv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/authorization/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authorization/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type localSubjectAccessReviewsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *localSubjectAccessReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.LocalSubjectAccessReviewNamespacer {
+func (c *localSubjectAccessReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.LocalSubjectAccessReviewNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type localSubjectAccessReviewsNamespacer struct {
 }
 
 func (n *localSubjectAccessReviewsNamespacer) Namespace(namespace string) upstreamauthorizationv1beta1client.LocalSubjectAccessReviewInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &localSubjectAccessReviewsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type localSubjectAccessReviewsClient struct {
@@ -102,7 +102,7 @@ func (c *localSubjectAccessReviewsClient) Create(ctx context.Context, localSubje
 	return obj.(*v1beta1.LocalSubjectAccessReview), err
 }
 
-func (c *localSubjectAccessReviewsClient) Update(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts metav1.CreateOptions) (*v1beta1.LocalSubjectAccessReview, error) {
+func (c *localSubjectAccessReviewsClient) Update(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts metav1.UpdateOptions) (*v1beta1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, localSubjectAccessReview), &v1beta1.LocalSubjectAccessReview{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *localSubjectAccessReviewsClient) Update(ctx context.Context, localSubje
 	return obj.(*v1beta1.LocalSubjectAccessReview), err
 }
 
-func (c *localSubjectAccessReviewsClient) UpdateStatus(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts metav1.CreateOptions) (*v1beta1.LocalSubjectAccessReview, error) {
+func (c *localSubjectAccessReviewsClient) UpdateStatus(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts metav1.UpdateOptions) (*v1beta1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(localsubjectaccessreviewsResource, c.ClusterPath, "status", c.Namespace, localSubjectAccessReview), &v1beta1.LocalSubjectAccessReview{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *localSubjectAccessReviewsClient) UpdateStatus(ctx context.Context, loca
 	return obj.(*v1beta1.LocalSubjectAccessReview), err
 }
 
-func (c *localSubjectAccessReviewsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *localSubjectAccessReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.LocalSubjectAccessReview{})
 	return err
 }

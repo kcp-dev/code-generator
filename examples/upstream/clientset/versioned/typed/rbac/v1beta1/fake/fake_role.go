@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	rbacv1beta1 "k8s.io/client-go/applyconfigurations/rbac/v1beta1"
 	upstreamrbacv1beta1client "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	"k8s.io/client-go/testing"
-	rbacv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/rbac/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/rbac/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type rolesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *rolesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.RoleNamespacer {
+func (c *rolesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.RoleNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type rolesNamespacer struct {
 }
 
 func (n *rolesNamespacer) Namespace(namespace string) upstreamrbacv1beta1client.RoleInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &rolesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type rolesClient struct {
@@ -102,7 +102,7 @@ func (c *rolesClient) Create(ctx context.Context, role *v1beta1.Role, opts metav
 	return obj.(*v1beta1.Role), err
 }
 
-func (c *rolesClient) Update(ctx context.Context, role *v1beta1.Role, opts metav1.CreateOptions) (*v1beta1.Role, error) {
+func (c *rolesClient) Update(ctx context.Context, role *v1beta1.Role, opts metav1.UpdateOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(rolesResource, c.ClusterPath, c.Namespace, role), &v1beta1.Role{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *rolesClient) Update(ctx context.Context, role *v1beta1.Role, opts metav
 	return obj.(*v1beta1.Role), err
 }
 
-func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1beta1.Role, opts metav1.CreateOptions) (*v1beta1.Role, error) {
+func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1beta1.Role, opts metav1.UpdateOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(rolesResource, c.ClusterPath, "status", c.Namespace, role), &v1beta1.Role{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1beta1.Role, opts
 	return obj.(*v1beta1.Role), err
 }
 
-func (c *rolesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *rolesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(rolesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Role{})
 	return err
 }

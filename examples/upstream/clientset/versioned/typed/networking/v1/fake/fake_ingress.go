@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	networkingv1 "k8s.io/client-go/applyconfigurations/networking/v1"
 	upstreamnetworkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	"k8s.io/client-go/testing"
-	networkingv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/networking/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1"
 )
 
@@ -46,7 +46,7 @@ type ingressesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ingressesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.IngressNamespacer {
+func (c *ingressesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.IngressNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type ingressesNamespacer struct {
 }
 
 func (n *ingressesNamespacer) Namespace(namespace string) upstreamnetworkingv1client.IngressInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &ingressesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type ingressesClient struct {
@@ -102,7 +102,7 @@ func (c *ingressesClient) Create(ctx context.Context, ingress *v1.Ingress, opts 
 	return obj.(*v1.Ingress), err
 }
 
-func (c *ingressesClient) Update(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (*v1.Ingress, error) {
+func (c *ingressesClient) Update(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(ingressesResource, c.ClusterPath, c.Namespace, ingress), &v1.Ingress{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *ingressesClient) Update(ctx context.Context, ingress *v1.Ingress, opts 
 	return obj.(*v1.Ingress), err
 }
 
-func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (*v1.Ingress, error) {
+func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(ingressesResource, c.ClusterPath, "status", c.Namespace, ingress), &v1.Ingress{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1.Ingress,
 	return obj.(*v1.Ingress), err
 }
 
-func (c *ingressesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *ingressesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(ingressesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Ingress{})
 	return err
 }

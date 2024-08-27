@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/imagepolicy/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/imagepolicy/v1alpha1"
 )
 
 var imagereviewsResource = v1alpha1.SchemeGroupVersion.WithResource("imagereviews")
@@ -38,38 +30,4 @@ var imagereviewsKind = v1alpha1.SchemeGroupVersion.WithKind("ImageReview")
 // imageReviewsClusterClient implements imageReviewInterface
 type imageReviewsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *imageReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ImageReviewNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &imageReviewsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of ImageReviews that match those selectors.
-func (c *imageReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ImageReviewList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(imagereviewsResource, imagereviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ImageReviewList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ImageReviewList{ListMeta: obj.(*v1alpha1.ImageReviewList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ImageReviewList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested imageReviews across all clusters.
-func (c *imageReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(imagereviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

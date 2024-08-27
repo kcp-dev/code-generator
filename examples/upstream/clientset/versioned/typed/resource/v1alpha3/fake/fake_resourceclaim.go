@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	resourcev1alpha3 "k8s.io/client-go/applyconfigurations/resource/v1alpha3"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	"k8s.io/client-go/testing"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
 
@@ -46,7 +46,7 @@ type resourceClaimsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *resourceClaimsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ResourceClaimNamespacer {
+func (c *resourceClaimsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ResourceClaimNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type resourceClaimsNamespacer struct {
 }
 
 func (n *resourceClaimsNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.ResourceClaimInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &resourceClaimsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type resourceClaimsClient struct {
@@ -102,7 +102,7 @@ func (c *resourceClaimsClient) Create(ctx context.Context, resourceClaim *v1alph
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-func (c *resourceClaimsClient) Update(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.CreateOptions) (*v1alpha3.ResourceClaim, error) {
+func (c *resourceClaimsClient) Update(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaim, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourceclaimsResource, c.ClusterPath, c.Namespace, resourceClaim), &v1alpha3.ResourceClaim{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *resourceClaimsClient) Update(ctx context.Context, resourceClaim *v1alph
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-func (c *resourceClaimsClient) UpdateStatus(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.CreateOptions) (*v1alpha3.ResourceClaim, error) {
+func (c *resourceClaimsClient) UpdateStatus(ctx context.Context, resourceClaim *v1alpha3.ResourceClaim, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaim, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourceclaimsResource, c.ClusterPath, "status", c.Namespace, resourceClaim), &v1alpha3.ResourceClaim{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *resourceClaimsClient) UpdateStatus(ctx context.Context, resourceClaim *
 	return obj.(*v1alpha3.ResourceClaim), err
 }
 
-func (c *resourceClaimsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *resourceClaimsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourceclaimsResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.ResourceClaim{})
 	return err
 }

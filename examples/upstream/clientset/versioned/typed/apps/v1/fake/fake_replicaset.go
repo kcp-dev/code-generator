@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"k8s.io/client-go/testing"
-	appsv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1"
 )
 
@@ -46,7 +46,7 @@ type replicaSetsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *replicaSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ReplicaSetNamespacer {
+func (c *replicaSetsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ReplicaSetNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type replicaSetsNamespacer struct {
 }
 
 func (n *replicaSetsNamespacer) Namespace(namespace string) upstreamappsv1client.ReplicaSetInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &replicaSetsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type replicaSetsClient struct {
@@ -102,7 +102,7 @@ func (c *replicaSetsClient) Create(ctx context.Context, replicaSet *v1.ReplicaSe
 	return obj.(*v1.ReplicaSet), err
 }
 
-func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.CreateOptions) (*v1.ReplicaSet, error) {
+func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.UpdateOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(replicasetsResource, c.ClusterPath, c.Namespace, replicaSet), &v1.ReplicaSet{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1.ReplicaSe
 	return obj.(*v1.ReplicaSet), err
 }
 
-func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.CreateOptions) (*v1.ReplicaSet, error) {
+func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.UpdateOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicasetsResource, c.ClusterPath, "status", c.Namespace, replicaSet), &v1.ReplicaSet{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1.Rep
 	return obj.(*v1.ReplicaSet), err
 }
 
-func (c *replicaSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *replicaSetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(replicasetsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ReplicaSet{})
 	return err
 }

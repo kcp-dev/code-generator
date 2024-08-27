@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storagemigration/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storagemigration/v1alpha1"
 )
 
 var storageversionmigrationsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversionmigrations")
@@ -38,38 +30,4 @@ var storageversionmigrationsKind = v1alpha1.SchemeGroupVersion.WithKind("Storage
 // storageVersionMigrationsClusterClient implements storageVersionMigrationInterface
 type storageVersionMigrationsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *storageVersionMigrationsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StorageVersionMigrationNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &storageVersionMigrationsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of StorageVersionMigrations that match those selectors.
-func (c *storageVersionMigrationsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionMigrationList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(storageversionmigrationsResource, storageversionmigrationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.StorageVersionMigrationList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.StorageVersionMigrationList{ListMeta: obj.(*v1alpha1.StorageVersionMigrationList).ListMeta}
-	for _, item := range obj.(*v1alpha1.StorageVersionMigrationList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested storageVersionMigrations across all clusters.
-func (c *storageVersionMigrationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(storageversionmigrationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

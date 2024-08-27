@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type resourceQuotasClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *resourceQuotasClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ResourceQuotaNamespacer {
+func (c *resourceQuotasClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ResourceQuotaNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type resourceQuotasNamespacer struct {
 }
 
 func (n *resourceQuotasNamespacer) Namespace(namespace string) upstreamcorev1client.ResourceQuotaInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &resourceQuotasClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type resourceQuotasClient struct {
@@ -102,7 +102,7 @@ func (c *resourceQuotasClient) Create(ctx context.Context, resourceQuota *v1.Res
 	return obj.(*v1.ResourceQuota), err
 }
 
-func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
+func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourcequotasResource, c.ClusterPath, c.Namespace, resourceQuota), &v1.ResourceQuota{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.Res
 	return obj.(*v1.ResourceQuota), err
 }
 
-func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
+func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourcequotasResource, c.ClusterPath, "status", c.Namespace, resourceQuota), &v1.ResourceQuota{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *
 	return obj.(*v1.ResourceQuota), err
 }
 
-func (c *resourceQuotasClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *resourceQuotasClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourcequotasResource, c.ClusterPath, c.Namespace, name, opts), &v1.ResourceQuota{})
 	return err
 }

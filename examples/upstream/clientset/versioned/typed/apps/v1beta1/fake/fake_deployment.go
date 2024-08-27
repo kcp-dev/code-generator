@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	appsv1beta1 "k8s.io/client-go/applyconfigurations/apps/v1beta1"
 	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 	"k8s.io/client-go/testing"
-	appsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type deploymentsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *deploymentsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.DeploymentNamespacer {
+func (c *deploymentsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.DeploymentNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type deploymentsNamespacer struct {
 }
 
 func (n *deploymentsNamespacer) Namespace(namespace string) upstreamappsv1beta1client.DeploymentInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &deploymentsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type deploymentsClient struct {
@@ -102,7 +102,7 @@ func (c *deploymentsClient) Create(ctx context.Context, deployment *v1beta1.Depl
 	return obj.(*v1beta1.Deployment), err
 }
 
-func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
+func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.UpdateOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(deploymentsResource, c.ClusterPath, c.Namespace, deployment), &v1beta1.Deployment{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Depl
 	return obj.(*v1beta1.Deployment), err
 }
 
-func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
+func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.UpdateOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(deploymentsResource, c.ClusterPath, "status", c.Namespace, deployment), &v1beta1.Deployment{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta
 	return obj.(*v1beta1.Deployment), err
 }
 
-func (c *deploymentsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *deploymentsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(deploymentsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Deployment{})
 	return err
 }

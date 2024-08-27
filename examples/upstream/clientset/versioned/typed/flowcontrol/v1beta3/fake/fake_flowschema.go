@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta3 "k8s.io/api/flowcontrol/v1beta3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/flowcontrol/v1beta3"
 )
 
 var flowschemasResource = v1beta3.SchemeGroupVersion.WithResource("flowschemas")
@@ -38,38 +30,4 @@ var flowschemasKind = v1beta3.SchemeGroupVersion.WithKind("FlowSchema")
 // flowSchemasClusterClient implements flowSchemaInterface
 type flowSchemasClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *flowSchemasClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.FlowSchemaNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &flowSchemasNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of FlowSchemas that match those selectors.
-func (c *flowSchemasClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta3.FlowSchemaList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(flowschemasResource, flowschemasKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta3.FlowSchemaList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta3.FlowSchemaList{ListMeta: obj.(*v1beta3.FlowSchemaList).ListMeta}
-	for _, item := range obj.(*v1beta3.FlowSchemaList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested flowSchemas across all clusters.
-func (c *flowSchemasClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(flowschemasResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

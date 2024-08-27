@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	appsv1beta1 "k8s.io/client-go/applyconfigurations/apps/v1beta1"
 	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 	"k8s.io/client-go/testing"
-	appsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type controllerRevisionsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *controllerRevisionsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ControllerRevisionNamespacer {
+func (c *controllerRevisionsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ControllerRevisionNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type controllerRevisionsNamespacer struct {
 }
 
 func (n *controllerRevisionsNamespacer) Namespace(namespace string) upstreamappsv1beta1client.ControllerRevisionInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &controllerRevisionsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type controllerRevisionsClient struct {
@@ -102,7 +102,7 @@ func (c *controllerRevisionsClient) Create(ctx context.Context, controllerRevisi
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.CreateOptions) (*v1beta1.ControllerRevision, error) {
+func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.UpdateOptions) (*v1beta1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, controllerRevision), &v1beta1.ControllerRevision{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevisi
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.CreateOptions) (*v1beta1.ControllerRevision, error) {
+func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controllerRevision *v1beta1.ControllerRevision, opts metav1.UpdateOptions) (*v1beta1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(controllerrevisionsResource, c.ClusterPath, "status", c.Namespace, controllerRevision), &v1beta1.ControllerRevision{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controller
 	return obj.(*v1beta1.ControllerRevision), err
 }
 
-func (c *controllerRevisionsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *controllerRevisionsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(controllerrevisionsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.ControllerRevision{})
 	return err
 }

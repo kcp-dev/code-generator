@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	policyv1 "k8s.io/client-go/applyconfigurations/policy/v1"
 	upstreampolicyv1client "k8s.io/client-go/kubernetes/typed/policy/v1"
 	"k8s.io/client-go/testing"
-	policyv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/policy/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/policy/v1"
 )
 
@@ -46,7 +46,7 @@ type podDisruptionBudgetsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podDisruptionBudgetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PodDisruptionBudgetNamespacer {
+func (c *podDisruptionBudgetsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.PodDisruptionBudgetNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type podDisruptionBudgetsNamespacer struct {
 }
 
 func (n *podDisruptionBudgetsNamespacer) Namespace(namespace string) upstreampolicyv1client.PodDisruptionBudgetInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &podDisruptionBudgetsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type podDisruptionBudgetsClient struct {
@@ -102,7 +102,7 @@ func (c *podDisruptionBudgetsClient) Create(ctx context.Context, podDisruptionBu
 	return obj.(*v1.PodDisruptionBudget), err
 }
 
-func (c *podDisruptionBudgetsClient) Update(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.CreateOptions) (*v1.PodDisruptionBudget, error) {
+func (c *podDisruptionBudgetsClient) Update(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.UpdateOptions) (*v1.PodDisruptionBudget, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(poddisruptionbudgetsResource, c.ClusterPath, c.Namespace, podDisruptionBudget), &v1.PodDisruptionBudget{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *podDisruptionBudgetsClient) Update(ctx context.Context, podDisruptionBu
 	return obj.(*v1.PodDisruptionBudget), err
 }
 
-func (c *podDisruptionBudgetsClient) UpdateStatus(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.CreateOptions) (*v1.PodDisruptionBudget, error) {
+func (c *podDisruptionBudgetsClient) UpdateStatus(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.UpdateOptions) (*v1.PodDisruptionBudget, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(poddisruptionbudgetsResource, c.ClusterPath, "status", c.Namespace, podDisruptionBudget), &v1.PodDisruptionBudget{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *podDisruptionBudgetsClient) UpdateStatus(ctx context.Context, podDisrup
 	return obj.(*v1.PodDisruptionBudget), err
 }
 
-func (c *podDisruptionBudgetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *podDisruptionBudgetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(poddisruptionbudgetsResource, c.ClusterPath, c.Namespace, name, opts), &v1.PodDisruptionBudget{})
 	return err
 }

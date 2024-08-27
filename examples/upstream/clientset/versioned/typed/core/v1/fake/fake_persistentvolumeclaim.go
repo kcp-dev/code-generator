@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type persistentVolumeClaimsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *persistentVolumeClaimsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PersistentVolumeClaimNamespacer {
+func (c *persistentVolumeClaimsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.PersistentVolumeClaimNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type persistentVolumeClaimsNamespacer struct {
 }
 
 func (n *persistentVolumeClaimsNamespacer) Namespace(namespace string) upstreamcorev1client.PersistentVolumeClaimInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &persistentVolumeClaimsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type persistentVolumeClaimsClient struct {
@@ -102,7 +102,7 @@ func (c *persistentVolumeClaimsClient) Create(ctx context.Context, persistentVol
 	return obj.(*v1.PersistentVolumeClaim), err
 }
 
-func (c *persistentVolumeClaimsClient) Update(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.CreateOptions) (*v1.PersistentVolumeClaim, error) {
+func (c *persistentVolumeClaimsClient) Update(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*v1.PersistentVolumeClaim, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(persistentvolumeclaimsResource, c.ClusterPath, c.Namespace, persistentVolumeClaim), &v1.PersistentVolumeClaim{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *persistentVolumeClaimsClient) Update(ctx context.Context, persistentVol
 	return obj.(*v1.PersistentVolumeClaim), err
 }
 
-func (c *persistentVolumeClaimsClient) UpdateStatus(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.CreateOptions) (*v1.PersistentVolumeClaim, error) {
+func (c *persistentVolumeClaimsClient) UpdateStatus(ctx context.Context, persistentVolumeClaim *v1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*v1.PersistentVolumeClaim, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(persistentvolumeclaimsResource, c.ClusterPath, "status", c.Namespace, persistentVolumeClaim), &v1.PersistentVolumeClaim{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *persistentVolumeClaimsClient) UpdateStatus(ctx context.Context, persist
 	return obj.(*v1.PersistentVolumeClaim), err
 }
 
-func (c *persistentVolumeClaimsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *persistentVolumeClaimsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(persistentvolumeclaimsResource, c.ClusterPath, c.Namespace, name, opts), &v1.PersistentVolumeClaim{})
 	return err
 }

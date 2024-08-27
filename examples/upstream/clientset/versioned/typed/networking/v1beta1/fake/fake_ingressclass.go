@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/networking/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1beta1"
 )
 
 var ingressclassesResource = v1beta1.SchemeGroupVersion.WithResource("ingressclasses")
@@ -38,38 +30,4 @@ var ingressclassesKind = v1beta1.SchemeGroupVersion.WithKind("IngressClass")
 // ingressClassesClusterClient implements ingressClassInterface
 type ingressClassesClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *ingressClassesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.IngressClassNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &ingressClassesNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of IngressClasses that match those selectors.
-func (c *ingressClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.IngressClassList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(ingressclassesResource, ingressclassesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.IngressClassList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.IngressClassList{ListMeta: obj.(*v1beta1.IngressClassList).ListMeta}
-	for _, item := range obj.(*v1beta1.IngressClassList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested ingressClasss across all clusters.
-func (c *ingressClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(ingressclassesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

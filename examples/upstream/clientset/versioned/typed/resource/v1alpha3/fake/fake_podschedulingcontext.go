@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	resourcev1alpha3 "k8s.io/client-go/applyconfigurations/resource/v1alpha3"
 	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	"k8s.io/client-go/testing"
-	resourcev1alpha3 "k8s.io/code-generator/examples/upstream/applyconfiguration/resource/v1alpha3"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
 
@@ -46,7 +46,7 @@ type podSchedulingContextsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podSchedulingContextsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PodSchedulingContextNamespacer {
+func (c *podSchedulingContextsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.PodSchedulingContextNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type podSchedulingContextsNamespacer struct {
 }
 
 func (n *podSchedulingContextsNamespacer) Namespace(namespace string) upstreamresourcev1alpha3client.PodSchedulingContextInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &podSchedulingContextsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type podSchedulingContextsClient struct {
@@ -102,7 +102,7 @@ func (c *podSchedulingContextsClient) Create(ctx context.Context, podSchedulingC
 	return obj.(*v1alpha3.PodSchedulingContext), err
 }
 
-func (c *podSchedulingContextsClient) Update(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.CreateOptions) (*v1alpha3.PodSchedulingContext, error) {
+func (c *podSchedulingContextsClient) Update(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, podSchedulingContext), &v1alpha3.PodSchedulingContext{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *podSchedulingContextsClient) Update(ctx context.Context, podSchedulingC
 	return obj.(*v1alpha3.PodSchedulingContext), err
 }
 
-func (c *podSchedulingContextsClient) UpdateStatus(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.CreateOptions) (*v1alpha3.PodSchedulingContext, error) {
+func (c *podSchedulingContextsClient) UpdateStatus(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(podschedulingcontextsResource, c.ClusterPath, "status", c.Namespace, podSchedulingContext), &v1alpha3.PodSchedulingContext{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *podSchedulingContextsClient) UpdateStatus(ctx context.Context, podSched
 	return obj.(*v1alpha3.PodSchedulingContext), err
 }
 
-func (c *podSchedulingContextsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *podSchedulingContextsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(podschedulingcontextsResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.PodSchedulingContext{})
 	return err
 }

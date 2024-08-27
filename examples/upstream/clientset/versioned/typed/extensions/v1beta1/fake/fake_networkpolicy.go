@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	extensionsv1beta1 "k8s.io/client-go/applyconfigurations/extensions/v1beta1"
 	upstreamextensionsv1beta1client "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 	"k8s.io/client-go/testing"
-	extensionsv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/extensions/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/extensions/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type networkPoliciesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *networkPoliciesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.NetworkPolicyNamespacer {
+func (c *networkPoliciesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.NetworkPolicyNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type networkPoliciesNamespacer struct {
 }
 
 func (n *networkPoliciesNamespacer) Namespace(namespace string) upstreamextensionsv1beta1client.NetworkPolicyInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &networkPoliciesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type networkPoliciesClient struct {
@@ -102,7 +102,7 @@ func (c *networkPoliciesClient) Create(ctx context.Context, networkPolicy *v1bet
 	return obj.(*v1beta1.NetworkPolicy), err
 }
 
-func (c *networkPoliciesClient) Update(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts metav1.CreateOptions) (*v1beta1.NetworkPolicy, error) {
+func (c *networkPoliciesClient) Update(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts metav1.UpdateOptions) (*v1beta1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(networkpoliciesResource, c.ClusterPath, c.Namespace, networkPolicy), &v1beta1.NetworkPolicy{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *networkPoliciesClient) Update(ctx context.Context, networkPolicy *v1bet
 	return obj.(*v1beta1.NetworkPolicy), err
 }
 
-func (c *networkPoliciesClient) UpdateStatus(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts metav1.CreateOptions) (*v1beta1.NetworkPolicy, error) {
+func (c *networkPoliciesClient) UpdateStatus(ctx context.Context, networkPolicy *v1beta1.NetworkPolicy, opts metav1.UpdateOptions) (*v1beta1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(networkpoliciesResource, c.ClusterPath, "status", c.Namespace, networkPolicy), &v1beta1.NetworkPolicy{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *networkPoliciesClient) UpdateStatus(ctx context.Context, networkPolicy 
 	return obj.(*v1beta1.NetworkPolicy), err
 }
 
-func (c *networkPoliciesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *networkPoliciesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(networkpoliciesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.NetworkPolicy{})
 	return err
 }

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type endpointsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *endpointsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.EndpointsNamespacer {
+func (c *endpointsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.EndpointsNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type endpointsNamespacer struct {
 }
 
 func (n *endpointsNamespacer) Namespace(namespace string) upstreamcorev1client.EndpointsInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &endpointsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type endpointsClient struct {
@@ -102,7 +102,7 @@ func (c *endpointsClient) Create(ctx context.Context, endpoints *v1.Endpoints, o
 	return obj.(*v1.Endpoints), err
 }
 
-func (c *endpointsClient) Update(ctx context.Context, endpoints *v1.Endpoints, opts metav1.CreateOptions) (*v1.Endpoints, error) {
+func (c *endpointsClient) Update(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(endpointsResource, c.ClusterPath, c.Namespace, endpoints), &v1.Endpoints{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *endpointsClient) Update(ctx context.Context, endpoints *v1.Endpoints, o
 	return obj.(*v1.Endpoints), err
 }
 
-func (c *endpointsClient) UpdateStatus(ctx context.Context, endpoints *v1.Endpoints, opts metav1.CreateOptions) (*v1.Endpoints, error) {
+func (c *endpointsClient) UpdateStatus(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(endpointsResource, c.ClusterPath, "status", c.Namespace, endpoints), &v1.Endpoints{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *endpointsClient) UpdateStatus(ctx context.Context, endpoints *v1.Endpoi
 	return obj.(*v1.Endpoints), err
 }
 
-func (c *endpointsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *endpointsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(endpointsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Endpoints{})
 	return err
 }

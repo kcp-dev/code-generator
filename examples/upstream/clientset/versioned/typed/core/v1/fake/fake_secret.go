@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type secretsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *secretsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.SecretNamespacer {
+func (c *secretsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.SecretNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type secretsNamespacer struct {
 }
 
 func (n *secretsNamespacer) Namespace(namespace string) upstreamcorev1client.SecretInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &secretsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type secretsClient struct {
@@ -102,7 +102,7 @@ func (c *secretsClient) Create(ctx context.Context, secret *v1.Secret, opts meta
 	return obj.(*v1.Secret), err
 }
 
-func (c *secretsClient) Update(ctx context.Context, secret *v1.Secret, opts metav1.CreateOptions) (*v1.Secret, error) {
+func (c *secretsClient) Update(ctx context.Context, secret *v1.Secret, opts metav1.UpdateOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(secretsResource, c.ClusterPath, c.Namespace, secret), &v1.Secret{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *secretsClient) Update(ctx context.Context, secret *v1.Secret, opts meta
 	return obj.(*v1.Secret), err
 }
 
-func (c *secretsClient) UpdateStatus(ctx context.Context, secret *v1.Secret, opts metav1.CreateOptions) (*v1.Secret, error) {
+func (c *secretsClient) UpdateStatus(ctx context.Context, secret *v1.Secret, opts metav1.UpdateOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(secretsResource, c.ClusterPath, "status", c.Namespace, secret), &v1.Secret{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *secretsClient) UpdateStatus(ctx context.Context, secret *v1.Secret, opt
 	return obj.(*v1.Secret), err
 }
 
-func (c *secretsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *secretsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(secretsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Secret{})
 	return err
 }

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type servicesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *servicesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ServiceNamespacer {
+func (c *servicesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ServiceNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type servicesNamespacer struct {
 }
 
 func (n *servicesNamespacer) Namespace(namespace string) upstreamcorev1client.ServiceInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &servicesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type servicesClient struct {
@@ -102,7 +102,7 @@ func (c *servicesClient) Create(ctx context.Context, service *v1.Service, opts m
 	return obj.(*v1.Service), err
 }
 
-func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(servicesResource, c.ClusterPath, c.Namespace, service), &v1.Service{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts m
 	return obj.(*v1.Service), err
 }
 
-func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(servicesResource, c.ClusterPath, "status", c.Namespace, service), &v1.Service{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, 
 	return obj.(*v1.Service), err
 }
 
-func (c *servicesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *servicesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(servicesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Service{})
 	return err
 }

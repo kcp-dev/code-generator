@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"k8s.io/client-go/testing"
-	appsv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1"
 )
 
@@ -46,7 +46,7 @@ type daemonSetsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *daemonSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.DaemonSetNamespacer {
+func (c *daemonSetsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.DaemonSetNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type daemonSetsNamespacer struct {
 }
 
 func (n *daemonSetsNamespacer) Namespace(namespace string) upstreamappsv1client.DaemonSetInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &daemonSetsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type daemonSetsClient struct {
@@ -102,7 +102,7 @@ func (c *daemonSetsClient) Create(ctx context.Context, daemonSet *v1.DaemonSet, 
 	return obj.(*v1.DaemonSet), err
 }
 
-func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (*v1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(daemonsetsResource, c.ClusterPath, c.Namespace, daemonSet), &v1.DaemonSet{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1.DaemonSet, 
 	return obj.(*v1.DaemonSet), err
 }
 
-func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (*v1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(daemonsetsResource, c.ClusterPath, "status", c.Namespace, daemonSet), &v1.DaemonSet{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1.Daemo
 	return obj.(*v1.DaemonSet), err
 }
 
-func (c *daemonSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *daemonSetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(daemonsetsResource, c.ClusterPath, c.Namespace, name, opts), &v1.DaemonSet{})
 	return err
 }

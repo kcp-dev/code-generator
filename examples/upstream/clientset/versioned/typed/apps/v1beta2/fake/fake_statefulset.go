@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	appsv1beta2 "k8s.io/client-go/applyconfigurations/apps/v1beta2"
 	upstreamappsv1beta2client "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 	"k8s.io/client-go/testing"
-	appsv1beta2 "k8s.io/code-generator/examples/upstream/applyconfiguration/apps/v1beta2"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta2"
 )
 
@@ -46,7 +46,7 @@ type statefulSetsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *statefulSetsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StatefulSetNamespacer {
+func (c *statefulSetsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.StatefulSetNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type statefulSetsNamespacer struct {
 }
 
 func (n *statefulSetsNamespacer) Namespace(namespace string) upstreamappsv1beta2client.StatefulSetInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &statefulSetsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type statefulSetsClient struct {
@@ -102,7 +102,7 @@ func (c *statefulSetsClient) Create(ctx context.Context, statefulSet *v1beta2.St
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-func (c *statefulSetsClient) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.CreateOptions) (*v1beta2.StatefulSet, error) {
+func (c *statefulSetsClient) Update(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.UpdateOptions) (*v1beta2.StatefulSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(statefulsetsResource, c.ClusterPath, c.Namespace, statefulSet), &v1beta2.StatefulSet{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *statefulSetsClient) Update(ctx context.Context, statefulSet *v1beta2.St
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-func (c *statefulSetsClient) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.CreateOptions) (*v1beta2.StatefulSet, error) {
+func (c *statefulSetsClient) UpdateStatus(ctx context.Context, statefulSet *v1beta2.StatefulSet, opts metav1.UpdateOptions) (*v1beta2.StatefulSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(statefulsetsResource, c.ClusterPath, "status", c.Namespace, statefulSet), &v1beta2.StatefulSet{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *statefulSetsClient) UpdateStatus(ctx context.Context, statefulSet *v1be
 	return obj.(*v1beta2.StatefulSet), err
 }
 
-func (c *statefulSetsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *statefulSetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(statefulsetsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta2.StatefulSet{})
 	return err
 }

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type serviceAccountsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *serviceAccountsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ServiceAccountNamespacer {
+func (c *serviceAccountsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ServiceAccountNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type serviceAccountsNamespacer struct {
 }
 
 func (n *serviceAccountsNamespacer) Namespace(namespace string) upstreamcorev1client.ServiceAccountInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &serviceAccountsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type serviceAccountsClient struct {
@@ -102,7 +102,7 @@ func (c *serviceAccountsClient) Create(ctx context.Context, serviceAccount *v1.S
 	return obj.(*v1.ServiceAccount), err
 }
 
-func (c *serviceAccountsClient) Update(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+func (c *serviceAccountsClient) Update(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.UpdateOptions) (*v1.ServiceAccount, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(serviceaccountsResource, c.ClusterPath, c.Namespace, serviceAccount), &v1.ServiceAccount{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *serviceAccountsClient) Update(ctx context.Context, serviceAccount *v1.S
 	return obj.(*v1.ServiceAccount), err
 }
 
-func (c *serviceAccountsClient) UpdateStatus(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+func (c *serviceAccountsClient) UpdateStatus(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.UpdateOptions) (*v1.ServiceAccount, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(serviceaccountsResource, c.ClusterPath, "status", c.Namespace, serviceAccount), &v1.ServiceAccount{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *serviceAccountsClient) UpdateStatus(ctx context.Context, serviceAccount
 	return obj.(*v1.ServiceAccount), err
 }
 
-func (c *serviceAccountsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *serviceAccountsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(serviceaccountsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ServiceAccount{})
 	return err
 }

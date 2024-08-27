@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/authorization/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authorization/v1"
 )
 
 var selfsubjectrulesreviewsResource = v1.SchemeGroupVersion.WithResource("selfsubjectrulesreviews")
@@ -38,38 +30,4 @@ var selfsubjectrulesreviewsKind = v1.SchemeGroupVersion.WithKind("SelfSubjectRul
 // selfSubjectRulesReviewsClusterClient implements selfSubjectRulesReviewInterface
 type selfSubjectRulesReviewsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *selfSubjectRulesReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.SelfSubjectRulesReviewNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &selfSubjectRulesReviewsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of SelfSubjectRulesReviews that match those selectors.
-func (c *selfSubjectRulesReviewsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SelfSubjectRulesReviewList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(selfsubjectrulesreviewsResource, selfsubjectrulesreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.SelfSubjectRulesReviewList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.SelfSubjectRulesReviewList{ListMeta: obj.(*v1.SelfSubjectRulesReviewList).ListMeta}
-	for _, item := range obj.(*v1.SelfSubjectRulesReviewList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested selfSubjectRulesReviews across all clusters.
-func (c *selfSubjectRulesReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(selfsubjectrulesreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

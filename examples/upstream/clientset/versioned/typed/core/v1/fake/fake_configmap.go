@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type configMapsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *configMapsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.ConfigMapNamespacer {
+func (c *configMapsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.ConfigMapNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -102,7 +102,7 @@ func (c *configMapsClient) Create(ctx context.Context, configMap *v1.ConfigMap, 
 	return obj.(*v1.ConfigMap), err
 }
 
-func (c *configMapsClient) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (*v1.ConfigMap, error) {
+func (c *configMapsClient) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(configmapsResource, c.ClusterPath, c.Namespace, configMap), &v1.ConfigMap{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *configMapsClient) Update(ctx context.Context, configMap *v1.ConfigMap, 
 	return obj.(*v1.ConfigMap), err
 }
 
-func (c *configMapsClient) UpdateStatus(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (*v1.ConfigMap, error) {
+func (c *configMapsClient) UpdateStatus(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(configmapsResource, c.ClusterPath, "status", c.Namespace, configMap), &v1.ConfigMap{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *configMapsClient) UpdateStatus(ctx context.Context, configMap *v1.Confi
 	return obj.(*v1.ConfigMap), err
 }
 
-func (c *configMapsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *configMapsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(configmapsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ConfigMap{})
 	return err
 }

@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	discoveryv1beta1 "k8s.io/client-go/applyconfigurations/discovery/v1beta1"
 	upstreamdiscoveryv1beta1client "k8s.io/client-go/kubernetes/typed/discovery/v1beta1"
 	"k8s.io/client-go/testing"
-	discoveryv1beta1 "k8s.io/code-generator/examples/upstream/applyconfiguration/discovery/v1beta1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/discovery/v1beta1"
 )
 
@@ -46,7 +46,7 @@ type endpointSlicesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *endpointSlicesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.EndpointSliceNamespacer {
+func (c *endpointSlicesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.EndpointSliceNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type endpointSlicesNamespacer struct {
 }
 
 func (n *endpointSlicesNamespacer) Namespace(namespace string) upstreamdiscoveryv1beta1client.EndpointSliceInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &endpointSlicesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type endpointSlicesClient struct {
@@ -102,7 +102,7 @@ func (c *endpointSlicesClient) Create(ctx context.Context, endpointSlice *v1beta
 	return obj.(*v1beta1.EndpointSlice), err
 }
 
-func (c *endpointSlicesClient) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts metav1.CreateOptions) (*v1beta1.EndpointSlice, error) {
+func (c *endpointSlicesClient) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts metav1.UpdateOptions) (*v1beta1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(endpointslicesResource, c.ClusterPath, c.Namespace, endpointSlice), &v1beta1.EndpointSlice{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *endpointSlicesClient) Update(ctx context.Context, endpointSlice *v1beta
 	return obj.(*v1beta1.EndpointSlice), err
 }
 
-func (c *endpointSlicesClient) UpdateStatus(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts metav1.CreateOptions) (*v1beta1.EndpointSlice, error) {
+func (c *endpointSlicesClient) UpdateStatus(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts metav1.UpdateOptions) (*v1beta1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(endpointslicesResource, c.ClusterPath, "status", c.Namespace, endpointSlice), &v1beta1.EndpointSlice{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *endpointSlicesClient) UpdateStatus(ctx context.Context, endpointSlice *
 	return obj.(*v1beta1.EndpointSlice), err
 }
 
-func (c *endpointSlicesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *endpointSlicesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(endpointslicesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.EndpointSlice{})
 	return err
 }

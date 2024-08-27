@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	batchv1 "k8s.io/client-go/applyconfigurations/batch/v1"
 	upstreambatchv1client "k8s.io/client-go/kubernetes/typed/batch/v1"
 	"k8s.io/client-go/testing"
-	batchv1 "k8s.io/code-generator/examples/upstream/applyconfiguration/batch/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/batch/v1"
 )
 
@@ -46,7 +46,7 @@ type cronJobsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *cronJobsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.CronJobNamespacer {
+func (c *cronJobsClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.CronJobNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type cronJobsNamespacer struct {
 }
 
 func (n *cronJobsNamespacer) Namespace(namespace string) upstreambatchv1client.CronJobInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &cronJobsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type cronJobsClient struct {
@@ -102,7 +102,7 @@ func (c *cronJobsClient) Create(ctx context.Context, cronJob *v1.CronJob, opts m
 	return obj.(*v1.CronJob), err
 }
 
-func (c *cronJobsClient) Update(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (*v1.CronJob, error) {
+func (c *cronJobsClient) Update(ctx context.Context, cronJob *v1.CronJob, opts metav1.UpdateOptions) (*v1.CronJob, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(cronjobsResource, c.ClusterPath, c.Namespace, cronJob), &v1.CronJob{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *cronJobsClient) Update(ctx context.Context, cronJob *v1.CronJob, opts m
 	return obj.(*v1.CronJob), err
 }
 
-func (c *cronJobsClient) UpdateStatus(ctx context.Context, cronJob *v1.CronJob, opts metav1.CreateOptions) (*v1.CronJob, error) {
+func (c *cronJobsClient) UpdateStatus(ctx context.Context, cronJob *v1.CronJob, opts metav1.UpdateOptions) (*v1.CronJob, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(cronjobsResource, c.ClusterPath, "status", c.Namespace, cronJob), &v1.CronJob{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *cronJobsClient) UpdateStatus(ctx context.Context, cronJob *v1.CronJob, 
 	return obj.(*v1.CronJob), err
 }
 
-func (c *cronJobsClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *cronJobsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(cronjobsResource, c.ClusterPath, c.Namespace, name, opts), &v1.CronJob{})
 	return err
 }

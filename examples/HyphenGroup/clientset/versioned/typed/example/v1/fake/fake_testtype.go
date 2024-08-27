@@ -45,7 +45,7 @@ type testTypesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *testTypesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.TestTypeNamespacer {
+func (c *testTypesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.TestTypeNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -84,7 +84,7 @@ type testTypesNamespacer struct {
 }
 
 func (n *testTypesNamespacer) Namespace(namespace string) upstreamexamplegroupv1client.TestTypeInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &testTypesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type testTypesClient struct {
@@ -101,7 +101,7 @@ func (c *testTypesClient) Create(ctx context.Context, testType *v1.TestType, opt
 	return obj.(*v1.TestType), err
 }
 
-func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
+func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(testtypesResource, c.ClusterPath, c.Namespace, testType), &v1.TestType{})
 	if obj == nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opt
 	return obj.(*v1.TestType), err
 }
 
-func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
+func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(testtypesResource, c.ClusterPath, "status", c.Namespace, testType), &v1.TestType{})
 	if obj == nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestTyp
 	return obj.(*v1.TestType), err
 }
 
-func (c *testTypesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *testTypesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(testtypesResource, c.ClusterPath, c.Namespace, name, opts), &v1.TestType{})
 	return err
 }

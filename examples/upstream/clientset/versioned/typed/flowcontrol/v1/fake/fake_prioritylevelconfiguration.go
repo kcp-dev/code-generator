@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/flowcontrol/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/flowcontrol/v1"
 )
 
 var prioritylevelconfigurationsResource = v1.SchemeGroupVersion.WithResource("prioritylevelconfigurations")
@@ -38,38 +30,4 @@ var prioritylevelconfigurationsKind = v1.SchemeGroupVersion.WithKind("PriorityLe
 // priorityLevelConfigurationsClusterClient implements priorityLevelConfigurationInterface
 type priorityLevelConfigurationsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *priorityLevelConfigurationsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PriorityLevelConfigurationNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &priorityLevelConfigurationsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of PriorityLevelConfigurations that match those selectors.
-func (c *priorityLevelConfigurationsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PriorityLevelConfigurationList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(prioritylevelconfigurationsResource, prioritylevelconfigurationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.PriorityLevelConfigurationList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.PriorityLevelConfigurationList{ListMeta: obj.(*v1.PriorityLevelConfigurationList).ListMeta}
-	for _, item := range obj.(*v1.PriorityLevelConfigurationList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested priorityLevelConfigurations across all clusters.
-func (c *priorityLevelConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(prioritylevelconfigurationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }

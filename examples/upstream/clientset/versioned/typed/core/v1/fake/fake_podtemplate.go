@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
-	corev1 "k8s.io/code-generator/examples/upstream/applyconfiguration/core/v1"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/core/v1"
 )
 
@@ -46,7 +46,7 @@ type podTemplatesClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podTemplatesClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.PodTemplateNamespacer {
+func (c *podTemplatesClusterClient) Cluster(clusterPath logicalcluster.Path) kcp.PodTemplateNamespacer {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -85,7 +85,7 @@ type podTemplatesNamespacer struct {
 }
 
 func (n *podTemplatesNamespacer) Namespace(namespace string) upstreamcorev1client.PodTemplateInterface {
-	return &configMapsClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
+	return &podTemplatesClient{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 
 type podTemplatesClient struct {
@@ -102,7 +102,7 @@ func (c *podTemplatesClient) Create(ctx context.Context, podTemplate *v1.PodTemp
 	return obj.(*v1.PodTemplate), err
 }
 
-func (c *podTemplatesClient) Update(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+func (c *podTemplatesClient) Update(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.UpdateOptions) (*v1.PodTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(podtemplatesResource, c.ClusterPath, c.Namespace, podTemplate), &v1.PodTemplate{})
 	if obj == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (c *podTemplatesClient) Update(ctx context.Context, podTemplate *v1.PodTemp
 	return obj.(*v1.PodTemplate), err
 }
 
-func (c *podTemplatesClient) UpdateStatus(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+func (c *podTemplatesClient) UpdateStatus(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.UpdateOptions) (*v1.PodTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(podtemplatesResource, c.ClusterPath, "status", c.Namespace, podTemplate), &v1.PodTemplate{})
 	if obj == nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *podTemplatesClient) UpdateStatus(ctx context.Context, podTemplate *v1.P
 	return obj.(*v1.PodTemplate), err
 }
 
-func (c *podTemplatesClient) Delete(ctx context.Context, name string, opts metav1.CreateOptions) error {
+func (c *podTemplatesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(podtemplatesResource, c.ClusterPath, c.Namespace, name, opts), &v1.PodTemplate{})
 	return err
 }

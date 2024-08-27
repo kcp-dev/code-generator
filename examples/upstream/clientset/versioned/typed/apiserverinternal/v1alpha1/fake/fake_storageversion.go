@@ -19,16 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/testing"
-	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apiserverinternal/v1alpha1"
 )
 
 var storageversionsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversions")
@@ -38,38 +30,4 @@ var storageversionsKind = v1alpha1.SchemeGroupVersion.WithKind("StorageVersion")
 // storageVersionsClusterClient implements storageVersionInterface
 type storageVersionsClusterClient struct {
 	*kcptesting.Fake
-}
-
-// Cluster scopes the client down to a particular cluster.
-func (c *storageVersionsClusterClient) Cluster(clusterPath logicalcluster.Path) *kcp.StorageVersionNamespacer {
-	if clusterPath == logicalcluster.Wildcard {
-		panic("A specific cluster must be provided when scoping, not the wildcard.")
-	}
-
-	return &storageVersionsNamespacer{Fake: c.Fake, ClusterPath: clusterPath}
-}
-
-// List takes label and field selectors, and returns the list of StorageVersions that match those selectors.
-func (c *storageVersionsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionList, err error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction(storageversionsResource, storageversionsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.StorageVersionList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.StorageVersionList{ListMeta: obj.(*v1alpha1.StorageVersionList).ListMeta}
-	for _, item := range obj.(*v1alpha1.StorageVersionList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested storageVersions across all clusters.
-func (c *storageVersionsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(storageversionsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
 }
