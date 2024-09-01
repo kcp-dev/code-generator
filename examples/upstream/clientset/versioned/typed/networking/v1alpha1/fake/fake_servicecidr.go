@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/networking/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	networkingv1alpha1 "k8s.io/client-go/applyconfigurations/networking/v1alpha1"
+	upstreamnetworkingv1alpha1client "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
+	"k8s.io/client-go/testing"
 )
 
 var servicecidrsResource = v1alpha1.SchemeGroupVersion.WithResource("servicecidrs")
@@ -30,4 +43,164 @@ var servicecidrsKind = v1alpha1.SchemeGroupVersion.WithKind("ServiceCIDR")
 // serviceCIDRsClusterClient implements serviceCIDRInterface
 type serviceCIDRsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *serviceCIDRsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1alpha1client.ServiceCIDRInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &serviceCIDRsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ServiceCIDRs that match those selectors.
+func (c *serviceCIDRsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ServiceCIDRList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(servicecidrsResource, servicecidrsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ServiceCIDRList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ServiceCIDRList{ListMeta: obj.(*v1alpha1.ServiceCIDRList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ServiceCIDRList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested serviceCIDRs across all clusters.
+func (c *serviceCIDRsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(servicecidrsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type serviceCIDRsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *serviceCIDRsClient) Create(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts metav1.CreateOptions) (*v1alpha1.ServiceCIDR, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(servicecidrsResource, c.ClusterPath, serviceCIDR), &v1alpha1.ServiceCIDR{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) Update(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts metav1.UpdateOptions) (*v1alpha1.ServiceCIDR, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(servicecidrsResource, c.ClusterPath, serviceCIDR), &v1alpha1.ServiceCIDR{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) UpdateStatus(ctx context.Context, serviceCIDR *v1alpha1.ServiceCIDR, opts metav1.UpdateOptions) (*v1alpha1.ServiceCIDR, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(servicecidrsResource, c.ClusterPath, "status", serviceCIDR), &v1alpha1.ServiceCIDR{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(servicecidrsResource, c.ClusterPath, name, opts), &v1alpha1.ServiceCIDR{})
+
+	return err
+}
+
+func (c *serviceCIDRsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(servicecidrsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha1.ServiceCIDRList{})
+	return err
+}
+
+func (c *serviceCIDRsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.ServiceCIDR, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(servicecidrsResource, c.ClusterPath, name), &v1alpha1.ServiceCIDR{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ServiceCIDRList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(servicecidrsResource, servicecidrsKind, c.ClusterPath, opts), &v1alpha1.ServiceCIDRList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ServiceCIDRList{ListMeta: obj.(*v1alpha1.ServiceCIDRList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ServiceCIDRList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *serviceCIDRsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(servicecidrsResource, c.ClusterPath, opts))
+
+}
+
+func (c *serviceCIDRsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.ServiceCIDR, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(servicecidrsResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha1.ServiceCIDR{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) Apply(ctx context.Context, applyConfiguration *networkingv1alpha1.ServiceCIDRApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ServiceCIDR, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(servicecidrsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha1.ServiceCIDR{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ServiceCIDR), err
+}
+
+func (c *serviceCIDRsClient) ApplyStatus(ctx context.Context, applyConfiguration *networkingv1alpha1.ServiceCIDRApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ServiceCIDR, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(servicecidrsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha1.ServiceCIDR{})
+
+	return obj.(*v1alpha1.ServiceCIDR), err
 }

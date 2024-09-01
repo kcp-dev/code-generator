@@ -119,11 +119,11 @@ var (
 )
 
 // ExampleV1 retrieves the ExampleV1Client
-func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
+func (c *Clientset) ExampleV1() examplev1.ExampleV1ClusterInterface {
 	return &fakeexamplev1.FakeExampleV1{Fake: &c.Fake}
 }
 
 // SecondExampleV1 retrieves the SecondExampleV1Client
-func (c *Clientset) SecondExampleV1() secondexamplev1.SecondExampleV1Interface {
+func (c *Clientset) SecondExampleV1() secondexamplev1.SecondExampleV1ClusterInterface {
 	return &fakesecondexamplev1.FakeSecondExampleV1{Fake: &c.Fake}
 }

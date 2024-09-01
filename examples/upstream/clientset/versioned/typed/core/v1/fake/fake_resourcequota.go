@@ -96,6 +96,7 @@ type resourceQuotasClient struct {
 
 func (c *resourceQuotasClient) Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(resourcequotasResource, c.ClusterPath, c.Namespace, resourceQuota), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *resourceQuotasClient) Create(ctx context.Context, resourceQuota *v1.Res
 
 func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourcequotasResource, c.ClusterPath, c.Namespace, resourceQuota), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *resourceQuotasClient) Update(ctx context.Context, resourceQuota *v1.Res
 
 func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourcequotasResource, c.ClusterPath, "status", c.Namespace, resourceQuota), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *resourceQuotasClient) UpdateStatus(ctx context.Context, resourceQuota *
 
 func (c *resourceQuotasClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourcequotasResource, c.ClusterPath, c.Namespace, name, opts), &v1.ResourceQuota{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *resourceQuotasClient) DeleteCollection(ctx context.Context, opts metav1
 
 func (c *resourceQuotasClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourcequotasResource, c.ClusterPath, c.Namespace, name), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ResourceQuota), err
 }
 
-// List takes label and field selectors, and returns the list of v1.ResourceQuota that match those selectors.
 func (c *resourceQuotasClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ResourceQuotaList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourcequotasResource, resourcequotasKind, c.ClusterPath, c.Namespace, opts), &v1.ResourceQuotaList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *resourceQuotasClient) List(ctx context.Context, opts metav1.ListOptions
 
 func (c *resourceQuotasClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourcequotasResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *resourceQuotasClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ResourceQuota, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourcequotasResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *resourceQuotasClient) Apply(ctx context.Context, applyConfiguration *co
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourcequotasResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ResourceQuota{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.ResourceQuota), err
+}
+
+func (c *resourceQuotasClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.ResourceQuotaApplyConfiguration, opts metav1.ApplyOptions) (*v1.ResourceQuota, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourcequotasResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.ResourceQuota{})
+
 	return obj.(*v1.ResourceQuota), err
 }

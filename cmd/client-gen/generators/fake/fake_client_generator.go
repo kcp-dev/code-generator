@@ -76,13 +76,14 @@ func TargetForGroup(args *args.Args, gv clientgentypes.GroupVersion, typeList []
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "fake_" + groupPkgName + "_client.go",
 				},
-				outputPackage:     outputPkg,
-				realClientPackage: realClientPkg,
-				group:             gv.Group.NonEmpty(),
-				version:           gv.Version.String(),
-				groupGoName:       groupGoName,
-				types:             typeList,
-				imports:           generator.NewImportTracker(),
+				outputPackage:                        outputPkg,
+				realClientPackage:                    realClientPkg,
+				group:                                gv.Group.NonEmpty(),
+				version:                              gv.Version.String(),
+				groupGoName:                          groupGoName,
+				types:                                typeList,
+				imports:                              generator.NewImportTracker(),
+				singleClusterTypedClientsPackagePath: args.SingleClusterTypedClientsPackagePath,
 			})
 			return generators
 		},

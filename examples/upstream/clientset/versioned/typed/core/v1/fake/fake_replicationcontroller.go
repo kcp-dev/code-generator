@@ -25,11 +25,13 @@ import (
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	applyconfigurationsautoscalingv1 "k8s.io/client-go/applyconfigurations/autoscaling/v1"
 	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/testing"
@@ -96,6 +98,7 @@ type replicationControllersClient struct {
 
 func (c *replicationControllersClient) Create(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.CreateOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, replicationController), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +107,7 @@ func (c *replicationControllersClient) Create(ctx context.Context, replicationCo
 
 func (c *replicationControllersClient) Update(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, replicationController), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +116,7 @@ func (c *replicationControllersClient) Update(ctx context.Context, replicationCo
 
 func (c *replicationControllersClient) UpdateStatus(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicationcontrollersResource, c.ClusterPath, "status", c.Namespace, replicationController), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +125,7 @@ func (c *replicationControllersClient) UpdateStatus(ctx context.Context, replica
 
 func (c *replicationControllersClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(replicationcontrollersResource, c.ClusterPath, c.Namespace, name, opts), &v1.ReplicationController{})
+
 	return err
 }
 
@@ -132,15 +138,16 @@ func (c *replicationControllersClient) DeleteCollection(ctx context.Context, opt
 
 func (c *replicationControllersClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, name), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ReplicationController), err
 }
 
-// List takes label and field selectors, and returns the list of v1.ReplicationController that match those selectors.
 func (c *replicationControllersClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ReplicationControllerList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(replicationcontrollersResource, replicationcontrollersKind, c.ClusterPath, c.Namespace, opts), &v1.ReplicationControllerList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +167,12 @@ func (c *replicationControllersClient) List(ctx context.Context, opts metav1.Lis
 
 func (c *replicationControllersClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *replicationControllersClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ReplicationController, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +191,66 @@ func (c *replicationControllersClient) Apply(ctx context.Context, applyConfigura
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ReplicationController{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ReplicationController), err
+}
+
+func (c *replicationControllersClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.ReplicationControllerApplyConfiguration, opts metav1.ApplyOptions) (*v1.ReplicationController, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.ReplicationController{})
+
+	return obj.(*v1.ReplicationController), err
+}
+
+func (c *replicationControllersClient) GetScale(ctx context.Context, replicationControllerName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetSubresourceAction(replicationcontrollersResource, c.ClusterPath, "scale", c.Namespace, replicationControllerName), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *replicationControllersClient) UpdateScale(ctx context.Context, replicationControllerName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicationcontrollersResource, c.ClusterPath, "scale", c.Namespace, scale), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *replicationControllersClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicationcontrollersResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &autoscalingv1.Scale{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
 }

@@ -96,6 +96,7 @@ type networkPoliciesClient struct {
 
 func (c *networkPoliciesClient) Create(ctx context.Context, networkPolicy *v1.NetworkPolicy, opts metav1.CreateOptions) (*v1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(networkpoliciesResource, c.ClusterPath, c.Namespace, networkPolicy), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *networkPoliciesClient) Create(ctx context.Context, networkPolicy *v1.Ne
 
 func (c *networkPoliciesClient) Update(ctx context.Context, networkPolicy *v1.NetworkPolicy, opts metav1.UpdateOptions) (*v1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(networkpoliciesResource, c.ClusterPath, c.Namespace, networkPolicy), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *networkPoliciesClient) Update(ctx context.Context, networkPolicy *v1.Ne
 
 func (c *networkPoliciesClient) UpdateStatus(ctx context.Context, networkPolicy *v1.NetworkPolicy, opts metav1.UpdateOptions) (*v1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(networkpoliciesResource, c.ClusterPath, "status", c.Namespace, networkPolicy), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *networkPoliciesClient) UpdateStatus(ctx context.Context, networkPolicy 
 
 func (c *networkPoliciesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(networkpoliciesResource, c.ClusterPath, c.Namespace, name, opts), &v1.NetworkPolicy{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *networkPoliciesClient) DeleteCollection(ctx context.Context, opts metav
 
 func (c *networkPoliciesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(networkpoliciesResource, c.ClusterPath, c.Namespace, name), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.NetworkPolicy), err
 }
 
-// List takes label and field selectors, and returns the list of v1.NetworkPolicy that match those selectors.
 func (c *networkPoliciesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.NetworkPolicyList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(networkpoliciesResource, networkpoliciesKind, c.ClusterPath, c.Namespace, opts), &v1.NetworkPolicyList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *networkPoliciesClient) List(ctx context.Context, opts metav1.ListOption
 
 func (c *networkPoliciesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(networkpoliciesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *networkPoliciesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.NetworkPolicy, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(networkpoliciesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *networkPoliciesClient) Apply(ctx context.Context, applyConfiguration *n
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(networkpoliciesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.NetworkPolicy{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.NetworkPolicy), err
+}
+
+func (c *networkPoliciesClient) ApplyStatus(ctx context.Context, applyConfiguration *networkingv1.NetworkPolicyApplyConfiguration, opts metav1.ApplyOptions) (*v1.NetworkPolicy, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(networkpoliciesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.NetworkPolicy{})
+
 	return obj.(*v1.NetworkPolicy), err
 }

@@ -96,6 +96,7 @@ type limitRangesClient struct {
 
 func (c *limitRangesClient) Create(ctx context.Context, limitRange *v1.LimitRange, opts metav1.CreateOptions) (*v1.LimitRange, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(limitrangesResource, c.ClusterPath, c.Namespace, limitRange), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *limitRangesClient) Create(ctx context.Context, limitRange *v1.LimitRang
 
 func (c *limitRangesClient) Update(ctx context.Context, limitRange *v1.LimitRange, opts metav1.UpdateOptions) (*v1.LimitRange, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(limitrangesResource, c.ClusterPath, c.Namespace, limitRange), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *limitRangesClient) Update(ctx context.Context, limitRange *v1.LimitRang
 
 func (c *limitRangesClient) UpdateStatus(ctx context.Context, limitRange *v1.LimitRange, opts metav1.UpdateOptions) (*v1.LimitRange, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(limitrangesResource, c.ClusterPath, "status", c.Namespace, limitRange), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *limitRangesClient) UpdateStatus(ctx context.Context, limitRange *v1.Lim
 
 func (c *limitRangesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(limitrangesResource, c.ClusterPath, c.Namespace, name, opts), &v1.LimitRange{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *limitRangesClient) DeleteCollection(ctx context.Context, opts metav1.De
 
 func (c *limitRangesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.LimitRange, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(limitrangesResource, c.ClusterPath, c.Namespace, name), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.LimitRange), err
 }
 
-// List takes label and field selectors, and returns the list of v1.LimitRange that match those selectors.
 func (c *limitRangesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.LimitRangeList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(limitrangesResource, limitrangesKind, c.ClusterPath, c.Namespace, opts), &v1.LimitRangeList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *limitRangesClient) List(ctx context.Context, opts metav1.ListOptions) (
 
 func (c *limitRangesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(limitrangesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *limitRangesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.LimitRange, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(limitrangesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *limitRangesClient) Apply(ctx context.Context, applyConfiguration *corev
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(limitrangesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.LimitRange{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.LimitRange), err
+}
+
+func (c *limitRangesClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.LimitRangeApplyConfiguration, opts metav1.ApplyOptions) (*v1.LimitRange, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(limitrangesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.LimitRange{})
+
 	return obj.(*v1.LimitRange), err
 }

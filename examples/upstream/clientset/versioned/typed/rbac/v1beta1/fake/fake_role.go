@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type rolesClient struct {
 
 func (c *rolesClient) Create(ctx context.Context, role *v1beta1.Role, opts metav1.CreateOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(rolesResource, c.ClusterPath, c.Namespace, role), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *rolesClient) Create(ctx context.Context, role *v1beta1.Role, opts metav
 
 func (c *rolesClient) Update(ctx context.Context, role *v1beta1.Role, opts metav1.UpdateOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(rolesResource, c.ClusterPath, c.Namespace, role), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *rolesClient) Update(ctx context.Context, role *v1beta1.Role, opts metav
 
 func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1beta1.Role, opts metav1.UpdateOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(rolesResource, c.ClusterPath, "status", c.Namespace, role), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *rolesClient) UpdateStatus(ctx context.Context, role *v1beta1.Role, opts
 
 func (c *rolesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(rolesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Role{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *rolesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 
 func (c *rolesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(rolesResource, c.ClusterPath, c.Namespace, name), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.Role), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.Role that match those selectors.
 func (c *rolesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.RoleList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(rolesResource, rolesKind, c.ClusterPath, c.Namespace, opts), &v1beta1.RoleList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *rolesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1bet
 
 func (c *rolesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(rolesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *rolesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Role, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(rolesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *rolesClient) Apply(ctx context.Context, applyConfiguration *rbacv1beta1
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(rolesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Role{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1beta1.Role), err
+}
+
+func (c *rolesClient) ApplyStatus(ctx context.Context, applyConfiguration *rbacv1beta1.RoleApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Role, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(rolesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.Role{})
+
 	return obj.(*v1beta1.Role), err
 }

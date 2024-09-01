@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/storagemigration/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	storagemigrationv1alpha1 "k8s.io/client-go/applyconfigurations/storagemigration/v1alpha1"
+	upstreamstoragemigrationv1alpha1client "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
+	"k8s.io/client-go/testing"
 )
 
 var storageversionmigrationsResource = v1alpha1.SchemeGroupVersion.WithResource("storageversionmigrations")
@@ -30,4 +43,164 @@ var storageversionmigrationsKind = v1alpha1.SchemeGroupVersion.WithKind("Storage
 // storageVersionMigrationsClusterClient implements storageVersionMigrationInterface
 type storageVersionMigrationsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *storageVersionMigrationsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamstoragemigrationv1alpha1client.StorageVersionMigrationInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &storageVersionMigrationsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of StorageVersionMigrations that match those selectors.
+func (c *storageVersionMigrationsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.StorageVersionMigrationList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(storageversionmigrationsResource, storageversionmigrationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.StorageVersionMigrationList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.StorageVersionMigrationList{ListMeta: obj.(*v1alpha1.StorageVersionMigrationList).ListMeta}
+	for _, item := range obj.(*v1alpha1.StorageVersionMigrationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested storageVersionMigrations across all clusters.
+func (c *storageVersionMigrationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(storageversionmigrationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type storageVersionMigrationsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *storageVersionMigrationsClient) Create(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts metav1.CreateOptions) (*v1alpha1.StorageVersionMigration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(storageversionmigrationsResource, c.ClusterPath, storageVersionMigration), &v1alpha1.StorageVersionMigration{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) Update(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts metav1.UpdateOptions) (*v1alpha1.StorageVersionMigration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(storageversionmigrationsResource, c.ClusterPath, storageVersionMigration), &v1alpha1.StorageVersionMigration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) UpdateStatus(ctx context.Context, storageVersionMigration *v1alpha1.StorageVersionMigration, opts metav1.UpdateOptions) (*v1alpha1.StorageVersionMigration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(storageversionmigrationsResource, c.ClusterPath, "status", storageVersionMigration), &v1alpha1.StorageVersionMigration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(storageversionmigrationsResource, c.ClusterPath, name, opts), &v1alpha1.StorageVersionMigration{})
+
+	return err
+}
+
+func (c *storageVersionMigrationsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(storageversionmigrationsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha1.StorageVersionMigrationList{})
+	return err
+}
+
+func (c *storageVersionMigrationsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.StorageVersionMigration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(storageversionmigrationsResource, c.ClusterPath, name), &v1alpha1.StorageVersionMigration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.StorageVersionMigrationList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(storageversionmigrationsResource, storageversionmigrationsKind, c.ClusterPath, opts), &v1alpha1.StorageVersionMigrationList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.StorageVersionMigrationList{ListMeta: obj.(*v1alpha1.StorageVersionMigrationList).ListMeta}
+	for _, item := range obj.(*v1alpha1.StorageVersionMigrationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *storageVersionMigrationsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(storageversionmigrationsResource, c.ClusterPath, opts))
+
+}
+
+func (c *storageVersionMigrationsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.StorageVersionMigration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(storageversionmigrationsResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha1.StorageVersionMigration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) Apply(ctx context.Context, applyConfiguration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.StorageVersionMigration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(storageversionmigrationsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha1.StorageVersionMigration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.StorageVersionMigration), err
+}
+
+func (c *storageVersionMigrationsClient) ApplyStatus(ctx context.Context, applyConfiguration *storagemigrationv1alpha1.StorageVersionMigrationApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.StorageVersionMigration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(storageversionmigrationsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha1.StorageVersionMigration{})
+
+	return obj.(*v1alpha1.StorageVersionMigration), err
 }

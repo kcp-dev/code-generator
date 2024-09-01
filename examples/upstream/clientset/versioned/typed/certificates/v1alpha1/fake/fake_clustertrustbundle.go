@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/certificates/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	certificatesv1alpha1 "k8s.io/client-go/applyconfigurations/certificates/v1alpha1"
+	upstreamcertificatesv1alpha1client "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
+	"k8s.io/client-go/testing"
 )
 
 var clustertrustbundlesResource = v1alpha1.SchemeGroupVersion.WithResource("clustertrustbundles")
@@ -30,4 +43,164 @@ var clustertrustbundlesKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterTrust
 // clusterTrustBundlesClusterClient implements clusterTrustBundleInterface
 type clusterTrustBundlesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *clusterTrustBundlesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1alpha1client.ClusterTrustBundleInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &clusterTrustBundlesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ClusterTrustBundles that match those selectors.
+func (c *clusterTrustBundlesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterTrustBundleList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(clustertrustbundlesResource, clustertrustbundlesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ClusterTrustBundleList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ClusterTrustBundleList{ListMeta: obj.(*v1alpha1.ClusterTrustBundleList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ClusterTrustBundleList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested clusterTrustBundles across all clusters.
+func (c *clusterTrustBundlesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(clustertrustbundlesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type clusterTrustBundlesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *clusterTrustBundlesClient) Create(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts metav1.CreateOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(clustertrustbundlesResource, c.ClusterPath, clusterTrustBundle), &v1alpha1.ClusterTrustBundle{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) Update(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts metav1.UpdateOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(clustertrustbundlesResource, c.ClusterPath, clusterTrustBundle), &v1alpha1.ClusterTrustBundle{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) UpdateStatus(ctx context.Context, clusterTrustBundle *v1alpha1.ClusterTrustBundle, opts metav1.UpdateOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(clustertrustbundlesResource, c.ClusterPath, "status", clusterTrustBundle), &v1alpha1.ClusterTrustBundle{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(clustertrustbundlesResource, c.ClusterPath, name, opts), &v1alpha1.ClusterTrustBundle{})
+
+	return err
+}
+
+func (c *clusterTrustBundlesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(clustertrustbundlesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterTrustBundleList{})
+	return err
+}
+
+func (c *clusterTrustBundlesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(clustertrustbundlesResource, c.ClusterPath, name), &v1alpha1.ClusterTrustBundle{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ClusterTrustBundleList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(clustertrustbundlesResource, clustertrustbundlesKind, c.ClusterPath, opts), &v1alpha1.ClusterTrustBundleList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ClusterTrustBundleList{ListMeta: obj.(*v1alpha1.ClusterTrustBundleList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ClusterTrustBundleList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *clusterTrustBundlesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(clustertrustbundlesResource, c.ClusterPath, opts))
+
+}
+
+func (c *clusterTrustBundlesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.ClusterTrustBundle, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clustertrustbundlesResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha1.ClusterTrustBundle{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) Apply(ctx context.Context, applyConfiguration *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clustertrustbundlesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha1.ClusterTrustBundle{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterTrustBundle), err
+}
+
+func (c *clusterTrustBundlesClient) ApplyStatus(ctx context.Context, applyConfiguration *certificatesv1alpha1.ClusterTrustBundleApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ClusterTrustBundle, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(clustertrustbundlesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha1.ClusterTrustBundle{})
+
+	return obj.(*v1alpha1.ClusterTrustBundle), err
 }

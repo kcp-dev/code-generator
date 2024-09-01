@@ -96,6 +96,7 @@ type jobsClient struct {
 
 func (c *jobsClient) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(jobsResource, c.ClusterPath, c.Namespace, job), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *jobsClient) Create(ctx context.Context, job *v1.Job, opts metav1.Create
 
 func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(jobsResource, c.ClusterPath, c.Namespace, job), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *jobsClient) Update(ctx context.Context, job *v1.Job, opts metav1.Update
 
 func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(jobsResource, c.ClusterPath, "status", c.Namespace, job), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *jobsClient) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.
 
 func (c *jobsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(jobsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Job{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *jobsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOpt
 
 func (c *jobsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(jobsResource, c.ClusterPath, c.Namespace, name), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Job), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Job that match those selectors.
 func (c *jobsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.JobList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(jobsResource, jobsKind, c.ClusterPath, c.Namespace, opts), &v1.JobList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *jobsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.Job
 
 func (c *jobsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(jobsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *jobsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Job, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(jobsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *jobsClient) Apply(ctx context.Context, applyConfiguration *batchv1.JobA
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(jobsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Job{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Job), err
+}
+
+func (c *jobsClient) ApplyStatus(ctx context.Context, applyConfiguration *batchv1.JobApplyConfiguration, opts metav1.ApplyOptions) (*v1.Job, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(jobsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Job{})
+
 	return obj.(*v1.Job), err
 }

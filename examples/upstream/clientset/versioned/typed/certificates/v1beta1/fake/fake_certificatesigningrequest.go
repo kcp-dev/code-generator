@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/certificates/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	certificatesv1beta1 "k8s.io/client-go/applyconfigurations/certificates/v1beta1"
+	upstreamcertificatesv1beta1client "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
+	"k8s.io/client-go/testing"
 )
 
 var certificatesigningrequestsResource = v1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests")
@@ -30,4 +43,164 @@ var certificatesigningrequestsKind = v1beta1.SchemeGroupVersion.WithKind("Certif
 // certificateSigningRequestsClusterClient implements certificateSigningRequestInterface
 type certificateSigningRequestsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *certificateSigningRequestsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1beta1client.CertificateSigningRequestInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &certificateSigningRequestsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of CertificateSigningRequests that match those selectors.
+func (c *certificateSigningRequestsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CertificateSigningRequestList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(certificatesigningrequestsResource, certificatesigningrequestsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.CertificateSigningRequestList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.CertificateSigningRequestList{ListMeta: obj.(*v1beta1.CertificateSigningRequestList).ListMeta}
+	for _, item := range obj.(*v1beta1.CertificateSigningRequestList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested certificateSigningRequests across all clusters.
+func (c *certificateSigningRequestsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(certificatesigningrequestsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type certificateSigningRequestsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *certificateSigningRequestsClient) Create(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts metav1.CreateOptions) (*v1beta1.CertificateSigningRequest, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(certificatesigningrequestsResource, c.ClusterPath, certificateSigningRequest), &v1beta1.CertificateSigningRequest{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) Update(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1beta1.CertificateSigningRequest, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(certificatesigningrequestsResource, c.ClusterPath, certificateSigningRequest), &v1beta1.CertificateSigningRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) UpdateStatus(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1beta1.CertificateSigningRequest, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(certificatesigningrequestsResource, c.ClusterPath, "status", certificateSigningRequest), &v1beta1.CertificateSigningRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(certificatesigningrequestsResource, c.ClusterPath, name, opts), &v1beta1.CertificateSigningRequest{})
+
+	return err
+}
+
+func (c *certificateSigningRequestsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(certificatesigningrequestsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1beta1.CertificateSigningRequestList{})
+	return err
+}
+
+func (c *certificateSigningRequestsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.CertificateSigningRequest, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(certificatesigningrequestsResource, c.ClusterPath, name), &v1beta1.CertificateSigningRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.CertificateSigningRequestList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(certificatesigningrequestsResource, certificatesigningrequestsKind, c.ClusterPath, opts), &v1beta1.CertificateSigningRequestList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.CertificateSigningRequestList{ListMeta: obj.(*v1beta1.CertificateSigningRequestList).ListMeta}
+	for _, item := range obj.(*v1beta1.CertificateSigningRequestList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *certificateSigningRequestsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(certificatesigningrequestsResource, c.ClusterPath, opts))
+
+}
+
+func (c *certificateSigningRequestsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.CertificateSigningRequest, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(certificatesigningrequestsResource, c.ClusterPath, name, pt, data, subresources...), &v1beta1.CertificateSigningRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) Apply(ctx context.Context, applyConfiguration *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.CertificateSigningRequest, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(certificatesigningrequestsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1beta1.CertificateSigningRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.CertificateSigningRequest), err
+}
+
+func (c *certificateSigningRequestsClient) ApplyStatus(ctx context.Context, applyConfiguration *certificatesv1beta1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.CertificateSigningRequest, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(certificatesigningrequestsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1beta1.CertificateSigningRequest{})
+
+	return obj.(*v1beta1.CertificateSigningRequest), err
 }

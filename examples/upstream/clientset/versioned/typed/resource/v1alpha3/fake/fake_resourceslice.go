@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	resourcev1alpha3 "k8s.io/client-go/applyconfigurations/resource/v1alpha3"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
+	"k8s.io/client-go/testing"
 )
 
 var resourceslicesResource = v1alpha3.SchemeGroupVersion.WithResource("resourceslices")
@@ -30,4 +43,164 @@ var resourceslicesKind = v1alpha3.SchemeGroupVersion.WithKind("ResourceSlice")
 // resourceSlicesClusterClient implements resourceSliceInterface
 type resourceSlicesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *resourceSlicesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamresourcev1alpha3client.ResourceSliceInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &resourceSlicesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ResourceSlices that match those selectors.
+func (c *resourceSlicesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.ResourceSliceList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourceslicesResource, resourceslicesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha3.ResourceSliceList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha3.ResourceSliceList{ListMeta: obj.(*v1alpha3.ResourceSliceList).ListMeta}
+	for _, item := range obj.(*v1alpha3.ResourceSliceList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested resourceSlices across all clusters.
+func (c *resourceSlicesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourceslicesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type resourceSlicesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *resourceSlicesClient) Create(ctx context.Context, resourceSlice *v1alpha3.ResourceSlice, opts metav1.CreateOptions) (*v1alpha3.ResourceSlice, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(resourceslicesResource, c.ClusterPath, resourceSlice), &v1alpha3.ResourceSlice{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) Update(ctx context.Context, resourceSlice *v1alpha3.ResourceSlice, opts metav1.UpdateOptions) (*v1alpha3.ResourceSlice, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(resourceslicesResource, c.ClusterPath, resourceSlice), &v1alpha3.ResourceSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) UpdateStatus(ctx context.Context, resourceSlice *v1alpha3.ResourceSlice, opts metav1.UpdateOptions) (*v1alpha3.ResourceSlice, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(resourceslicesResource, c.ClusterPath, "status", resourceSlice), &v1alpha3.ResourceSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(resourceslicesResource, c.ClusterPath, name, opts), &v1alpha3.ResourceSlice{})
+
+	return err
+}
+
+func (c *resourceSlicesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(resourceslicesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha3.ResourceSliceList{})
+	return err
+}
+
+func (c *resourceSlicesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha3.ResourceSlice, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(resourceslicesResource, c.ClusterPath, name), &v1alpha3.ResourceSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.ResourceSliceList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(resourceslicesResource, resourceslicesKind, c.ClusterPath, opts), &v1alpha3.ResourceSliceList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha3.ResourceSliceList{ListMeta: obj.(*v1alpha3.ResourceSliceList).ListMeta}
+	for _, item := range obj.(*v1alpha3.ResourceSliceList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *resourceSlicesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(resourceslicesResource, c.ClusterPath, opts))
+
+}
+
+func (c *resourceSlicesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha3.ResourceSlice, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(resourceslicesResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha3.ResourceSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) Apply(ctx context.Context, applyConfiguration *resourcev1alpha3.ResourceSliceApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.ResourceSlice, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(resourceslicesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha3.ResourceSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.ResourceSlice), err
+}
+
+func (c *resourceSlicesClient) ApplyStatus(ctx context.Context, applyConfiguration *resourcev1alpha3.ResourceSliceApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.ResourceSlice, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(resourceslicesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha3.ResourceSlice{})
+
+	return obj.(*v1alpha3.ResourceSlice), err
 }

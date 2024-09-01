@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 )
 
 var persistentvolumesResource = v1.SchemeGroupVersion.WithResource("persistentvolumes")
@@ -30,4 +42,164 @@ var persistentvolumesKind = v1.SchemeGroupVersion.WithKind("PersistentVolume")
 // persistentVolumesClusterClient implements persistentVolumeInterface
 type persistentVolumesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *persistentVolumesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcorev1client.PersistentVolumeInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &persistentVolumesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of PersistentVolumes that match those selectors.
+func (c *persistentVolumesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PersistentVolumeList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(persistentvolumesResource, persistentvolumesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.PersistentVolumeList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.PersistentVolumeList{ListMeta: obj.(*v1.PersistentVolumeList).ListMeta}
+	for _, item := range obj.(*v1.PersistentVolumeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested persistentVolumes across all clusters.
+func (c *persistentVolumesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(persistentvolumesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type persistentVolumesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *persistentVolumesClient) Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (*v1.PersistentVolume, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(persistentvolumesResource, c.ClusterPath, persistentVolume), &v1.PersistentVolume{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) Update(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (*v1.PersistentVolume, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(persistentvolumesResource, c.ClusterPath, persistentVolume), &v1.PersistentVolume{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) UpdateStatus(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (*v1.PersistentVolume, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(persistentvolumesResource, c.ClusterPath, "status", persistentVolume), &v1.PersistentVolume{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(persistentvolumesResource, c.ClusterPath, name, opts), &v1.PersistentVolume{})
+
+	return err
+}
+
+func (c *persistentVolumesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(persistentvolumesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.PersistentVolumeList{})
+	return err
+}
+
+func (c *persistentVolumesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.PersistentVolume, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(persistentvolumesResource, c.ClusterPath, name), &v1.PersistentVolume{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.PersistentVolumeList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(persistentvolumesResource, persistentvolumesKind, c.ClusterPath, opts), &v1.PersistentVolumeList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.PersistentVolumeList{ListMeta: obj.(*v1.PersistentVolumeList).ListMeta}
+	for _, item := range obj.(*v1.PersistentVolumeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *persistentVolumesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(persistentvolumesResource, c.ClusterPath, opts))
+
+}
+
+func (c *persistentVolumesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.PersistentVolume, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(persistentvolumesResource, c.ClusterPath, name, pt, data, subresources...), &v1.PersistentVolume{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) Apply(ctx context.Context, applyConfiguration *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (*v1.PersistentVolume, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(persistentvolumesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.PersistentVolume{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PersistentVolume), err
+}
+
+func (c *persistentVolumesClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (*v1.PersistentVolume, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(persistentvolumesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.PersistentVolume{})
+
+	return obj.(*v1.PersistentVolume), err
 }

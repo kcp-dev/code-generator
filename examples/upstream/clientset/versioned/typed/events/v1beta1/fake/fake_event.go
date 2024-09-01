@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/events/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type eventsClient struct {
 
 func (c *eventsClient) Create(ctx context.Context, event *v1beta1.Event, opts metav1.CreateOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *eventsClient) Create(ctx context.Context, event *v1beta1.Event, opts me
 
 func (c *eventsClient) Update(ctx context.Context, event *v1beta1.Event, opts metav1.UpdateOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *eventsClient) Update(ctx context.Context, event *v1beta1.Event, opts me
 
 func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1beta1.Event, opts metav1.UpdateOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(eventsResource, c.ClusterPath, "status", c.Namespace, event), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1beta1.Event, o
 
 func (c *eventsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(eventsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Event{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *eventsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 
 func (c *eventsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(eventsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.Event), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.Event that match those selectors.
 func (c *eventsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.EventList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(eventsResource, eventsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.EventList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *eventsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1be
 
 func (c *eventsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(eventsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *eventsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *eventsClient) Apply(ctx context.Context, applyConfiguration *eventsv1be
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1beta1.Event), err
+}
+
+func (c *eventsClient) ApplyStatus(ctx context.Context, applyConfiguration *eventsv1beta1.EventApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Event, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.Event{})
+
 	return obj.(*v1beta1.Event), err
 }

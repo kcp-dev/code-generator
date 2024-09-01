@@ -20,37 +20,77 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamextensionsv1beta1client "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/extensions/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type ExtensionsV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeExtensionsV1beta1) DaemonSets(namespace string) v1beta1.DaemonSetInterface {
-	return &FakeDaemonSets{c, namespace}
+func (c *ExtensionsV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamextensionsv1beta1client.ExtensionsV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &ExtensionsV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeExtensionsV1beta1) Deployments(namespace string) v1beta1.DeploymentInterface {
-	return &FakeDeployments{c, namespace}
+func (c *ExtensionsV1beta1ClusterClient) DaemonSets(namespace string) v1beta1.DaemonSetClusterInterface {
+	return &daemonSetsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeExtensionsV1beta1) Ingresses(namespace string) v1beta1.IngressInterface {
-	return &FakeIngresses{c, namespace}
+func (c *ExtensionsV1beta1ClusterClient) Deployments(namespace string) v1beta1.DeploymentClusterInterface {
+	return &deploymentsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeExtensionsV1beta1) NetworkPolicies(namespace string) v1beta1.NetworkPolicyInterface {
-	return &FakeNetworkPolicies{c, namespace}
+func (c *ExtensionsV1beta1ClusterClient) Ingresses(namespace string) v1beta1.IngressClusterInterface {
+	return &ingressesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeExtensionsV1beta1) ReplicaSets(namespace string) v1beta1.ReplicaSetInterface {
-	return &FakeReplicaSets{c, namespace}
+func (c *ExtensionsV1beta1ClusterClient) NetworkPolicies(namespace string) v1beta1.NetworkPolicyClusterInterface {
+	return &networkPoliciesClusterClient{Fake: c.Fake}
+}
+
+func (c *ExtensionsV1beta1ClusterClient) ReplicaSets(namespace string) v1beta1.ReplicaSetClusterInterface {
+	return &replicaSetsClusterClient{Fake: c.Fake}
+}
+
+type ExtensionsV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeExtensionsV1beta1) RESTClient() rest.Interface {
+func (c *ExtensionsV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *ExtensionsV1beta1Client) DaemonSets(namespace string) upstreamextensionsv1beta1client.DaemonSetInterface {
+
+	return &daemonSetsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ExtensionsV1beta1Client) Deployments(namespace string) upstreamextensionsv1beta1client.DeploymentInterface {
+
+	return &deploymentsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ExtensionsV1beta1Client) Ingresses(namespace string) upstreamextensionsv1beta1client.IngressInterface {
+
+	return &ingressesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ExtensionsV1beta1Client) NetworkPolicies(namespace string) upstreamextensionsv1beta1client.NetworkPolicyInterface {
+
+	return &networkPoliciesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ExtensionsV1beta1Client) ReplicaSets(namespace string) upstreamextensionsv1beta1client.ReplicaSetInterface {
+
+	return &replicaSetsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

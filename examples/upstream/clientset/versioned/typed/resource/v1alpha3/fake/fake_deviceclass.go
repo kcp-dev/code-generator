@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	resourcev1alpha3 "k8s.io/client-go/applyconfigurations/resource/v1alpha3"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
+	"k8s.io/client-go/testing"
 )
 
 var deviceclassesResource = v1alpha3.SchemeGroupVersion.WithResource("deviceclasses")
@@ -30,4 +43,164 @@ var deviceclassesKind = v1alpha3.SchemeGroupVersion.WithKind("DeviceClass")
 // deviceClassesClusterClient implements deviceClassInterface
 type deviceClassesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *deviceClassesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamresourcev1alpha3client.DeviceClassInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &deviceClassesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of DeviceClasses that match those selectors.
+func (c *deviceClassesClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha3.DeviceClassList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(deviceclassesResource, deviceclassesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha3.DeviceClassList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha3.DeviceClassList{ListMeta: obj.(*v1alpha3.DeviceClassList).ListMeta}
+	for _, item := range obj.(*v1alpha3.DeviceClassList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested deviceClasss across all clusters.
+func (c *deviceClassesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(deviceclassesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type deviceClassesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *deviceClassesClient) Create(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts metav1.CreateOptions) (*v1alpha3.DeviceClass, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(deviceclassesResource, c.ClusterPath, deviceClass), &v1alpha3.DeviceClass{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) Update(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts metav1.UpdateOptions) (*v1alpha3.DeviceClass, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(deviceclassesResource, c.ClusterPath, deviceClass), &v1alpha3.DeviceClass{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) UpdateStatus(ctx context.Context, deviceClass *v1alpha3.DeviceClass, opts metav1.UpdateOptions) (*v1alpha3.DeviceClass, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(deviceclassesResource, c.ClusterPath, "status", deviceClass), &v1alpha3.DeviceClass{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(deviceclassesResource, c.ClusterPath, name, opts), &v1alpha3.DeviceClass{})
+
+	return err
+}
+
+func (c *deviceClassesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(deviceclassesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha3.DeviceClassList{})
+	return err
+}
+
+func (c *deviceClassesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha3.DeviceClass, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(deviceclassesResource, c.ClusterPath, name), &v1alpha3.DeviceClass{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.DeviceClassList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(deviceclassesResource, deviceclassesKind, c.ClusterPath, opts), &v1alpha3.DeviceClassList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha3.DeviceClassList{ListMeta: obj.(*v1alpha3.DeviceClassList).ListMeta}
+	for _, item := range obj.(*v1alpha3.DeviceClassList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *deviceClassesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(deviceclassesResource, c.ClusterPath, opts))
+
+}
+
+func (c *deviceClassesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha3.DeviceClass, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(deviceclassesResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha3.DeviceClass{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) Apply(ctx context.Context, applyConfiguration *resourcev1alpha3.DeviceClassApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.DeviceClass, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(deviceclassesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha3.DeviceClass{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha3.DeviceClass), err
+}
+
+func (c *deviceClassesClient) ApplyStatus(ctx context.Context, applyConfiguration *resourcev1alpha3.DeviceClassApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.DeviceClass, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(deviceclassesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha3.DeviceClass{})
+
+	return obj.(*v1alpha3.DeviceClass), err
 }

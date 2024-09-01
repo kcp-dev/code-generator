@@ -96,6 +96,7 @@ type controllerRevisionsClient struct {
 
 func (c *controllerRevisionsClient) Create(ctx context.Context, controllerRevision *v1.ControllerRevision, opts metav1.CreateOptions) (*v1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, controllerRevision), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *controllerRevisionsClient) Create(ctx context.Context, controllerRevisi
 
 func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevision *v1.ControllerRevision, opts metav1.UpdateOptions) (*v1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, controllerRevision), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *controllerRevisionsClient) Update(ctx context.Context, controllerRevisi
 
 func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controllerRevision *v1.ControllerRevision, opts metav1.UpdateOptions) (*v1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(controllerrevisionsResource, c.ClusterPath, "status", c.Namespace, controllerRevision), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *controllerRevisionsClient) UpdateStatus(ctx context.Context, controller
 
 func (c *controllerRevisionsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(controllerrevisionsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ControllerRevision{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *controllerRevisionsClient) DeleteCollection(ctx context.Context, opts m
 
 func (c *controllerRevisionsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, name), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ControllerRevision), err
 }
 
-// List takes label and field selectors, and returns the list of v1.ControllerRevision that match those selectors.
 func (c *controllerRevisionsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ControllerRevisionList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(controllerrevisionsResource, controllerrevisionsKind, c.ClusterPath, c.Namespace, opts), &v1.ControllerRevisionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *controllerRevisionsClient) List(ctx context.Context, opts metav1.ListOp
 
 func (c *controllerRevisionsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *controllerRevisionsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ControllerRevision, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *controllerRevisionsClient) Apply(ctx context.Context, applyConfiguratio
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ControllerRevision{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.ControllerRevision), err
+}
+
+func (c *controllerRevisionsClient) ApplyStatus(ctx context.Context, applyConfiguration *appsv1.ControllerRevisionApplyConfiguration, opts metav1.ApplyOptions) (*v1.ControllerRevision, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(controllerrevisionsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.ControllerRevision{})
+
 	return obj.(*v1.ControllerRevision), err
 }

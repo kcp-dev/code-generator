@@ -96,6 +96,7 @@ type endpointSlicesClient struct {
 
 func (c *endpointSlicesClient) Create(ctx context.Context, endpointSlice *v1.EndpointSlice, opts metav1.CreateOptions) (*v1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(endpointslicesResource, c.ClusterPath, c.Namespace, endpointSlice), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *endpointSlicesClient) Create(ctx context.Context, endpointSlice *v1.End
 
 func (c *endpointSlicesClient) Update(ctx context.Context, endpointSlice *v1.EndpointSlice, opts metav1.UpdateOptions) (*v1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(endpointslicesResource, c.ClusterPath, c.Namespace, endpointSlice), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *endpointSlicesClient) Update(ctx context.Context, endpointSlice *v1.End
 
 func (c *endpointSlicesClient) UpdateStatus(ctx context.Context, endpointSlice *v1.EndpointSlice, opts metav1.UpdateOptions) (*v1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(endpointslicesResource, c.ClusterPath, "status", c.Namespace, endpointSlice), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *endpointSlicesClient) UpdateStatus(ctx context.Context, endpointSlice *
 
 func (c *endpointSlicesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(endpointslicesResource, c.ClusterPath, c.Namespace, name, opts), &v1.EndpointSlice{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *endpointSlicesClient) DeleteCollection(ctx context.Context, opts metav1
 
 func (c *endpointSlicesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(endpointslicesResource, c.ClusterPath, c.Namespace, name), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.EndpointSlice), err
 }
 
-// List takes label and field selectors, and returns the list of v1.EndpointSlice that match those selectors.
 func (c *endpointSlicesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.EndpointSliceList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(endpointslicesResource, endpointslicesKind, c.ClusterPath, c.Namespace, opts), &v1.EndpointSliceList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *endpointSlicesClient) List(ctx context.Context, opts metav1.ListOptions
 
 func (c *endpointSlicesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(endpointslicesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *endpointSlicesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.EndpointSlice, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointslicesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *endpointSlicesClient) Apply(ctx context.Context, applyConfiguration *di
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointslicesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.EndpointSlice{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.EndpointSlice), err
+}
+
+func (c *endpointSlicesClient) ApplyStatus(ctx context.Context, applyConfiguration *discoveryv1.EndpointSliceApplyConfiguration, opts metav1.ApplyOptions) (*v1.EndpointSlice, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointslicesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.EndpointSlice{})
+
 	return obj.(*v1.EndpointSlice), err
 }

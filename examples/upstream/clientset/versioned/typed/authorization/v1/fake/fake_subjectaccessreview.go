@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	authorizationv1 "k8s.io/client-go/applyconfigurations/authorization/v1"
+	upstreamauthorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
+	"k8s.io/client-go/testing"
 )
 
 var subjectaccessreviewsResource = v1.SchemeGroupVersion.WithResource("subjectaccessreviews")
@@ -30,4 +42,164 @@ var subjectaccessreviewsKind = v1.SchemeGroupVersion.WithKind("SubjectAccessRevi
 // subjectAccessReviewsClusterClient implements subjectAccessReviewInterface
 type subjectAccessReviewsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *subjectAccessReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthorizationv1client.SubjectAccessReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &subjectAccessReviewsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of SubjectAccessReviews that match those selectors.
+func (c *subjectAccessReviewsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SubjectAccessReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(subjectaccessreviewsResource, subjectaccessreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.SubjectAccessReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.SubjectAccessReviewList{ListMeta: obj.(*v1.SubjectAccessReviewList).ListMeta}
+	for _, item := range obj.(*v1.SubjectAccessReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested subjectAccessReviews across all clusters.
+func (c *subjectAccessReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(subjectaccessreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type subjectAccessReviewsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *subjectAccessReviewsClient) Create(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.CreateOptions) (*v1.SubjectAccessReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(subjectaccessreviewsResource, c.ClusterPath, subjectAccessReview), &v1.SubjectAccessReview{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) Update(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.UpdateOptions) (*v1.SubjectAccessReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(subjectaccessreviewsResource, c.ClusterPath, subjectAccessReview), &v1.SubjectAccessReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) UpdateStatus(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.UpdateOptions) (*v1.SubjectAccessReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(subjectaccessreviewsResource, c.ClusterPath, "status", subjectAccessReview), &v1.SubjectAccessReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(subjectaccessreviewsResource, c.ClusterPath, name, opts), &v1.SubjectAccessReview{})
+
+	return err
+}
+
+func (c *subjectAccessReviewsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(subjectaccessreviewsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.SubjectAccessReviewList{})
+	return err
+}
+
+func (c *subjectAccessReviewsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.SubjectAccessReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(subjectaccessreviewsResource, c.ClusterPath, name), &v1.SubjectAccessReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.SubjectAccessReviewList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(subjectaccessreviewsResource, subjectaccessreviewsKind, c.ClusterPath, opts), &v1.SubjectAccessReviewList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.SubjectAccessReviewList{ListMeta: obj.(*v1.SubjectAccessReviewList).ListMeta}
+	for _, item := range obj.(*v1.SubjectAccessReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *subjectAccessReviewsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(subjectaccessreviewsResource, c.ClusterPath, opts))
+
+}
+
+func (c *subjectAccessReviewsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.SubjectAccessReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(subjectaccessreviewsResource, c.ClusterPath, name, pt, data, subresources...), &v1.SubjectAccessReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) Apply(ctx context.Context, applyConfiguration *authorizationv1.SubjectAccessReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1.SubjectAccessReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(subjectaccessreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.SubjectAccessReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.SubjectAccessReview), err
+}
+
+func (c *subjectAccessReviewsClient) ApplyStatus(ctx context.Context, applyConfiguration *authorizationv1.SubjectAccessReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1.SubjectAccessReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(subjectaccessreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.SubjectAccessReview{})
+
+	return obj.(*v1.SubjectAccessReview), err
 }

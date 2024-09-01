@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamnodev1client "k8s.io/client-go/kubernetes/typed/node/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/node/v1"
 )
 
-type cSIDriversClusterClient struct {
+type NodeV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeNodeV1) RuntimeClasses() v1.RuntimeClassInterface {
-	return &FakeRuntimeClasses{c}
+func (c *NodeV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamnodev1client.NodeV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &NodeV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *NodeV1ClusterClient) RuntimeClasses() v1.RuntimeClassClusterInterface {
+	return &runtimeClassesClusterClient{Fake: c.Fake}
+}
+
+type NodeV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeNodeV1) RESTClient() rest.Interface {
+func (c *NodeV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *NodeV1Client) RuntimeClasses() upstreamnodev1client.RuntimeClassInterface {
+
+	return &runtimeClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

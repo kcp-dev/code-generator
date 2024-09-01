@@ -98,6 +98,7 @@ type eventsClient struct {
 
 func (c *eventsClient) Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -106,6 +107,7 @@ func (c *eventsClient) Create(ctx context.Context, event *v1.Event, opts metav1.
 
 func (c *eventsClient) Update(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -114,6 +116,7 @@ func (c *eventsClient) Update(ctx context.Context, event *v1.Event, opts metav1.
 
 func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(eventsResource, c.ClusterPath, "status", c.Namespace, event), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -122,6 +125,7 @@ func (c *eventsClient) UpdateStatus(ctx context.Context, event *v1.Event, opts m
 
 func (c *eventsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(eventsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Event{})
+
 	return err
 }
 
@@ -134,15 +138,16 @@ func (c *eventsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 
 func (c *eventsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(eventsResource, c.ClusterPath, c.Namespace, name), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Event), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Event that match those selectors.
 func (c *eventsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.EventList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(eventsResource, eventsKind, c.ClusterPath, c.Namespace, opts), &v1.EventList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -162,10 +167,12 @@ func (c *eventsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.E
 
 func (c *eventsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(eventsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *eventsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Event, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -184,17 +191,37 @@ func (c *eventsClient) Apply(ctx context.Context, applyConfiguration *eventsv1.E
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Event{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Event), err
 }
 
+func (c *eventsClient) ApplyStatus(ctx context.Context, applyConfiguration *eventsv1.EventApplyConfiguration, opts metav1.ApplyOptions) (*v1.Event, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(eventsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Event{})
+
+	return obj.(*v1.Event), err
+}
+
 func (c *eventsClient) CreateWithEventNamespace(event *v1.Event) (*v1.Event, error) {
-	action := core.NewRootCreateAction(eventsResource, c.ClusterPath, event)
+	action := kcptesting.NewRootCreateAction(eventsResource, c.ClusterPath, event)
 	if c.Namespace != "" {
-		action = core.NewCreateAction(eventsResource, c.ClusterPath, c.Namespace, event)
+		action = kcptesting.NewCreateAction(eventsResource, c.ClusterPath, c.Namespace, event)
 	}
 	obj, err := c.Fake.Invokes(action, event)
 	if obj == nil {
@@ -206,9 +233,9 @@ func (c *eventsClient) CreateWithEventNamespace(event *v1.Event) (*v1.Event, err
 
 // Update replaces an existing event. Returns the copy of the event the server returns, or an error.
 func (c *eventsClient) UpdateWithEventNamespace(event *v1.Event) (*v1.Event, error) {
-	action := core.NewRootUpdateAction(eventsResource, c.ClusterPath, event)
+	action := kcptesting.NewRootUpdateAction(eventsResource, c.ClusterPath, event)
 	if c.Namespace != "" {
-		action = core.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event)
+		action = kcptesting.NewUpdateAction(eventsResource, c.ClusterPath, c.Namespace, event)
 	}
 	obj, err := c.Fake.Invokes(action, event)
 	if obj == nil {
@@ -223,9 +250,9 @@ func (c *eventsClient) UpdateWithEventNamespace(event *v1.Event) (*v1.Event, err
 func (c *eventsClient) PatchWithEventNamespace(event *v1.Event, data []byte) (*v1.Event, error) {
 	// TODO: Should be configurable to support additional patch strategies.
 	pt := types.StrategicMergePatchType
-	action := core.NewRootPatchAction(eventsResource, c.ClusterPath, event.Name, pt, data)
+	action := kcptesting.NewRootPatchAction(eventsResource, c.ClusterPath, event.Name, pt, data)
 	if c.Namespace != "" {
-		action = core.NewPatchAction(eventsResource, c.ClusterPath, c.Namespace, event.Name, pt, data)
+		action = kcptesting.NewPatchAction(eventsResource, c.ClusterPath, c.Namespace, event.Name, pt, data)
 	}
 	obj, err := c.Fake.Invokes(action, event)
 	if obj == nil {
@@ -237,9 +264,9 @@ func (c *eventsClient) PatchWithEventNamespace(event *v1.Event, data []byte) (*v
 
 // Search returns a list of events matching the specified object.
 func (c *eventsClient) Search(scheme *runtime.Scheme, objOrRef runtime.Object) (*v1.EventList, error) {
-	action := core.NewRootListAction(eventsResource, eventsKind, c.ClusterPath, metav1.ListOptions{})
+	action := kcptesting.NewRootListAction(eventsResource, eventsKind, c.ClusterPath, metav1.ListOptions{})
 	if c.Namespace != "" {
-		action = core.NewListAction(eventsResource, eventsKind, c.ClusterPath, c.Namespace, metav1.ListOptions{})
+		action = kcptesting.NewListAction(eventsResource, eventsKind, c.ClusterPath, c.Namespace, metav1.ListOptions{})
 	}
 	obj, err := c.Fake.Invokes(action, &v1.EventList{})
 	if obj == nil {
@@ -250,7 +277,7 @@ func (c *eventsClient) Search(scheme *runtime.Scheme, objOrRef runtime.Object) (
 }
 
 func (c *eventsClient) GetFieldSelector(involvedObjectName, involvedObjectNamespace, involvedObjectKind, involvedObjectUID *string) fields.Selector {
-	action := core.GenericActionImpl{}
+	action := kcptesting.GenericActionImpl{}
 	action.Verb = "get-field-selector"
 	action.Resource = eventsResource
 	action.ClusterPath = c.ClusterPath

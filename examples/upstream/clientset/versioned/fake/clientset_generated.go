@@ -223,271 +223,271 @@ var (
 )
 
 // AdmissionregistrationV1 retrieves the AdmissionregistrationV1Client
-func (c *Clientset) AdmissionregistrationV1() admissionregistrationv1.AdmissionregistrationV1Interface {
+func (c *Clientset) AdmissionregistrationV1() admissionregistrationv1.AdmissionregistrationV1ClusterInterface {
 	return &fakeadmissionregistrationv1.FakeAdmissionregistrationV1{Fake: &c.Fake}
 }
 
 // AdmissionregistrationV1alpha1 retrieves the AdmissionregistrationV1alpha1Client
-func (c *Clientset) AdmissionregistrationV1alpha1() admissionregistrationv1alpha1.AdmissionregistrationV1alpha1Interface {
+func (c *Clientset) AdmissionregistrationV1alpha1() admissionregistrationv1alpha1.AdmissionregistrationV1alpha1ClusterInterface {
 	return &fakeadmissionregistrationv1alpha1.FakeAdmissionregistrationV1alpha1{Fake: &c.Fake}
 }
 
 // AdmissionregistrationV1beta1 retrieves the AdmissionregistrationV1beta1Client
-func (c *Clientset) AdmissionregistrationV1beta1() admissionregistrationv1beta1.AdmissionregistrationV1beta1Interface {
+func (c *Clientset) AdmissionregistrationV1beta1() admissionregistrationv1beta1.AdmissionregistrationV1beta1ClusterInterface {
 	return &fakeadmissionregistrationv1beta1.FakeAdmissionregistrationV1beta1{Fake: &c.Fake}
 }
 
 // InternalV1alpha1 retrieves the InternalV1alpha1Client
-func (c *Clientset) InternalV1alpha1() internalv1alpha1.InternalV1alpha1Interface {
+func (c *Clientset) InternalV1alpha1() internalv1alpha1.InternalV1alpha1ClusterInterface {
 	return &fakeinternalv1alpha1.FakeInternalV1alpha1{Fake: &c.Fake}
 }
 
 // AppsV1 retrieves the AppsV1Client
-func (c *Clientset) AppsV1() appsv1.AppsV1Interface {
+func (c *Clientset) AppsV1() appsv1.AppsV1ClusterInterface {
 	return &fakeappsv1.FakeAppsV1{Fake: &c.Fake}
 }
 
 // AppsV1beta1 retrieves the AppsV1beta1Client
-func (c *Clientset) AppsV1beta1() appsv1beta1.AppsV1beta1Interface {
+func (c *Clientset) AppsV1beta1() appsv1beta1.AppsV1beta1ClusterInterface {
 	return &fakeappsv1beta1.FakeAppsV1beta1{Fake: &c.Fake}
 }
 
 // AppsV1beta2 retrieves the AppsV1beta2Client
-func (c *Clientset) AppsV1beta2() appsv1beta2.AppsV1beta2Interface {
+func (c *Clientset) AppsV1beta2() appsv1beta2.AppsV1beta2ClusterInterface {
 	return &fakeappsv1beta2.FakeAppsV1beta2{Fake: &c.Fake}
 }
 
 // AuthenticationV1 retrieves the AuthenticationV1Client
-func (c *Clientset) AuthenticationV1() authenticationv1.AuthenticationV1Interface {
+func (c *Clientset) AuthenticationV1() authenticationv1.AuthenticationV1ClusterInterface {
 	return &fakeauthenticationv1.FakeAuthenticationV1{Fake: &c.Fake}
 }
 
 // AuthenticationV1alpha1 retrieves the AuthenticationV1alpha1Client
-func (c *Clientset) AuthenticationV1alpha1() authenticationv1alpha1.AuthenticationV1alpha1Interface {
+func (c *Clientset) AuthenticationV1alpha1() authenticationv1alpha1.AuthenticationV1alpha1ClusterInterface {
 	return &fakeauthenticationv1alpha1.FakeAuthenticationV1alpha1{Fake: &c.Fake}
 }
 
 // AuthenticationV1beta1 retrieves the AuthenticationV1beta1Client
-func (c *Clientset) AuthenticationV1beta1() authenticationv1beta1.AuthenticationV1beta1Interface {
+func (c *Clientset) AuthenticationV1beta1() authenticationv1beta1.AuthenticationV1beta1ClusterInterface {
 	return &fakeauthenticationv1beta1.FakeAuthenticationV1beta1{Fake: &c.Fake}
 }
 
 // AuthorizationV1 retrieves the AuthorizationV1Client
-func (c *Clientset) AuthorizationV1() authorizationv1.AuthorizationV1Interface {
+func (c *Clientset) AuthorizationV1() authorizationv1.AuthorizationV1ClusterInterface {
 	return &fakeauthorizationv1.FakeAuthorizationV1{Fake: &c.Fake}
 }
 
 // AuthorizationV1beta1 retrieves the AuthorizationV1beta1Client
-func (c *Clientset) AuthorizationV1beta1() authorizationv1beta1.AuthorizationV1beta1Interface {
+func (c *Clientset) AuthorizationV1beta1() authorizationv1beta1.AuthorizationV1beta1ClusterInterface {
 	return &fakeauthorizationv1beta1.FakeAuthorizationV1beta1{Fake: &c.Fake}
 }
 
 // AutoscalingV1 retrieves the AutoscalingV1Client
-func (c *Clientset) AutoscalingV1() autoscalingv1.AutoscalingV1Interface {
+func (c *Clientset) AutoscalingV1() autoscalingv1.AutoscalingV1ClusterInterface {
 	return &fakeautoscalingv1.FakeAutoscalingV1{Fake: &c.Fake}
 }
 
 // AutoscalingV2 retrieves the AutoscalingV2Client
-func (c *Clientset) AutoscalingV2() autoscalingv2.AutoscalingV2Interface {
+func (c *Clientset) AutoscalingV2() autoscalingv2.AutoscalingV2ClusterInterface {
 	return &fakeautoscalingv2.FakeAutoscalingV2{Fake: &c.Fake}
 }
 
 // AutoscalingV2beta1 retrieves the AutoscalingV2beta1Client
-func (c *Clientset) AutoscalingV2beta1() autoscalingv2beta1.AutoscalingV2beta1Interface {
+func (c *Clientset) AutoscalingV2beta1() autoscalingv2beta1.AutoscalingV2beta1ClusterInterface {
 	return &fakeautoscalingv2beta1.FakeAutoscalingV2beta1{Fake: &c.Fake}
 }
 
 // AutoscalingV2beta2 retrieves the AutoscalingV2beta2Client
-func (c *Clientset) AutoscalingV2beta2() autoscalingv2beta2.AutoscalingV2beta2Interface {
+func (c *Clientset) AutoscalingV2beta2() autoscalingv2beta2.AutoscalingV2beta2ClusterInterface {
 	return &fakeautoscalingv2beta2.FakeAutoscalingV2beta2{Fake: &c.Fake}
 }
 
 // BatchV1 retrieves the BatchV1Client
-func (c *Clientset) BatchV1() batchv1.BatchV1Interface {
+func (c *Clientset) BatchV1() batchv1.BatchV1ClusterInterface {
 	return &fakebatchv1.FakeBatchV1{Fake: &c.Fake}
 }
 
 // BatchV1beta1 retrieves the BatchV1beta1Client
-func (c *Clientset) BatchV1beta1() batchv1beta1.BatchV1beta1Interface {
+func (c *Clientset) BatchV1beta1() batchv1beta1.BatchV1beta1ClusterInterface {
 	return &fakebatchv1beta1.FakeBatchV1beta1{Fake: &c.Fake}
 }
 
 // CertificatesV1 retrieves the CertificatesV1Client
-func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1Interface {
+func (c *Clientset) CertificatesV1() certificatesv1.CertificatesV1ClusterInterface {
 	return &fakecertificatesv1.FakeCertificatesV1{Fake: &c.Fake}
 }
 
 // CertificatesV1alpha1 retrieves the CertificatesV1alpha1Client
-func (c *Clientset) CertificatesV1alpha1() certificatesv1alpha1.CertificatesV1alpha1Interface {
+func (c *Clientset) CertificatesV1alpha1() certificatesv1alpha1.CertificatesV1alpha1ClusterInterface {
 	return &fakecertificatesv1alpha1.FakeCertificatesV1alpha1{Fake: &c.Fake}
 }
 
 // CertificatesV1beta1 retrieves the CertificatesV1beta1Client
-func (c *Clientset) CertificatesV1beta1() certificatesv1beta1.CertificatesV1beta1Interface {
+func (c *Clientset) CertificatesV1beta1() certificatesv1beta1.CertificatesV1beta1ClusterInterface {
 	return &fakecertificatesv1beta1.FakeCertificatesV1beta1{Fake: &c.Fake}
 }
 
 // CoordinationV1 retrieves the CoordinationV1Client
-func (c *Clientset) CoordinationV1() coordinationv1.CoordinationV1Interface {
+func (c *Clientset) CoordinationV1() coordinationv1.CoordinationV1ClusterInterface {
 	return &fakecoordinationv1.FakeCoordinationV1{Fake: &c.Fake}
 }
 
 // CoordinationV1alpha1 retrieves the CoordinationV1alpha1Client
-func (c *Clientset) CoordinationV1alpha1() coordinationv1alpha1.CoordinationV1alpha1Interface {
+func (c *Clientset) CoordinationV1alpha1() coordinationv1alpha1.CoordinationV1alpha1ClusterInterface {
 	return &fakecoordinationv1alpha1.FakeCoordinationV1alpha1{Fake: &c.Fake}
 }
 
 // CoordinationV1beta1 retrieves the CoordinationV1beta1Client
-func (c *Clientset) CoordinationV1beta1() coordinationv1beta1.CoordinationV1beta1Interface {
+func (c *Clientset) CoordinationV1beta1() coordinationv1beta1.CoordinationV1beta1ClusterInterface {
 	return &fakecoordinationv1beta1.FakeCoordinationV1beta1{Fake: &c.Fake}
 }
 
 // CoreV1 retrieves the CoreV1Client
-func (c *Clientset) CoreV1() corev1.CoreV1Interface {
+func (c *Clientset) CoreV1() corev1.CoreV1ClusterInterface {
 	return &fakecorev1.FakeCoreV1{Fake: &c.Fake}
 }
 
 // DiscoveryV1 retrieves the DiscoveryV1Client
-func (c *Clientset) DiscoveryV1() discoveryv1.DiscoveryV1Interface {
+func (c *Clientset) DiscoveryV1() discoveryv1.DiscoveryV1ClusterInterface {
 	return &fakediscoveryv1.FakeDiscoveryV1{Fake: &c.Fake}
 }
 
 // DiscoveryV1beta1 retrieves the DiscoveryV1beta1Client
-func (c *Clientset) DiscoveryV1beta1() discoveryv1beta1.DiscoveryV1beta1Interface {
+func (c *Clientset) DiscoveryV1beta1() discoveryv1beta1.DiscoveryV1beta1ClusterInterface {
 	return &fakediscoveryv1beta1.FakeDiscoveryV1beta1{Fake: &c.Fake}
 }
 
 // EventsV1 retrieves the EventsV1Client
-func (c *Clientset) EventsV1() eventsv1.EventsV1Interface {
+func (c *Clientset) EventsV1() eventsv1.EventsV1ClusterInterface {
 	return &fakeeventsv1.FakeEventsV1{Fake: &c.Fake}
 }
 
 // EventsV1beta1 retrieves the EventsV1beta1Client
-func (c *Clientset) EventsV1beta1() eventsv1beta1.EventsV1beta1Interface {
+func (c *Clientset) EventsV1beta1() eventsv1beta1.EventsV1beta1ClusterInterface {
 	return &fakeeventsv1beta1.FakeEventsV1beta1{Fake: &c.Fake}
 }
 
 // ExtensionsV1beta1 retrieves the ExtensionsV1beta1Client
-func (c *Clientset) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1Interface {
+func (c *Clientset) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1ClusterInterface {
 	return &fakeextensionsv1beta1.FakeExtensionsV1beta1{Fake: &c.Fake}
 }
 
 // FlowcontrolV1 retrieves the FlowcontrolV1Client
-func (c *Clientset) FlowcontrolV1() flowcontrolv1.FlowcontrolV1Interface {
+func (c *Clientset) FlowcontrolV1() flowcontrolv1.FlowcontrolV1ClusterInterface {
 	return &fakeflowcontrolv1.FakeFlowcontrolV1{Fake: &c.Fake}
 }
 
 // FlowcontrolV1beta1 retrieves the FlowcontrolV1beta1Client
-func (c *Clientset) FlowcontrolV1beta1() flowcontrolv1beta1.FlowcontrolV1beta1Interface {
+func (c *Clientset) FlowcontrolV1beta1() flowcontrolv1beta1.FlowcontrolV1beta1ClusterInterface {
 	return &fakeflowcontrolv1beta1.FakeFlowcontrolV1beta1{Fake: &c.Fake}
 }
 
 // FlowcontrolV1beta2 retrieves the FlowcontrolV1beta2Client
-func (c *Clientset) FlowcontrolV1beta2() flowcontrolv1beta2.FlowcontrolV1beta2Interface {
+func (c *Clientset) FlowcontrolV1beta2() flowcontrolv1beta2.FlowcontrolV1beta2ClusterInterface {
 	return &fakeflowcontrolv1beta2.FakeFlowcontrolV1beta2{Fake: &c.Fake}
 }
 
 // FlowcontrolV1beta3 retrieves the FlowcontrolV1beta3Client
-func (c *Clientset) FlowcontrolV1beta3() flowcontrolv1beta3.FlowcontrolV1beta3Interface {
+func (c *Clientset) FlowcontrolV1beta3() flowcontrolv1beta3.FlowcontrolV1beta3ClusterInterface {
 	return &fakeflowcontrolv1beta3.FakeFlowcontrolV1beta3{Fake: &c.Fake}
 }
 
 // ImagepolicyV1alpha1 retrieves the ImagepolicyV1alpha1Client
-func (c *Clientset) ImagepolicyV1alpha1() imagepolicyv1alpha1.ImagepolicyV1alpha1Interface {
+func (c *Clientset) ImagepolicyV1alpha1() imagepolicyv1alpha1.ImagepolicyV1alpha1ClusterInterface {
 	return &fakeimagepolicyv1alpha1.FakeImagepolicyV1alpha1{Fake: &c.Fake}
 }
 
 // NetworkingV1 retrieves the NetworkingV1Client
-func (c *Clientset) NetworkingV1() networkingv1.NetworkingV1Interface {
+func (c *Clientset) NetworkingV1() networkingv1.NetworkingV1ClusterInterface {
 	return &fakenetworkingv1.FakeNetworkingV1{Fake: &c.Fake}
 }
 
 // NetworkingV1alpha1 retrieves the NetworkingV1alpha1Client
-func (c *Clientset) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface {
+func (c *Clientset) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1ClusterInterface {
 	return &fakenetworkingv1alpha1.FakeNetworkingV1alpha1{Fake: &c.Fake}
 }
 
 // NetworkingV1beta1 retrieves the NetworkingV1beta1Client
-func (c *Clientset) NetworkingV1beta1() networkingv1beta1.NetworkingV1beta1Interface {
+func (c *Clientset) NetworkingV1beta1() networkingv1beta1.NetworkingV1beta1ClusterInterface {
 	return &fakenetworkingv1beta1.FakeNetworkingV1beta1{Fake: &c.Fake}
 }
 
 // NodeV1 retrieves the NodeV1Client
-func (c *Clientset) NodeV1() nodev1.NodeV1Interface {
+func (c *Clientset) NodeV1() nodev1.NodeV1ClusterInterface {
 	return &fakenodev1.FakeNodeV1{Fake: &c.Fake}
 }
 
 // NodeV1alpha1 retrieves the NodeV1alpha1Client
-func (c *Clientset) NodeV1alpha1() nodev1alpha1.NodeV1alpha1Interface {
+func (c *Clientset) NodeV1alpha1() nodev1alpha1.NodeV1alpha1ClusterInterface {
 	return &fakenodev1alpha1.FakeNodeV1alpha1{Fake: &c.Fake}
 }
 
 // NodeV1beta1 retrieves the NodeV1beta1Client
-func (c *Clientset) NodeV1beta1() nodev1beta1.NodeV1beta1Interface {
+func (c *Clientset) NodeV1beta1() nodev1beta1.NodeV1beta1ClusterInterface {
 	return &fakenodev1beta1.FakeNodeV1beta1{Fake: &c.Fake}
 }
 
 // PolicyV1 retrieves the PolicyV1Client
-func (c *Clientset) PolicyV1() policyv1.PolicyV1Interface {
+func (c *Clientset) PolicyV1() policyv1.PolicyV1ClusterInterface {
 	return &fakepolicyv1.FakePolicyV1{Fake: &c.Fake}
 }
 
 // PolicyV1beta1 retrieves the PolicyV1beta1Client
-func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
+func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1ClusterInterface {
 	return &fakepolicyv1beta1.FakePolicyV1beta1{Fake: &c.Fake}
 }
 
 // RbacV1 retrieves the RbacV1Client
-func (c *Clientset) RbacV1() rbacv1.RbacV1Interface {
+func (c *Clientset) RbacV1() rbacv1.RbacV1ClusterInterface {
 	return &fakerbacv1.FakeRbacV1{Fake: &c.Fake}
 }
 
 // RbacV1alpha1 retrieves the RbacV1alpha1Client
-func (c *Clientset) RbacV1alpha1() rbacv1alpha1.RbacV1alpha1Interface {
+func (c *Clientset) RbacV1alpha1() rbacv1alpha1.RbacV1alpha1ClusterInterface {
 	return &fakerbacv1alpha1.FakeRbacV1alpha1{Fake: &c.Fake}
 }
 
 // RbacV1beta1 retrieves the RbacV1beta1Client
-func (c *Clientset) RbacV1beta1() rbacv1beta1.RbacV1beta1Interface {
+func (c *Clientset) RbacV1beta1() rbacv1beta1.RbacV1beta1ClusterInterface {
 	return &fakerbacv1beta1.FakeRbacV1beta1{Fake: &c.Fake}
 }
 
 // ResourceV1alpha3 retrieves the ResourceV1alpha3Client
-func (c *Clientset) ResourceV1alpha3() resourcev1alpha3.ResourceV1alpha3Interface {
+func (c *Clientset) ResourceV1alpha3() resourcev1alpha3.ResourceV1alpha3ClusterInterface {
 	return &fakeresourcev1alpha3.FakeResourceV1alpha3{Fake: &c.Fake}
 }
 
 // SchedulingV1 retrieves the SchedulingV1Client
-func (c *Clientset) SchedulingV1() schedulingv1.SchedulingV1Interface {
+func (c *Clientset) SchedulingV1() schedulingv1.SchedulingV1ClusterInterface {
 	return &fakeschedulingv1.FakeSchedulingV1{Fake: &c.Fake}
 }
 
 // SchedulingV1alpha1 retrieves the SchedulingV1alpha1Client
-func (c *Clientset) SchedulingV1alpha1() schedulingv1alpha1.SchedulingV1alpha1Interface {
+func (c *Clientset) SchedulingV1alpha1() schedulingv1alpha1.SchedulingV1alpha1ClusterInterface {
 	return &fakeschedulingv1alpha1.FakeSchedulingV1alpha1{Fake: &c.Fake}
 }
 
 // SchedulingV1beta1 retrieves the SchedulingV1beta1Client
-func (c *Clientset) SchedulingV1beta1() schedulingv1beta1.SchedulingV1beta1Interface {
+func (c *Clientset) SchedulingV1beta1() schedulingv1beta1.SchedulingV1beta1ClusterInterface {
 	return &fakeschedulingv1beta1.FakeSchedulingV1beta1{Fake: &c.Fake}
 }
 
 // StorageV1 retrieves the StorageV1Client
-func (c *Clientset) StorageV1() storagev1.StorageV1Interface {
+func (c *Clientset) StorageV1() storagev1.StorageV1ClusterInterface {
 	return &fakestoragev1.FakeStorageV1{Fake: &c.Fake}
 }
 
 // StorageV1alpha1 retrieves the StorageV1alpha1Client
-func (c *Clientset) StorageV1alpha1() storagev1alpha1.StorageV1alpha1Interface {
+func (c *Clientset) StorageV1alpha1() storagev1alpha1.StorageV1alpha1ClusterInterface {
 	return &fakestoragev1alpha1.FakeStorageV1alpha1{Fake: &c.Fake}
 }
 
 // StorageV1beta1 retrieves the StorageV1beta1Client
-func (c *Clientset) StorageV1beta1() storagev1beta1.StorageV1beta1Interface {
+func (c *Clientset) StorageV1beta1() storagev1beta1.StorageV1beta1ClusterInterface {
 	return &fakestoragev1beta1.FakeStorageV1beta1{Fake: &c.Fake}
 }
 
 // StoragemigrationV1alpha1 retrieves the StoragemigrationV1alpha1Client
-func (c *Clientset) StoragemigrationV1alpha1() storagemigrationv1alpha1.StoragemigrationV1alpha1Interface {
+func (c *Clientset) StoragemigrationV1alpha1() storagemigrationv1alpha1.StoragemigrationV1alpha1ClusterInterface {
 	return &fakestoragemigrationv1alpha1.FakeStoragemigrationV1alpha1{Fake: &c.Fake}
 }

@@ -20,29 +20,59 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamappsv1beta1client "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type AppsV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAppsV1beta1) ControllerRevisions(namespace string) v1beta1.ControllerRevisionInterface {
-	return &FakeControllerRevisions{c, namespace}
+func (c *AppsV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamappsv1beta1client.AppsV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AppsV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeAppsV1beta1) Deployments(namespace string) v1beta1.DeploymentInterface {
-	return &FakeDeployments{c, namespace}
+func (c *AppsV1beta1ClusterClient) ControllerRevisions(namespace string) v1beta1.ControllerRevisionClusterInterface {
+	return &controllerRevisionsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeAppsV1beta1) StatefulSets(namespace string) v1beta1.StatefulSetInterface {
-	return &FakeStatefulSets{c, namespace}
+func (c *AppsV1beta1ClusterClient) Deployments(namespace string) v1beta1.DeploymentClusterInterface {
+	return &deploymentsClusterClient{Fake: c.Fake}
+}
+
+func (c *AppsV1beta1ClusterClient) StatefulSets(namespace string) v1beta1.StatefulSetClusterInterface {
+	return &statefulSetsClusterClient{Fake: c.Fake}
+}
+
+type AppsV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAppsV1beta1) RESTClient() rest.Interface {
+func (c *AppsV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AppsV1beta1Client) ControllerRevisions(namespace string) upstreamappsv1beta1client.ControllerRevisionInterface {
+
+	return &controllerRevisionsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *AppsV1beta1Client) Deployments(namespace string) upstreamappsv1beta1client.DeploymentInterface {
+
+	return &deploymentsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *AppsV1beta1Client) StatefulSets(namespace string) upstreamappsv1beta1client.StatefulSetInterface {
+
+	return &statefulSetsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

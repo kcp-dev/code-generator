@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type podSchedulingContextsClient struct {
 
 func (c *podSchedulingContextsClient) Create(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.CreateOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, podSchedulingContext), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *podSchedulingContextsClient) Create(ctx context.Context, podSchedulingC
 
 func (c *podSchedulingContextsClient) Update(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, podSchedulingContext), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *podSchedulingContextsClient) Update(ctx context.Context, podSchedulingC
 
 func (c *podSchedulingContextsClient) UpdateStatus(ctx context.Context, podSchedulingContext *v1alpha3.PodSchedulingContext, opts metav1.UpdateOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(podschedulingcontextsResource, c.ClusterPath, "status", c.Namespace, podSchedulingContext), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *podSchedulingContextsClient) UpdateStatus(ctx context.Context, podSched
 
 func (c *podSchedulingContextsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(podschedulingcontextsResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.PodSchedulingContext{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *podSchedulingContextsClient) DeleteCollection(ctx context.Context, opts
 
 func (c *podSchedulingContextsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, name), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1alpha3.PodSchedulingContext), err
 }
 
-// List takes label and field selectors, and returns the list of v1alpha3.PodSchedulingContext that match those selectors.
 func (c *podSchedulingContextsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.PodSchedulingContextList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(podschedulingcontextsResource, podschedulingcontextsKind, c.ClusterPath, c.Namespace, opts), &v1alpha3.PodSchedulingContextList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *podSchedulingContextsClient) List(ctx context.Context, opts metav1.List
 
 func (c *podSchedulingContextsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *podSchedulingContextsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha3.PodSchedulingContext, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *podSchedulingContextsClient) Apply(ctx context.Context, applyConfigurat
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1alpha3.PodSchedulingContext{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1alpha3.PodSchedulingContext), err
+}
+
+func (c *podSchedulingContextsClient) ApplyStatus(ctx context.Context, applyConfiguration *resourcev1alpha3.PodSchedulingContextApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.PodSchedulingContext, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(podschedulingcontextsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1alpha3.PodSchedulingContext{})
+
 	return obj.(*v1alpha3.PodSchedulingContext), err
 }

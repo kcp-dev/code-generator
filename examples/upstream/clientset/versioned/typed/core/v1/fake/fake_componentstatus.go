@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 )
 
 var componentstatusesResource = v1.SchemeGroupVersion.WithResource("componentstatuses")
@@ -30,4 +42,164 @@ var componentstatusesKind = v1.SchemeGroupVersion.WithKind("ComponentStatus")
 // componentStatusesClusterClient implements componentStatusInterface
 type componentStatusesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *componentStatusesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcorev1client.ComponentStatusInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &componentStatusesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ComponentStatuses that match those selectors.
+func (c *componentStatusesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ComponentStatusList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(componentstatusesResource, componentstatusesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ComponentStatusList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ComponentStatusList{ListMeta: obj.(*v1.ComponentStatusList).ListMeta}
+	for _, item := range obj.(*v1.ComponentStatusList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested componentStatuss across all clusters.
+func (c *componentStatusesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(componentstatusesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type componentStatusesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *componentStatusesClient) Create(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.CreateOptions) (*v1.ComponentStatus, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(componentstatusesResource, c.ClusterPath, componentStatus), &v1.ComponentStatus{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) Update(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.UpdateOptions) (*v1.ComponentStatus, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(componentstatusesResource, c.ClusterPath, componentStatus), &v1.ComponentStatus{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) UpdateStatus(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.UpdateOptions) (*v1.ComponentStatus, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(componentstatusesResource, c.ClusterPath, "status", componentStatus), &v1.ComponentStatus{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(componentstatusesResource, c.ClusterPath, name, opts), &v1.ComponentStatus{})
+
+	return err
+}
+
+func (c *componentStatusesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(componentstatusesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.ComponentStatusList{})
+	return err
+}
+
+func (c *componentStatusesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ComponentStatus, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(componentstatusesResource, c.ClusterPath, name), &v1.ComponentStatus{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ComponentStatusList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(componentstatusesResource, componentstatusesKind, c.ClusterPath, opts), &v1.ComponentStatusList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ComponentStatusList{ListMeta: obj.(*v1.ComponentStatusList).ListMeta}
+	for _, item := range obj.(*v1.ComponentStatusList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *componentStatusesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(componentstatusesResource, c.ClusterPath, opts))
+
+}
+
+func (c *componentStatusesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ComponentStatus, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(componentstatusesResource, c.ClusterPath, name, pt, data, subresources...), &v1.ComponentStatus{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) Apply(ctx context.Context, applyConfiguration *corev1.ComponentStatusApplyConfiguration, opts metav1.ApplyOptions) (*v1.ComponentStatus, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(componentstatusesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.ComponentStatus{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ComponentStatus), err
+}
+
+func (c *componentStatusesClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.ComponentStatusApplyConfiguration, opts metav1.ApplyOptions) (*v1.ComponentStatus, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(componentstatusesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.ComponentStatus{})
+
+	return obj.(*v1.ComponentStatus), err
 }

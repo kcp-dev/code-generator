@@ -20,33 +20,68 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamnetworkingv1beta1client "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type NetworkingV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeNetworkingV1beta1) IPAddresses() v1beta1.IPAddressInterface {
-	return &FakeIPAddresses{c}
+func (c *NetworkingV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1beta1client.NetworkingV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &NetworkingV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeNetworkingV1beta1) Ingresses(namespace string) v1beta1.IngressInterface {
-	return &FakeIngresses{c, namespace}
+func (c *NetworkingV1beta1ClusterClient) IPAddresses() v1beta1.IPAddressClusterInterface {
+	return &iPAddressesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeNetworkingV1beta1) IngressClasses() v1beta1.IngressClassInterface {
-	return &FakeIngressClasses{c}
+func (c *NetworkingV1beta1ClusterClient) Ingresses(namespace string) v1beta1.IngressClusterInterface {
+	return &ingressesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeNetworkingV1beta1) ServiceCIDRs() v1beta1.ServiceCIDRInterface {
-	return &FakeServiceCIDRs{c}
+func (c *NetworkingV1beta1ClusterClient) IngressClasses() v1beta1.IngressClassClusterInterface {
+	return &ingressClassesClusterClient{Fake: c.Fake}
+}
+
+func (c *NetworkingV1beta1ClusterClient) ServiceCIDRs() v1beta1.ServiceCIDRClusterInterface {
+	return &serviceCIDRsClusterClient{Fake: c.Fake}
+}
+
+type NetworkingV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeNetworkingV1beta1) RESTClient() rest.Interface {
+func (c *NetworkingV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *NetworkingV1beta1Client) IPAddresses() upstreamnetworkingv1beta1client.IPAddressInterface {
+
+	return &iPAddressesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *NetworkingV1beta1Client) Ingresses(namespace string) upstreamnetworkingv1beta1client.IngressInterface {
+
+	return &ingressesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *NetworkingV1beta1Client) IngressClasses() upstreamnetworkingv1beta1client.IngressClassInterface {
+
+	return &ingressClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *NetworkingV1beta1Client) ServiceCIDRs() upstreamnetworkingv1beta1client.ServiceCIDRInterface {
+
+	return &serviceCIDRsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

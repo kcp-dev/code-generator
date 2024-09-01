@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamauthenticationv1client "k8s.io/client-go/kubernetes/typed/authentication/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authentication/v1"
 )
 
-type cSIDriversClusterClient struct {
+type AuthenticationV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAuthenticationV1) SelfSubjectReviews() v1.SelfSubjectReviewInterface {
-	return &FakeSelfSubjectReviews{c}
+func (c *AuthenticationV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1client.AuthenticationV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AuthenticationV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeAuthenticationV1) TokenReviews() v1.TokenReviewInterface {
-	return &FakeTokenReviews{c}
+func (c *AuthenticationV1ClusterClient) SelfSubjectReviews() v1.SelfSubjectReviewClusterInterface {
+	return &selfSubjectReviewsClusterClient{Fake: c.Fake}
+}
+
+func (c *AuthenticationV1ClusterClient) TokenReviews() v1.TokenReviewClusterInterface {
+	return &tokenReviewsClusterClient{Fake: c.Fake}
+}
+
+type AuthenticationV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAuthenticationV1) RESTClient() rest.Interface {
+func (c *AuthenticationV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AuthenticationV1Client) SelfSubjectReviews() upstreamauthenticationv1client.SelfSubjectReviewInterface {
+
+	return &selfSubjectReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AuthenticationV1Client) TokenReviews() upstreamauthenticationv1client.TokenReviewInterface {
+
+	return &tokenReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

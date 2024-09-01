@@ -25,11 +25,14 @@ import (
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	applyconfigurationsautoscalingv1 "k8s.io/client-go/applyconfigurations/autoscaling/v1"
 	extensionsv1beta1 "k8s.io/client-go/applyconfigurations/extensions/v1beta1"
 	upstreamextensionsv1beta1client "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 	"k8s.io/client-go/testing"
@@ -96,6 +99,7 @@ type deploymentsClient struct {
 
 func (c *deploymentsClient) Create(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.CreateOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(deploymentsResource, c.ClusterPath, c.Namespace, deployment), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +108,7 @@ func (c *deploymentsClient) Create(ctx context.Context, deployment *v1beta1.Depl
 
 func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.UpdateOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(deploymentsResource, c.ClusterPath, c.Namespace, deployment), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +117,7 @@ func (c *deploymentsClient) Update(ctx context.Context, deployment *v1beta1.Depl
 
 func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts metav1.UpdateOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(deploymentsResource, c.ClusterPath, "status", c.Namespace, deployment), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +126,7 @@ func (c *deploymentsClient) UpdateStatus(ctx context.Context, deployment *v1beta
 
 func (c *deploymentsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(deploymentsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Deployment{})
+
 	return err
 }
 
@@ -132,15 +139,16 @@ func (c *deploymentsClient) DeleteCollection(ctx context.Context, opts metav1.De
 
 func (c *deploymentsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(deploymentsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.Deployment that match those selectors.
 func (c *deploymentsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.DeploymentList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(deploymentsResource, deploymentsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.DeploymentList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +168,12 @@ func (c *deploymentsClient) List(ctx context.Context, opts metav1.ListOptions) (
 
 func (c *deploymentsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(deploymentsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *deploymentsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Deployment, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +192,66 @@ func (c *deploymentsClient) Apply(ctx context.Context, applyConfiguration *exten
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Deployment{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.Deployment), err
+}
+
+func (c *deploymentsClient) ApplyStatus(ctx context.Context, applyConfiguration *extensionsv1beta1.DeploymentApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Deployment, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.Deployment{})
+
+	return obj.(*v1beta1.Deployment), err
+}
+
+func (c *deploymentsClient) GetScale(ctx context.Context, replicationControllerName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetSubresourceAction(deploymentsResource, c.ClusterPath, "scale", c.Namespace, replicationControllerName), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *deploymentsClient) UpdateScale(ctx context.Context, replicationControllerName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(deploymentsResource, c.ClusterPath, "scale", c.Namespace, scale), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *deploymentsClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(deploymentsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &autoscalingv1.Scale{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
 }

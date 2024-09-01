@@ -96,6 +96,7 @@ type configMapsClient struct {
 
 func (c *configMapsClient) Create(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(configmapsResource, c.ClusterPath, c.Namespace, configMap), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *configMapsClient) Create(ctx context.Context, configMap *v1.ConfigMap, 
 
 func (c *configMapsClient) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(configmapsResource, c.ClusterPath, c.Namespace, configMap), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *configMapsClient) Update(ctx context.Context, configMap *v1.ConfigMap, 
 
 func (c *configMapsClient) UpdateStatus(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(configmapsResource, c.ClusterPath, "status", c.Namespace, configMap), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *configMapsClient) UpdateStatus(ctx context.Context, configMap *v1.Confi
 
 func (c *configMapsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(configmapsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ConfigMap{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *configMapsClient) DeleteCollection(ctx context.Context, opts metav1.Del
 
 func (c *configMapsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(configmapsResource, c.ClusterPath, c.Namespace, name), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ConfigMap), err
 }
 
-// List takes label and field selectors, and returns the list of v1.ConfigMap that match those selectors.
 func (c *configMapsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ConfigMapList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(configmapsResource, configmapsKind, c.ClusterPath, c.Namespace, opts), &v1.ConfigMapList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *configMapsClient) List(ctx context.Context, opts metav1.ListOptions) (*
 
 func (c *configMapsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(configmapsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *configMapsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ConfigMap, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(configmapsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *configMapsClient) Apply(ctx context.Context, applyConfiguration *corev1
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(configmapsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ConfigMap{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.ConfigMap), err
+}
+
+func (c *configMapsClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.ConfigMapApplyConfiguration, opts metav1.ApplyOptions) (*v1.ConfigMap, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(configmapsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.ConfigMap{})
+
 	return obj.(*v1.ConfigMap), err
 }

@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/flowcontrol/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	flowcontrolv1 "k8s.io/client-go/applyconfigurations/flowcontrol/v1"
+	upstreamflowcontrolv1client "k8s.io/client-go/kubernetes/typed/flowcontrol/v1"
+	"k8s.io/client-go/testing"
 )
 
 var prioritylevelconfigurationsResource = v1.SchemeGroupVersion.WithResource("prioritylevelconfigurations")
@@ -30,4 +42,164 @@ var prioritylevelconfigurationsKind = v1.SchemeGroupVersion.WithKind("PriorityLe
 // priorityLevelConfigurationsClusterClient implements priorityLevelConfigurationInterface
 type priorityLevelConfigurationsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *priorityLevelConfigurationsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamflowcontrolv1client.PriorityLevelConfigurationInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &priorityLevelConfigurationsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of PriorityLevelConfigurations that match those selectors.
+func (c *priorityLevelConfigurationsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PriorityLevelConfigurationList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(prioritylevelconfigurationsResource, prioritylevelconfigurationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.PriorityLevelConfigurationList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.PriorityLevelConfigurationList{ListMeta: obj.(*v1.PriorityLevelConfigurationList).ListMeta}
+	for _, item := range obj.(*v1.PriorityLevelConfigurationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested priorityLevelConfigurations across all clusters.
+func (c *priorityLevelConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(prioritylevelconfigurationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type priorityLevelConfigurationsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *priorityLevelConfigurationsClient) Create(ctx context.Context, priorityLevelConfiguration *v1.PriorityLevelConfiguration, opts metav1.CreateOptions) (*v1.PriorityLevelConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(prioritylevelconfigurationsResource, c.ClusterPath, priorityLevelConfiguration), &v1.PriorityLevelConfiguration{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) Update(ctx context.Context, priorityLevelConfiguration *v1.PriorityLevelConfiguration, opts metav1.UpdateOptions) (*v1.PriorityLevelConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(prioritylevelconfigurationsResource, c.ClusterPath, priorityLevelConfiguration), &v1.PriorityLevelConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) UpdateStatus(ctx context.Context, priorityLevelConfiguration *v1.PriorityLevelConfiguration, opts metav1.UpdateOptions) (*v1.PriorityLevelConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(prioritylevelconfigurationsResource, c.ClusterPath, "status", priorityLevelConfiguration), &v1.PriorityLevelConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(prioritylevelconfigurationsResource, c.ClusterPath, name, opts), &v1.PriorityLevelConfiguration{})
+
+	return err
+}
+
+func (c *priorityLevelConfigurationsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(prioritylevelconfigurationsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.PriorityLevelConfigurationList{})
+	return err
+}
+
+func (c *priorityLevelConfigurationsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.PriorityLevelConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(prioritylevelconfigurationsResource, c.ClusterPath, name), &v1.PriorityLevelConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.PriorityLevelConfigurationList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(prioritylevelconfigurationsResource, prioritylevelconfigurationsKind, c.ClusterPath, opts), &v1.PriorityLevelConfigurationList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.PriorityLevelConfigurationList{ListMeta: obj.(*v1.PriorityLevelConfigurationList).ListMeta}
+	for _, item := range obj.(*v1.PriorityLevelConfigurationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *priorityLevelConfigurationsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(prioritylevelconfigurationsResource, c.ClusterPath, opts))
+
+}
+
+func (c *priorityLevelConfigurationsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.PriorityLevelConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(prioritylevelconfigurationsResource, c.ClusterPath, name, pt, data, subresources...), &v1.PriorityLevelConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) Apply(ctx context.Context, applyConfiguration *flowcontrolv1.PriorityLevelConfigurationApplyConfiguration, opts metav1.ApplyOptions) (*v1.PriorityLevelConfiguration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(prioritylevelconfigurationsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.PriorityLevelConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.PriorityLevelConfiguration), err
+}
+
+func (c *priorityLevelConfigurationsClient) ApplyStatus(ctx context.Context, applyConfiguration *flowcontrolv1.PriorityLevelConfigurationApplyConfiguration, opts metav1.ApplyOptions) (*v1.PriorityLevelConfiguration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(prioritylevelconfigurationsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.PriorityLevelConfiguration{})
+
+	return obj.(*v1.PriorityLevelConfiguration), err
 }

@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamautoscalingv2beta1client "k8s.io/client-go/kubernetes/typed/autoscaling/v2beta1"
 	rest "k8s.io/client-go/rest"
 	v2beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/autoscaling/v2beta1"
 )
 
-type cSIDriversClusterClient struct {
+type AutoscalingV2beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAutoscalingV2beta1) HorizontalPodAutoscalers(namespace string) v2beta1.HorizontalPodAutoscalerInterface {
-	return &FakeHorizontalPodAutoscalers{c, namespace}
+func (c *AutoscalingV2beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamautoscalingv2beta1client.AutoscalingV2beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AutoscalingV2beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *AutoscalingV2beta1ClusterClient) HorizontalPodAutoscalers(namespace string) v2beta1.HorizontalPodAutoscalerClusterInterface {
+	return &horizontalPodAutoscalersClusterClient{Fake: c.Fake}
+}
+
+type AutoscalingV2beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAutoscalingV2beta1) RESTClient() rest.Interface {
+func (c *AutoscalingV2beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AutoscalingV2beta1Client) HorizontalPodAutoscalers(namespace string) upstreamautoscalingv2beta1client.HorizontalPodAutoscalerInterface {
+
+	return &horizontalPodAutoscalersClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

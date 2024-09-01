@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	admissionregistrationv1 "k8s.io/client-go/applyconfigurations/admissionregistration/v1"
+	upstreamadmissionregistrationv1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
+	"k8s.io/client-go/testing"
 )
 
 var validatingwebhookconfigurationsResource = v1.SchemeGroupVersion.WithResource("validatingwebhookconfigurations")
@@ -30,4 +42,164 @@ var validatingwebhookconfigurationsKind = v1.SchemeGroupVersion.WithKind("Valida
 // validatingWebhookConfigurationsClusterClient implements validatingWebhookConfigurationInterface
 type validatingWebhookConfigurationsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *validatingWebhookConfigurationsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamadmissionregistrationv1client.ValidatingWebhookConfigurationInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &validatingWebhookConfigurationsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ValidatingWebhookConfigurations that match those selectors.
+func (c *validatingWebhookConfigurationsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ValidatingWebhookConfigurationList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(validatingwebhookconfigurationsResource, validatingwebhookconfigurationsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.ValidatingWebhookConfigurationList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ValidatingWebhookConfigurationList{ListMeta: obj.(*v1.ValidatingWebhookConfigurationList).ListMeta}
+	for _, item := range obj.(*v1.ValidatingWebhookConfigurationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested validatingWebhookConfigurations across all clusters.
+func (c *validatingWebhookConfigurationsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(validatingwebhookconfigurationsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type validatingWebhookConfigurationsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *validatingWebhookConfigurationsClient) Create(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.CreateOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(validatingwebhookconfigurationsResource, c.ClusterPath, validatingWebhookConfiguration), &v1.ValidatingWebhookConfiguration{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) Update(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(validatingwebhookconfigurationsResource, c.ClusterPath, validatingWebhookConfiguration), &v1.ValidatingWebhookConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) UpdateStatus(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(validatingwebhookconfigurationsResource, c.ClusterPath, "status", validatingWebhookConfiguration), &v1.ValidatingWebhookConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(validatingwebhookconfigurationsResource, c.ClusterPath, name, opts), &v1.ValidatingWebhookConfiguration{})
+
+	return err
+}
+
+func (c *validatingWebhookConfigurationsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(validatingwebhookconfigurationsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.ValidatingWebhookConfigurationList{})
+	return err
+}
+
+func (c *validatingWebhookConfigurationsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(validatingwebhookconfigurationsResource, c.ClusterPath, name), &v1.ValidatingWebhookConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ValidatingWebhookConfigurationList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(validatingwebhookconfigurationsResource, validatingwebhookconfigurationsKind, c.ClusterPath, opts), &v1.ValidatingWebhookConfigurationList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.ValidatingWebhookConfigurationList{ListMeta: obj.(*v1.ValidatingWebhookConfigurationList).ListMeta}
+	for _, item := range obj.(*v1.ValidatingWebhookConfigurationList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *validatingWebhookConfigurationsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(validatingwebhookconfigurationsResource, c.ClusterPath, opts))
+
+}
+
+func (c *validatingWebhookConfigurationsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ValidatingWebhookConfiguration, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(validatingwebhookconfigurationsResource, c.ClusterPath, name, pt, data, subresources...), &v1.ValidatingWebhookConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) Apply(ctx context.Context, applyConfiguration *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(validatingwebhookconfigurationsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.ValidatingWebhookConfiguration{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.ValidatingWebhookConfiguration), err
+}
+
+func (c *validatingWebhookConfigurationsClient) ApplyStatus(ctx context.Context, applyConfiguration *admissionregistrationv1.ValidatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (*v1.ValidatingWebhookConfiguration, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(validatingwebhookconfigurationsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.ValidatingWebhookConfiguration{})
+
+	return obj.(*v1.ValidatingWebhookConfiguration), err
 }

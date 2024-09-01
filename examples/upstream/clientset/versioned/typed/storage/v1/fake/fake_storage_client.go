@@ -20,37 +20,77 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamstoragev1client "k8s.io/client-go/kubernetes/typed/storage/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1"
 )
 
-type cSIDriversClusterClient struct {
+type StorageV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeStorageV1) CSIDrivers() v1.CSIDriverInterface {
-	return &FakeCSIDrivers{c}
+func (c *StorageV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamstoragev1client.StorageV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &StorageV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeStorageV1) CSINodes() v1.CSINodeInterface {
-	return &FakeCSINodes{c}
+func (c *StorageV1ClusterClient) CSIDrivers() v1.CSIDriverClusterInterface {
+	return &cSIDriversClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeStorageV1) CSIStorageCapacities(namespace string) v1.CSIStorageCapacityInterface {
-	return &FakeCSIStorageCapacities{c, namespace}
+func (c *StorageV1ClusterClient) CSINodes() v1.CSINodeClusterInterface {
+	return &cSINodesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeStorageV1) StorageClasses() v1.StorageClassInterface {
-	return &FakeStorageClasses{c}
+func (c *StorageV1ClusterClient) CSIStorageCapacities(namespace string) v1.CSIStorageCapacityClusterInterface {
+	return &cSIStorageCapacitiesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeStorageV1) VolumeAttachments() v1.VolumeAttachmentInterface {
-	return &FakeVolumeAttachments{c}
+func (c *StorageV1ClusterClient) StorageClasses() v1.StorageClassClusterInterface {
+	return &storageClassesClusterClient{Fake: c.Fake}
+}
+
+func (c *StorageV1ClusterClient) VolumeAttachments() v1.VolumeAttachmentClusterInterface {
+	return &volumeAttachmentsClusterClient{Fake: c.Fake}
+}
+
+type StorageV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeStorageV1) RESTClient() rest.Interface {
+func (c *StorageV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *StorageV1Client) CSIDrivers() upstreamstoragev1client.CSIDriverInterface {
+
+	return &cSIDriversClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *StorageV1Client) CSINodes() upstreamstoragev1client.CSINodeInterface {
+
+	return &cSINodesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *StorageV1Client) CSIStorageCapacities(namespace string) upstreamstoragev1client.CSIStorageCapacityInterface {
+
+	return &cSIStorageCapacitiesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *StorageV1Client) StorageClasses() upstreamstoragev1client.StorageClassInterface {
+
+	return &storageClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *StorageV1Client) VolumeAttachments() upstreamstoragev1client.VolumeAttachmentInterface {
+
+	return &volumeAttachmentsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

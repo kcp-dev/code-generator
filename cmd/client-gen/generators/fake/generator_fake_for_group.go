@@ -41,7 +41,8 @@ type genFakeForGroup struct {
 	types   []*types.Type
 	imports namer.ImportTracker
 	// If the genGroup has been called. This generator should only execute once.
-	called bool
+	called                               bool
+	singleClusterTypedClientsPackagePath string
 }
 
 var _ generator.Generator = &genFakeForGroup{}
@@ -66,33 +67,68 @@ func (g *genFakeForGroup) Imports(c *generator.Context) (imports []string) {
 	if len(g.types) != 0 {
 		imports = append(imports, fmt.Sprintf("%s \"%s\"", strings.ToLower(path.Base(g.realClientPackage)), g.realClientPackage))
 	}
+	imports = append(imports, "upstream"+strings.ToLower(g.groupGoName+g.version+"client \""+g.singleClusterTypedClientsPackagePath+"/"+g.groupGoName+"/"+g.version+"\""))
 	imports = append(imports, "kcptesting \"github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing\"")
+	imports = append(imports, "metav1 \"k8s.io/apimachinery/pkg/apis/meta/v1\"")
 	return imports
 }
 
 func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
+	externalClient := len(g.singleClusterTypedClientsPackagePath) > 0
+
 	m := map[string]interface{}{
-		"type":                t,
-		"GroupGoName":         g.groupGoName,
-		"Version":             namer.IC(g.version),
-		"Fake":                c.Universe.Type(types.Name{Package: "k8s.io/client-go/testing", Name: "Fake"}),
-		"RESTClientInterface": c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Interface"}),
-		"RESTClient":          c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClient"}),
+		"type":                    t,
+		"GroupGoName":             g.groupGoName,
+		"Version":                 namer.IC(g.version),
+		"Fake":                    c.Universe.Type(types.Name{Package: "k8s.io/client-go/testing", Name: "Fake"}),
+		"RESTClientInterface":     c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Interface"}),
+		"RESTClient":              c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClient"}),
+		"upstreamClientInterface": "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + g.groupGoName + strings.Title(g.version) + "Interface",
+		"useUpstreamClient":       externalClient,
 	}
 
-	sw.Do(groupClientTemplate, m)
+	// Cluster clients.
+	sw.Do(groupClusterClientTemplate, m)
+	sw.Do(getterClusterMethod, m)
 	for _, t := range g.types {
 		tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 		if err != nil {
 			return err
 		}
 		wrapper := map[string]interface{}{
-			"type":              t,
-			"GroupGoName":       g.groupGoName,
-			"Version":           namer.IC(g.version),
-			"realClientPackage": strings.ToLower(path.Base(g.realClientPackage)),
+			"type":                    t,
+			"GroupGoName":             g.groupGoName,
+			"Version":                 namer.IC(g.version),
+			"realClientPackage":       strings.ToLower(path.Base(g.realClientPackage)),
+			"upstreamClientInterface": "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + t.Name.Name + "Interface",
+			"useUpstreamClient":       externalClient,
+		}
+		if tags.NonNamespaced {
+			sw.Do(getterClusterImplNonNamespaced, wrapper)
+			continue
+		}
+		sw.Do(getterClusterImplNamespaced, wrapper)
+	}
+
+	// non-cluster clients
+	sw.Do(groupClientTemplate, m)
+
+	sw.Do(getRESTClient, m)
+
+	for _, t := range g.types {
+		tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
+		if err != nil {
+			return err
+		}
+		wrapper := map[string]interface{}{
+			"type":                    t,
+			"GroupGoName":             g.groupGoName,
+			"Version":                 namer.IC(g.version),
+			"realClientPackage":       strings.ToLower(path.Base(g.realClientPackage)),
+			"upstreamClientInterface": "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + t.Name.Name + "Interface",
+			"useUpstreamClient":       externalClient,
 		}
 		if tags.NonNamespaced {
 			sw.Do(getterImplNonNamespaced, wrapper)
@@ -100,33 +136,73 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 		}
 		sw.Do(getterImplNamespaced, wrapper)
 	}
-	sw.Do(getRESTClient, m)
+
 	return sw.Error()
 }
 
-var groupClientTemplate = `
-type $.type|privatePlural$ClusterClient struct {
+var groupClusterClientTemplate = `
+type $.GroupGoName$$.Version$ClusterClient struct {
 	*kcptesting.Fake
 }
 `
 
-var getterImplNamespaced = `
-func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$(namespace string) $.realClientPackage$.$.type|public$Interface {
-	return &Fake$.type|publicPlural${c, namespace}
+var groupClientTemplate = `
+type $.GroupGoName$$.Version$Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 `
 
-var getterImplNonNamespaced = `
-func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$() $.realClientPackage$.$.type|public$Interface {
-	return &Fake$.type|publicPlural${c}
+var getterClusterImplNamespaced = `
+func (c *$.GroupGoName$$.Version$ClusterClient) $.type|publicPlural$(namespace string) $.realClientPackage$.$.type|public$ClusterInterface {
+	return &$.type|privatePlural$ClusterClient{Fake: c.Fake}
+}
+`
+
+var getterClusterImplNonNamespaced = `
+func (c *$.GroupGoName$$.Version$ClusterClient) $.type|publicPlural$() $.realClientPackage$.$.type|public$ClusterInterface {
+	return &$.type|privatePlural$ClusterClient{Fake: c.Fake}
+}
+`
+
+var getterClusterMethod = `
+$if .useUpstreamClient$
+func (c *$.GroupGoName$$.Version$ClusterClient) Cluster(clusterPath logicalcluster.Path) $.upstreamClientInterface$ {
+$else$
+func (c *$.GroupGoName$$.Version$ClusterClient) Cluster(clusterPath logicalcluster.Path) $.GroupGoName$$.Version$Client {
+$end$
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &$.GroupGoName$$.Version$Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 `
 
 var getRESTClient = `
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *Fake$.GroupGoName$$.Version$) RESTClient() $.RESTClientInterface|raw$ {
+func (c *$.GroupGoName$$.Version$Client) RESTClient() $.RESTClientInterface|raw$ {
 	var ret *$.RESTClient|raw$
 	return ret
+}
+`
+
+var getterImplNonNamespaced = `
+$if .useUpstreamClient$
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.upstreamClientInterface$ {
+$else$
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.GroupGoName$$.Version$Client {
+$end$
+	return &$.type|privatePlural$Client{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+`
+
+var getterImplNamespaced = `
+$if .useUpstreamClient$
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.upstreamClientInterface$ {
+$else$
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.GroupGoName$$.Version$Client {
+$end$
+	return &$.type|privatePlural$Client{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }
 `

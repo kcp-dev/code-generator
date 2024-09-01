@@ -117,6 +117,6 @@ var (
 )
 
 // ExampleV1 retrieves the ExampleV1Client
-func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
+func (c *Clientset) ExampleV1() examplev1.ExampleV1ClusterInterface {
 	return &fakeexamplev1.FakeExampleV1{Fake: &c.Fake}
 }

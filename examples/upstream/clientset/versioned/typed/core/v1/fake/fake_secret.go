@@ -96,6 +96,7 @@ type secretsClient struct {
 
 func (c *secretsClient) Create(ctx context.Context, secret *v1.Secret, opts metav1.CreateOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(secretsResource, c.ClusterPath, c.Namespace, secret), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *secretsClient) Create(ctx context.Context, secret *v1.Secret, opts meta
 
 func (c *secretsClient) Update(ctx context.Context, secret *v1.Secret, opts metav1.UpdateOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(secretsResource, c.ClusterPath, c.Namespace, secret), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *secretsClient) Update(ctx context.Context, secret *v1.Secret, opts meta
 
 func (c *secretsClient) UpdateStatus(ctx context.Context, secret *v1.Secret, opts metav1.UpdateOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(secretsResource, c.ClusterPath, "status", c.Namespace, secret), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *secretsClient) UpdateStatus(ctx context.Context, secret *v1.Secret, opt
 
 func (c *secretsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(secretsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Secret{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *secretsClient) DeleteCollection(ctx context.Context, opts metav1.Delete
 
 func (c *secretsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(secretsResource, c.ClusterPath, c.Namespace, name), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Secret), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Secret that match those selectors.
 func (c *secretsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.SecretList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(secretsResource, secretsKind, c.ClusterPath, c.Namespace, opts), &v1.SecretList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *secretsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.
 
 func (c *secretsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(secretsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *secretsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Secret, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(secretsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *secretsClient) Apply(ctx context.Context, applyConfiguration *corev1.Se
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(secretsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Secret{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Secret), err
+}
+
+func (c *secretsClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.SecretApplyConfiguration, opts metav1.ApplyOptions) (*v1.Secret, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(secretsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Secret{})
+
 	return obj.(*v1.Secret), err
 }

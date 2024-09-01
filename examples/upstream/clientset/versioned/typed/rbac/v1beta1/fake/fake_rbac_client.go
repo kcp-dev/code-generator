@@ -20,33 +20,68 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamrbacv1beta1client "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/rbac/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type RbacV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeRbacV1beta1) ClusterRoles() v1beta1.ClusterRoleInterface {
-	return &FakeClusterRoles{c}
+func (c *RbacV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamrbacv1beta1client.RbacV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &RbacV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeRbacV1beta1) ClusterRoleBindings() v1beta1.ClusterRoleBindingInterface {
-	return &FakeClusterRoleBindings{c}
+func (c *RbacV1beta1ClusterClient) ClusterRoles() v1beta1.ClusterRoleClusterInterface {
+	return &clusterRolesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeRbacV1beta1) Roles(namespace string) v1beta1.RoleInterface {
-	return &FakeRoles{c, namespace}
+func (c *RbacV1beta1ClusterClient) ClusterRoleBindings() v1beta1.ClusterRoleBindingClusterInterface {
+	return &clusterRoleBindingsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeRbacV1beta1) RoleBindings(namespace string) v1beta1.RoleBindingInterface {
-	return &FakeRoleBindings{c, namespace}
+func (c *RbacV1beta1ClusterClient) Roles(namespace string) v1beta1.RoleClusterInterface {
+	return &rolesClusterClient{Fake: c.Fake}
+}
+
+func (c *RbacV1beta1ClusterClient) RoleBindings(namespace string) v1beta1.RoleBindingClusterInterface {
+	return &roleBindingsClusterClient{Fake: c.Fake}
+}
+
+type RbacV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeRbacV1beta1) RESTClient() rest.Interface {
+func (c *RbacV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *RbacV1beta1Client) ClusterRoles() upstreamrbacv1beta1client.ClusterRoleInterface {
+
+	return &clusterRolesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *RbacV1beta1Client) ClusterRoleBindings() upstreamrbacv1beta1client.ClusterRoleBindingInterface {
+
+	return &clusterRoleBindingsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *RbacV1beta1Client) Roles(namespace string) upstreamrbacv1beta1client.RoleInterface {
+
+	return &rolesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *RbacV1beta1Client) RoleBindings(namespace string) upstreamrbacv1beta1client.RoleBindingInterface {
+
+	return &roleBindingsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

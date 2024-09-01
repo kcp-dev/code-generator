@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamauthenticationv1beta1client "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authentication/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type AuthenticationV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAuthenticationV1beta1) SelfSubjectReviews() v1beta1.SelfSubjectReviewInterface {
-	return &FakeSelfSubjectReviews{c}
+func (c *AuthenticationV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1beta1client.AuthenticationV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AuthenticationV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeAuthenticationV1beta1) TokenReviews() v1beta1.TokenReviewInterface {
-	return &FakeTokenReviews{c}
+func (c *AuthenticationV1beta1ClusterClient) SelfSubjectReviews() v1beta1.SelfSubjectReviewClusterInterface {
+	return &selfSubjectReviewsClusterClient{Fake: c.Fake}
+}
+
+func (c *AuthenticationV1beta1ClusterClient) TokenReviews() v1beta1.TokenReviewClusterInterface {
+	return &tokenReviewsClusterClient{Fake: c.Fake}
+}
+
+type AuthenticationV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAuthenticationV1beta1) RESTClient() rest.Interface {
+func (c *AuthenticationV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AuthenticationV1beta1Client) SelfSubjectReviews() upstreamauthenticationv1beta1client.SelfSubjectReviewInterface {
+
+	return &selfSubjectReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AuthenticationV1beta1Client) TokenReviews() upstreamauthenticationv1beta1client.TokenReviewInterface {
+
+	return &tokenReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

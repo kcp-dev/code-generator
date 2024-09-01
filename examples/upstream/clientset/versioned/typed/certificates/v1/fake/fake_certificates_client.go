@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamcertificatesv1client "k8s.io/client-go/kubernetes/typed/certificates/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/certificates/v1"
 )
 
-type cSIDriversClusterClient struct {
+type CertificatesV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeCertificatesV1) CertificateSigningRequests() v1.CertificateSigningRequestInterface {
-	return &FakeCertificateSigningRequests{c}
+func (c *CertificatesV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcertificatesv1client.CertificatesV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &CertificatesV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *CertificatesV1ClusterClient) CertificateSigningRequests() v1.CertificateSigningRequestClusterInterface {
+	return &certificateSigningRequestsClusterClient{Fake: c.Fake}
+}
+
+type CertificatesV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeCertificatesV1) RESTClient() rest.Interface {
+func (c *CertificatesV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *CertificatesV1Client) CertificateSigningRequests() upstreamcertificatesv1client.CertificateSigningRequestInterface {
+
+	return &certificateSigningRequestsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

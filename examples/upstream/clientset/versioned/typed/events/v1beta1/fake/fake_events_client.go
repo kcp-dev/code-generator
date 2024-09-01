@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreameventsv1beta1client "k8s.io/client-go/kubernetes/typed/events/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/events/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type EventsV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeEventsV1beta1) Events(namespace string) v1beta1.EventInterface {
-	return &FakeEvents{c, namespace}
+func (c *EventsV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreameventsv1beta1client.EventsV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &EventsV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *EventsV1beta1ClusterClient) Events(namespace string) v1beta1.EventClusterInterface {
+	return &eventsClusterClient{Fake: c.Fake}
+}
+
+type EventsV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeEventsV1beta1) RESTClient() rest.Interface {
+func (c *EventsV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *EventsV1beta1Client) Events(namespace string) upstreameventsv1beta1client.EventInterface {
+
+	return &eventsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

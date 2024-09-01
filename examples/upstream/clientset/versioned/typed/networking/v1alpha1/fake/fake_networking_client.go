@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamnetworkingv1alpha1client "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type NetworkingV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeNetworkingV1alpha1) IPAddresses() v1alpha1.IPAddressInterface {
-	return &FakeIPAddresses{c}
+func (c *NetworkingV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1alpha1client.NetworkingV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &NetworkingV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeNetworkingV1alpha1) ServiceCIDRs() v1alpha1.ServiceCIDRInterface {
-	return &FakeServiceCIDRs{c}
+func (c *NetworkingV1alpha1ClusterClient) IPAddresses() v1alpha1.IPAddressClusterInterface {
+	return &iPAddressesClusterClient{Fake: c.Fake}
+}
+
+func (c *NetworkingV1alpha1ClusterClient) ServiceCIDRs() v1alpha1.ServiceCIDRClusterInterface {
+	return &serviceCIDRsClusterClient{Fake: c.Fake}
+}
+
+type NetworkingV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeNetworkingV1alpha1) RESTClient() rest.Interface {
+func (c *NetworkingV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *NetworkingV1alpha1Client) IPAddresses() upstreamnetworkingv1alpha1client.IPAddressInterface {
+
+	return &iPAddressesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *NetworkingV1alpha1Client) ServiceCIDRs() upstreamnetworkingv1alpha1client.ServiceCIDRInterface {
+
+	return &serviceCIDRsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

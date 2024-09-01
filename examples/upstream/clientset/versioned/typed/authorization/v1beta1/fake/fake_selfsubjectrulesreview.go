@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/authorization/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	authorizationv1beta1 "k8s.io/client-go/applyconfigurations/authorization/v1beta1"
+	upstreamauthorizationv1beta1client "k8s.io/client-go/kubernetes/typed/authorization/v1beta1"
+	"k8s.io/client-go/testing"
 )
 
 var selfsubjectrulesreviewsResource = v1beta1.SchemeGroupVersion.WithResource("selfsubjectrulesreviews")
@@ -30,4 +43,164 @@ var selfsubjectrulesreviewsKind = v1beta1.SchemeGroupVersion.WithKind("SelfSubje
 // selfSubjectRulesReviewsClusterClient implements selfSubjectRulesReviewInterface
 type selfSubjectRulesReviewsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *selfSubjectRulesReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthorizationv1beta1client.SelfSubjectRulesReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &selfSubjectRulesReviewsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of SelfSubjectRulesReviews that match those selectors.
+func (c *selfSubjectRulesReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.SelfSubjectRulesReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(selfsubjectrulesreviewsResource, selfsubjectrulesreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.SelfSubjectRulesReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.SelfSubjectRulesReviewList{ListMeta: obj.(*v1beta1.SelfSubjectRulesReviewList).ListMeta}
+	for _, item := range obj.(*v1beta1.SelfSubjectRulesReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested selfSubjectRulesReviews across all clusters.
+func (c *selfSubjectRulesReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(selfsubjectrulesreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type selfSubjectRulesReviewsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *selfSubjectRulesReviewsClient) Create(ctx context.Context, selfSubjectRulesReview *v1beta1.SelfSubjectRulesReview, opts metav1.CreateOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(selfsubjectrulesreviewsResource, c.ClusterPath, selfSubjectRulesReview), &v1beta1.SelfSubjectRulesReview{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) Update(ctx context.Context, selfSubjectRulesReview *v1beta1.SelfSubjectRulesReview, opts metav1.UpdateOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(selfsubjectrulesreviewsResource, c.ClusterPath, selfSubjectRulesReview), &v1beta1.SelfSubjectRulesReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) UpdateStatus(ctx context.Context, selfSubjectRulesReview *v1beta1.SelfSubjectRulesReview, opts metav1.UpdateOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(selfsubjectrulesreviewsResource, c.ClusterPath, "status", selfSubjectRulesReview), &v1beta1.SelfSubjectRulesReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(selfsubjectrulesreviewsResource, c.ClusterPath, name, opts), &v1beta1.SelfSubjectRulesReview{})
+
+	return err
+}
+
+func (c *selfSubjectRulesReviewsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(selfsubjectrulesreviewsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1beta1.SelfSubjectRulesReviewList{})
+	return err
+}
+
+func (c *selfSubjectRulesReviewsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(selfsubjectrulesreviewsResource, c.ClusterPath, name), &v1beta1.SelfSubjectRulesReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.SelfSubjectRulesReviewList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(selfsubjectrulesreviewsResource, selfsubjectrulesreviewsKind, c.ClusterPath, opts), &v1beta1.SelfSubjectRulesReviewList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.SelfSubjectRulesReviewList{ListMeta: obj.(*v1beta1.SelfSubjectRulesReviewList).ListMeta}
+	for _, item := range obj.(*v1beta1.SelfSubjectRulesReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *selfSubjectRulesReviewsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(selfsubjectrulesreviewsResource, c.ClusterPath, opts))
+
+}
+
+func (c *selfSubjectRulesReviewsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.SelfSubjectRulesReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(selfsubjectrulesreviewsResource, c.ClusterPath, name, pt, data, subresources...), &v1beta1.SelfSubjectRulesReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) Apply(ctx context.Context, applyConfiguration *authorizationv1beta1.SelfSubjectRulesReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(selfsubjectrulesreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1beta1.SelfSubjectRulesReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
+}
+
+func (c *selfSubjectRulesReviewsClient) ApplyStatus(ctx context.Context, applyConfiguration *authorizationv1beta1.SelfSubjectRulesReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.SelfSubjectRulesReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(selfsubjectrulesreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1beta1.SelfSubjectRulesReview{})
+
+	return obj.(*v1beta1.SelfSubjectRulesReview), err
 }

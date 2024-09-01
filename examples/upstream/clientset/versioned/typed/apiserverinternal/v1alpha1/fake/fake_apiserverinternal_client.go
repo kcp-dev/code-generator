@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreaminternalv1alpha1client "k8s.io/client-go/kubernetes/typed/internal/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apiserverinternal/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type InternalV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeInternalV1alpha1) StorageVersions() v1alpha1.StorageVersionInterface {
-	return &FakeStorageVersions{c}
+func (c *InternalV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreaminternalv1alpha1client.InternalV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &InternalV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *InternalV1alpha1ClusterClient) StorageVersions() v1alpha1.StorageVersionClusterInterface {
+	return &storageVersionsClusterClient{Fake: c.Fake}
+}
+
+type InternalV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeInternalV1alpha1) RESTClient() rest.Interface {
+func (c *InternalV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *InternalV1alpha1Client) StorageVersions() upstreaminternalv1alpha1client.StorageVersionInterface {
+
+	return &storageVersionsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

@@ -15,5 +15,11 @@ var ListersExpansions = map[string]string{
 }
 
 var ClientSetFakeExpansions = map[string]string{
-	"StaticFakesClientSetEventExpansion": StaticFakesClientSetEventExpansion,
+	"StaticFakesClientSetEventNamespacedExpansion": StaticFakesClientSetEventNamespacedExpansion,
+	"StaticFakesClientSetEventExpansion":           StaticFakesClientSetEventExpansion,
+	"StaticFakesClientSetNamespacesExpansion":      StaticFakesClientSetNamespacesExpansion,
+	"StaticFakesClientSetNodesExpansion":           StaticFakesClientSetNodesExpansion,
+	"StaticFakesClientSetPodsExpansion":            StaticFakesClientSetPodsExpansion,
+	"StaticFakesClientSetServicesExpansion":        StaticFakesClientSetServicesExpansion,
+	"StaticFakesClientSetServiceAccountsExpansion": StaticFakesClientSetServiceAccountsExpansion,
 }

@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamschedulingv1client "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/scheduling/v1"
 )
 
-type cSIDriversClusterClient struct {
+type SchedulingV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeSchedulingV1) PriorityClasses() v1.PriorityClassInterface {
-	return &FakePriorityClasses{c}
+func (c *SchedulingV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamschedulingv1client.SchedulingV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &SchedulingV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *SchedulingV1ClusterClient) PriorityClasses() v1.PriorityClassClusterInterface {
+	return &priorityClassesClusterClient{Fake: c.Fake}
+}
+
+type SchedulingV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeSchedulingV1) RESTClient() rest.Interface {
+func (c *SchedulingV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *SchedulingV1Client) PriorityClasses() upstreamschedulingv1client.PriorityClassInterface {
+
+	return &priorityClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

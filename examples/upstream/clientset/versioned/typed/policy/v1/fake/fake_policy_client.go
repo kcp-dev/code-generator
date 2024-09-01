@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreampolicyv1client "k8s.io/client-go/kubernetes/typed/policy/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/policy/v1"
 )
 
-type cSIDriversClusterClient struct {
+type PolicyV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakePolicyV1) Evictions(namespace string) v1.EvictionInterface {
-	return &FakeEvictions{c, namespace}
+func (c *PolicyV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreampolicyv1client.PolicyV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &PolicyV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakePolicyV1) PodDisruptionBudgets(namespace string) v1.PodDisruptionBudgetInterface {
-	return &FakePodDisruptionBudgets{c, namespace}
+func (c *PolicyV1ClusterClient) Evictions(namespace string) v1.EvictionClusterInterface {
+	return &evictionsClusterClient{Fake: c.Fake}
+}
+
+func (c *PolicyV1ClusterClient) PodDisruptionBudgets(namespace string) v1.PodDisruptionBudgetClusterInterface {
+	return &podDisruptionBudgetsClusterClient{Fake: c.Fake}
+}
+
+type PolicyV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakePolicyV1) RESTClient() rest.Interface {
+func (c *PolicyV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *PolicyV1Client) Evictions(namespace string) upstreampolicyv1client.EvictionInterface {
+
+	return &evictionsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *PolicyV1Client) PodDisruptionBudgets(namespace string) upstreampolicyv1client.PodDisruptionBudgetInterface {
+
+	return &podDisruptionBudgetsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

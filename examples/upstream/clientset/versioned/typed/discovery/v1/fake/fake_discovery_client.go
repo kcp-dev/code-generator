@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamdiscoveryv1client "k8s.io/client-go/kubernetes/typed/discovery/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/discovery/v1"
 )
 
-type cSIDriversClusterClient struct {
+type DiscoveryV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeDiscoveryV1) EndpointSlices(namespace string) v1.EndpointSliceInterface {
-	return &FakeEndpointSlices{c, namespace}
+func (c *DiscoveryV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamdiscoveryv1client.DiscoveryV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &DiscoveryV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *DiscoveryV1ClusterClient) EndpointSlices(namespace string) v1.EndpointSliceClusterInterface {
+	return &endpointSlicesClusterClient{Fake: c.Fake}
+}
+
+type DiscoveryV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeDiscoveryV1) RESTClient() rest.Interface {
+func (c *DiscoveryV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *DiscoveryV1Client) EndpointSlices(namespace string) upstreamdiscoveryv1client.EndpointSliceInterface {
+
+	return &endpointSlicesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

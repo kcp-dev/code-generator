@@ -26,11 +26,13 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
+	applyconfigurationsautoscalingv1 "k8s.io/client-go/applyconfigurations/autoscaling/v1"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"k8s.io/client-go/testing"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1"
@@ -96,6 +98,7 @@ type replicaSetsClient struct {
 
 func (c *replicaSetsClient) Create(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.CreateOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(replicasetsResource, c.ClusterPath, c.Namespace, replicaSet), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +107,7 @@ func (c *replicaSetsClient) Create(ctx context.Context, replicaSet *v1.ReplicaSe
 
 func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.UpdateOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(replicasetsResource, c.ClusterPath, c.Namespace, replicaSet), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +116,7 @@ func (c *replicaSetsClient) Update(ctx context.Context, replicaSet *v1.ReplicaSe
 
 func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.UpdateOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicasetsResource, c.ClusterPath, "status", c.Namespace, replicaSet), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +125,7 @@ func (c *replicaSetsClient) UpdateStatus(ctx context.Context, replicaSet *v1.Rep
 
 func (c *replicaSetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(replicasetsResource, c.ClusterPath, c.Namespace, name, opts), &v1.ReplicaSet{})
+
 	return err
 }
 
@@ -132,15 +138,16 @@ func (c *replicaSetsClient) DeleteCollection(ctx context.Context, opts metav1.De
 
 func (c *replicaSetsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(replicasetsResource, c.ClusterPath, c.Namespace, name), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ReplicaSet), err
 }
 
-// List takes label and field selectors, and returns the list of v1.ReplicaSet that match those selectors.
 func (c *replicaSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ReplicaSetList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(replicasetsResource, replicasetsKind, c.ClusterPath, c.Namespace, opts), &v1.ReplicaSetList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +167,12 @@ func (c *replicaSetsClient) List(ctx context.Context, opts metav1.ListOptions) (
 
 func (c *replicaSetsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(replicasetsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *replicaSetsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ReplicaSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +191,66 @@ func (c *replicaSetsClient) Apply(ctx context.Context, applyConfiguration *appsv
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.ReplicaSet{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.ReplicaSet), err
+}
+
+func (c *replicaSetsClient) ApplyStatus(ctx context.Context, applyConfiguration *appsv1.ReplicaSetApplyConfiguration, opts metav1.ApplyOptions) (*v1.ReplicaSet, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.ReplicaSet{})
+
+	return obj.(*v1.ReplicaSet), err
+}
+
+func (c *replicaSetsClient) GetScale(ctx context.Context, replicationControllerName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewGetSubresourceAction(replicasetsResource, c.ClusterPath, "scale", c.Namespace, replicationControllerName), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *replicaSetsClient) UpdateScale(ctx context.Context, replicationControllerName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(replicasetsResource, c.ClusterPath, "scale", c.Namespace, scale), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+func (c *replicaSetsClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(replicasetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &autoscalingv1.Scale{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
 }

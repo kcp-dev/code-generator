@@ -96,6 +96,7 @@ type ingressesClient struct {
 
 func (c *ingressesClient) Create(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(ingressesResource, c.ClusterPath, c.Namespace, ingress), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *ingressesClient) Create(ctx context.Context, ingress *v1.Ingress, opts 
 
 func (c *ingressesClient) Update(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(ingressesResource, c.ClusterPath, c.Namespace, ingress), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *ingressesClient) Update(ctx context.Context, ingress *v1.Ingress, opts 
 
 func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(ingressesResource, c.ClusterPath, "status", c.Namespace, ingress), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *ingressesClient) UpdateStatus(ctx context.Context, ingress *v1.Ingress,
 
 func (c *ingressesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(ingressesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Ingress{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *ingressesClient) DeleteCollection(ctx context.Context, opts metav1.Dele
 
 func (c *ingressesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(ingressesResource, c.ClusterPath, c.Namespace, name), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Ingress), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Ingress that match those selectors.
 func (c *ingressesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.IngressList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(ingressesResource, ingressesKind, c.ClusterPath, c.Namespace, opts), &v1.IngressList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *ingressesClient) List(ctx context.Context, opts metav1.ListOptions) (*v
 
 func (c *ingressesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(ingressesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *ingressesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Ingress, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(ingressesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *ingressesClient) Apply(ctx context.Context, applyConfiguration *network
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(ingressesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Ingress{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Ingress), err
+}
+
+func (c *ingressesClient) ApplyStatus(ctx context.Context, applyConfiguration *networkingv1.IngressApplyConfiguration, opts metav1.ApplyOptions) (*v1.Ingress, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(ingressesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Ingress{})
+
 	return obj.(*v1.Ingress), err
 }

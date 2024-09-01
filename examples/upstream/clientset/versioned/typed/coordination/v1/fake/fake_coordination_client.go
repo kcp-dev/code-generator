@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamcoordinationv1client "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/coordination/v1"
 )
 
-type cSIDriversClusterClient struct {
+type CoordinationV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeCoordinationV1) Leases(namespace string) v1.LeaseInterface {
-	return &FakeLeases{c, namespace}
+func (c *CoordinationV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcoordinationv1client.CoordinationV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &CoordinationV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *CoordinationV1ClusterClient) Leases(namespace string) v1.LeaseClusterInterface {
+	return &leasesClusterClient{Fake: c.Fake}
+}
+
+type CoordinationV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeCoordinationV1) RESTClient() rest.Interface {
+func (c *CoordinationV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *CoordinationV1Client) Leases(namespace string) upstreamcoordinationv1client.LeaseInterface {
+
+	return &leasesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

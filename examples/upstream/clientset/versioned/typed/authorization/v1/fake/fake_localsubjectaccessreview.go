@@ -96,6 +96,7 @@ type localSubjectAccessReviewsClient struct {
 
 func (c *localSubjectAccessReviewsClient) Create(ctx context.Context, localSubjectAccessReview *v1.LocalSubjectAccessReview, opts metav1.CreateOptions) (*v1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, localSubjectAccessReview), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *localSubjectAccessReviewsClient) Create(ctx context.Context, localSubje
 
 func (c *localSubjectAccessReviewsClient) Update(ctx context.Context, localSubjectAccessReview *v1.LocalSubjectAccessReview, opts metav1.UpdateOptions) (*v1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, localSubjectAccessReview), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *localSubjectAccessReviewsClient) Update(ctx context.Context, localSubje
 
 func (c *localSubjectAccessReviewsClient) UpdateStatus(ctx context.Context, localSubjectAccessReview *v1.LocalSubjectAccessReview, opts metav1.UpdateOptions) (*v1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(localsubjectaccessreviewsResource, c.ClusterPath, "status", c.Namespace, localSubjectAccessReview), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *localSubjectAccessReviewsClient) UpdateStatus(ctx context.Context, loca
 
 func (c *localSubjectAccessReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, name, opts), &v1.LocalSubjectAccessReview{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *localSubjectAccessReviewsClient) DeleteCollection(ctx context.Context, 
 
 func (c *localSubjectAccessReviewsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, name), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.LocalSubjectAccessReview), err
 }
 
-// List takes label and field selectors, and returns the list of v1.LocalSubjectAccessReview that match those selectors.
 func (c *localSubjectAccessReviewsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.LocalSubjectAccessReviewList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(localsubjectaccessreviewsResource, localsubjectaccessreviewsKind, c.ClusterPath, c.Namespace, opts), &v1.LocalSubjectAccessReviewList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *localSubjectAccessReviewsClient) List(ctx context.Context, opts metav1.
 
 func (c *localSubjectAccessReviewsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *localSubjectAccessReviewsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.LocalSubjectAccessReview, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *localSubjectAccessReviewsClient) Apply(ctx context.Context, applyConfig
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.LocalSubjectAccessReview{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.LocalSubjectAccessReview), err
+}
+
+func (c *localSubjectAccessReviewsClient) ApplyStatus(ctx context.Context, applyConfiguration *authorizationv1.LocalSubjectAccessReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1.LocalSubjectAccessReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(localsubjectaccessreviewsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.LocalSubjectAccessReview{})
+
 	return obj.(*v1.LocalSubjectAccessReview), err
 }

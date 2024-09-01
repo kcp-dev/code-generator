@@ -19,8 +19,20 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	upstreamcorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/testing"
 )
 
 var nodesResource = v1.SchemeGroupVersion.WithResource("nodes")
@@ -30,4 +42,164 @@ var nodesKind = v1.SchemeGroupVersion.WithKind("Node")
 // nodesClusterClient implements nodeInterface
 type nodesClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *nodesClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamcorev1client.NodeInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &nodesClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of Nodes that match those selectors.
+func (c *nodesClusterClient) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NodeList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(nodesResource, nodesKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1.NodeList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.NodeList{ListMeta: obj.(*v1.NodeList).ListMeta}
+	for _, item := range obj.(*v1.NodeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested nodes across all clusters.
+func (c *nodesClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(nodesResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type nodesClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *nodesClient) Create(ctx context.Context, node *v1.Node, opts metav1.CreateOptions) (*v1.Node, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(nodesResource, c.ClusterPath, node), &v1.Node{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) Update(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (*v1.Node, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(nodesResource, c.ClusterPath, node), &v1.Node{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (*v1.Node, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(nodesResource, c.ClusterPath, "status", node), &v1.Node{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(nodesResource, c.ClusterPath, name, opts), &v1.Node{})
+
+	return err
+}
+
+func (c *nodesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(nodesResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1.NodeList{})
+	return err
+}
+
+func (c *nodesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Node, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(nodesResource, c.ClusterPath, name), &v1.Node{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.NodeList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(nodesResource, nodesKind, c.ClusterPath, opts), &v1.NodeList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1.NodeList{ListMeta: obj.(*v1.NodeList).ListMeta}
+	for _, item := range obj.(*v1.NodeList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *nodesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(nodesResource, c.ClusterPath, opts))
+
+}
+
+func (c *nodesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Node, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(nodesResource, c.ClusterPath, name, pt, data, subresources...), &v1.Node{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) Apply(ctx context.Context, applyConfiguration *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (*v1.Node, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(nodesResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1.Node{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Node), err
+}
+
+func (c *nodesClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.NodeApplyConfiguration, opts metav1.ApplyOptions) (*v1.Node, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(nodesResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1.Node{})
+
+	return obj.(*v1.Node), err
 }

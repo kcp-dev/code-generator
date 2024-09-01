@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamimagepolicyv1alpha1client "k8s.io/client-go/kubernetes/typed/imagepolicy/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/imagepolicy/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type ImagepolicyV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeImagepolicyV1alpha1) ImageReviews() v1alpha1.ImageReviewInterface {
-	return &FakeImageReviews{c}
+func (c *ImagepolicyV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamimagepolicyv1alpha1client.ImagepolicyV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &ImagepolicyV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *ImagepolicyV1alpha1ClusterClient) ImageReviews() v1alpha1.ImageReviewClusterInterface {
+	return &imageReviewsClusterClient{Fake: c.Fake}
+}
+
+type ImagepolicyV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeImagepolicyV1alpha1) RESTClient() rest.Interface {
+func (c *ImagepolicyV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *ImagepolicyV1alpha1Client) ImageReviews() upstreamimagepolicyv1alpha1client.ImageReviewInterface {
+
+	return &imageReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

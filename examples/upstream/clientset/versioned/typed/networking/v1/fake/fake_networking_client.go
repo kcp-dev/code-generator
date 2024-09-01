@@ -20,29 +20,59 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamnetworkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/networking/v1"
 )
 
-type cSIDriversClusterClient struct {
+type NetworkingV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeNetworkingV1) Ingresses(namespace string) v1.IngressInterface {
-	return &FakeIngresses{c, namespace}
+func (c *NetworkingV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamnetworkingv1client.NetworkingV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &NetworkingV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeNetworkingV1) IngressClasses() v1.IngressClassInterface {
-	return &FakeIngressClasses{c}
+func (c *NetworkingV1ClusterClient) Ingresses(namespace string) v1.IngressClusterInterface {
+	return &ingressesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeNetworkingV1) NetworkPolicies(namespace string) v1.NetworkPolicyInterface {
-	return &FakeNetworkPolicies{c, namespace}
+func (c *NetworkingV1ClusterClient) IngressClasses() v1.IngressClassClusterInterface {
+	return &ingressClassesClusterClient{Fake: c.Fake}
+}
+
+func (c *NetworkingV1ClusterClient) NetworkPolicies(namespace string) v1.NetworkPolicyClusterInterface {
+	return &networkPoliciesClusterClient{Fake: c.Fake}
+}
+
+type NetworkingV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeNetworkingV1) RESTClient() rest.Interface {
+func (c *NetworkingV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *NetworkingV1Client) Ingresses(namespace string) upstreamnetworkingv1client.IngressInterface {
+
+	return &ingressesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *NetworkingV1Client) IngressClasses() upstreamnetworkingv1client.IngressClassInterface {
+
+	return &ingressClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *NetworkingV1Client) NetworkPolicies(namespace string) upstreamnetworkingv1client.NetworkPolicyInterface {
+
+	return &networkPoliciesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

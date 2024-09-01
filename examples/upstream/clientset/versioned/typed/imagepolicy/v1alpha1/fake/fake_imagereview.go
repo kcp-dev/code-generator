@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha1 "k8s.io/api/imagepolicy/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	imagepolicyv1alpha1 "k8s.io/client-go/applyconfigurations/imagepolicy/v1alpha1"
+	upstreamimagepolicyv1alpha1client "k8s.io/client-go/kubernetes/typed/imagepolicy/v1alpha1"
+	"k8s.io/client-go/testing"
 )
 
 var imagereviewsResource = v1alpha1.SchemeGroupVersion.WithResource("imagereviews")
@@ -30,4 +43,164 @@ var imagereviewsKind = v1alpha1.SchemeGroupVersion.WithKind("ImageReview")
 // imageReviewsClusterClient implements imageReviewInterface
 type imageReviewsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *imageReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamimagepolicyv1alpha1client.ImageReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &imageReviewsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of ImageReviews that match those selectors.
+func (c *imageReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ImageReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(imagereviewsResource, imagereviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1alpha1.ImageReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ImageReviewList{ListMeta: obj.(*v1alpha1.ImageReviewList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ImageReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested imageReviews across all clusters.
+func (c *imageReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(imagereviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type imageReviewsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *imageReviewsClient) Create(ctx context.Context, imageReview *v1alpha1.ImageReview, opts metav1.CreateOptions) (*v1alpha1.ImageReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(imagereviewsResource, c.ClusterPath, imageReview), &v1alpha1.ImageReview{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) Update(ctx context.Context, imageReview *v1alpha1.ImageReview, opts metav1.UpdateOptions) (*v1alpha1.ImageReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(imagereviewsResource, c.ClusterPath, imageReview), &v1alpha1.ImageReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) UpdateStatus(ctx context.Context, imageReview *v1alpha1.ImageReview, opts metav1.UpdateOptions) (*v1alpha1.ImageReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(imagereviewsResource, c.ClusterPath, "status", imageReview), &v1alpha1.ImageReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(imagereviewsResource, c.ClusterPath, name, opts), &v1alpha1.ImageReview{})
+
+	return err
+}
+
+func (c *imageReviewsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(imagereviewsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1alpha1.ImageReviewList{})
+	return err
+}
+
+func (c *imageReviewsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.ImageReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(imagereviewsResource, c.ClusterPath, name), &v1alpha1.ImageReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ImageReviewList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(imagereviewsResource, imagereviewsKind, c.ClusterPath, opts), &v1alpha1.ImageReviewList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1alpha1.ImageReviewList{ListMeta: obj.(*v1alpha1.ImageReviewList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ImageReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *imageReviewsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(imagereviewsResource, c.ClusterPath, opts))
+
+}
+
+func (c *imageReviewsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha1.ImageReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(imagereviewsResource, c.ClusterPath, name, pt, data, subresources...), &v1alpha1.ImageReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) Apply(ctx context.Context, applyConfiguration *imagepolicyv1alpha1.ImageReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ImageReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(imagereviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1alpha1.ImageReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ImageReview), err
+}
+
+func (c *imageReviewsClient) ApplyStatus(ctx context.Context, applyConfiguration *imagepolicyv1alpha1.ImageReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha1.ImageReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(imagereviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1alpha1.ImageReview{})
+
+	return obj.(*v1alpha1.ImageReview), err
 }

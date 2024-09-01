@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type daemonSetsClient struct {
 
 func (c *daemonSetsClient) Create(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts metav1.CreateOptions) (*v1beta1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(daemonsetsResource, c.ClusterPath, c.Namespace, daemonSet), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *daemonSetsClient) Create(ctx context.Context, daemonSet *v1beta1.Daemon
 
 func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts metav1.UpdateOptions) (*v1beta1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(daemonsetsResource, c.ClusterPath, c.Namespace, daemonSet), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *daemonSetsClient) Update(ctx context.Context, daemonSet *v1beta1.Daemon
 
 func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts metav1.UpdateOptions) (*v1beta1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(daemonsetsResource, c.ClusterPath, "status", c.Namespace, daemonSet), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *daemonSetsClient) UpdateStatus(ctx context.Context, daemonSet *v1beta1.
 
 func (c *daemonSetsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(daemonsetsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.DaemonSet{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *daemonSetsClient) DeleteCollection(ctx context.Context, opts metav1.Del
 
 func (c *daemonSetsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(daemonsetsResource, c.ClusterPath, c.Namespace, name), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.DaemonSet), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.DaemonSet that match those selectors.
 func (c *daemonSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.DaemonSetList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(daemonsetsResource, daemonsetsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.DaemonSetList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *daemonSetsClient) List(ctx context.Context, opts metav1.ListOptions) (*
 
 func (c *daemonSetsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(daemonsetsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *daemonSetsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.DaemonSet, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(daemonsetsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *daemonSetsClient) Apply(ctx context.Context, applyConfiguration *extens
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(daemonsetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.DaemonSet{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1beta1.DaemonSet), err
+}
+
+func (c *daemonSetsClient) ApplyStatus(ctx context.Context, applyConfiguration *extensionsv1beta1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.DaemonSet, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(daemonsetsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.DaemonSet{})
+
 	return obj.(*v1beta1.DaemonSet), err
 }

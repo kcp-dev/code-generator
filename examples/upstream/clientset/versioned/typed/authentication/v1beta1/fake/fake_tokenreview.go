@@ -19,8 +19,21 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/authentication/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	authenticationv1beta1 "k8s.io/client-go/applyconfigurations/authentication/v1beta1"
+	upstreamauthenticationv1beta1client "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
+	"k8s.io/client-go/testing"
 )
 
 var tokenreviewsResource = v1beta1.SchemeGroupVersion.WithResource("tokenreviews")
@@ -30,4 +43,164 @@ var tokenreviewsKind = v1beta1.SchemeGroupVersion.WithKind("TokenReview")
 // tokenReviewsClusterClient implements tokenReviewInterface
 type tokenReviewsClusterClient struct {
 	*kcptesting.Fake
+}
+
+// Cluster scopes the client down to a particular cluster.
+func (c *tokenReviewsClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1beta1client.TokenReviewInterface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &tokenReviewsClient{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+// List takes label and field selectors, and returns the list of TokenReviews that match those selectors.
+func (c *tokenReviewsClusterClient) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.TokenReviewList, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction(tokenreviewsResource, tokenreviewsKind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &v1beta1.TokenReviewList{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.TokenReviewList{ListMeta: obj.(*v1beta1.TokenReviewList).ListMeta}
+	for _, item := range obj.(*v1beta1.TokenReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+// Watch returns a watch.Interface that watches the requested tokenReviews across all clusters.
+func (c *tokenReviewsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(tokenreviewsResource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+
+type tokenReviewsClient struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+
+func (c *tokenReviewsClient) Create(ctx context.Context, tokenReview *v1beta1.TokenReview, opts metav1.CreateOptions) (*v1beta1.TokenReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction(tokenreviewsResource, c.ClusterPath, tokenReview), &v1beta1.TokenReview{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) Update(ctx context.Context, tokenReview *v1beta1.TokenReview, opts metav1.UpdateOptions) (*v1beta1.TokenReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction(tokenreviewsResource, c.ClusterPath, tokenReview), &v1beta1.TokenReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) UpdateStatus(ctx context.Context, tokenReview *v1beta1.TokenReview, opts metav1.UpdateOptions) (*v1beta1.TokenReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction(tokenreviewsResource, c.ClusterPath, "status", tokenReview), &v1beta1.TokenReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions(tokenreviewsResource, c.ClusterPath, name, opts), &v1beta1.TokenReview{})
+
+	return err
+}
+
+func (c *tokenReviewsClient) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	action := kcptesting.NewRootDeleteCollectionAction(tokenreviewsResource, c.ClusterPath, listOpts)
+
+	_, err := c.Fake.Invokes(action, &v1beta1.TokenReviewList{})
+	return err
+}
+
+func (c *tokenReviewsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.TokenReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction(tokenreviewsResource, c.ClusterPath, name), &v1beta1.TokenReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.TokenReviewList, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(tokenreviewsResource, tokenreviewsKind, c.ClusterPath, opts), &v1beta1.TokenReviewList{})
+
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &v1beta1.TokenReviewList{ListMeta: obj.(*v1beta1.TokenReviewList).ListMeta}
+	for _, item := range obj.(*v1beta1.TokenReviewList).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+
+func (c *tokenReviewsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(tokenreviewsResource, c.ClusterPath, opts))
+
+}
+
+func (c *tokenReviewsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.TokenReview, error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(tokenreviewsResource, c.ClusterPath, name, pt, data, subresources...), &v1beta1.TokenReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) Apply(ctx context.Context, applyConfiguration *authenticationv1beta1.TokenReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.TokenReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(tokenreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data), &v1beta1.TokenReview{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.TokenReview), err
+}
+
+func (c *tokenReviewsClient) ApplyStatus(ctx context.Context, applyConfiguration *authenticationv1beta1.TokenReviewApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.TokenReview, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction(tokenreviewsResource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &v1beta1.TokenReview{})
+
+	return obj.(*v1beta1.TokenReview), err
 }

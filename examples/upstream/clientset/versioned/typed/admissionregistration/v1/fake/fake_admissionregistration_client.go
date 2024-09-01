@@ -20,33 +20,68 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamadmissionregistrationv1client "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/admissionregistration/v1"
 )
 
-type cSIDriversClusterClient struct {
+type AdmissionregistrationV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAdmissionregistrationV1) MutatingWebhookConfigurations() v1.MutatingWebhookConfigurationInterface {
-	return &FakeMutatingWebhookConfigurations{c}
+func (c *AdmissionregistrationV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamadmissionregistrationv1client.AdmissionregistrationV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AdmissionregistrationV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeAdmissionregistrationV1) ValidatingAdmissionPolicies() v1.ValidatingAdmissionPolicyInterface {
-	return &FakeValidatingAdmissionPolicies{c}
+func (c *AdmissionregistrationV1ClusterClient) MutatingWebhookConfigurations() v1.MutatingWebhookConfigurationClusterInterface {
+	return &mutatingWebhookConfigurationsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeAdmissionregistrationV1) ValidatingAdmissionPolicyBindings() v1.ValidatingAdmissionPolicyBindingInterface {
-	return &FakeValidatingAdmissionPolicyBindings{c}
+func (c *AdmissionregistrationV1ClusterClient) ValidatingAdmissionPolicies() v1.ValidatingAdmissionPolicyClusterInterface {
+	return &validatingAdmissionPoliciesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeAdmissionregistrationV1) ValidatingWebhookConfigurations() v1.ValidatingWebhookConfigurationInterface {
-	return &FakeValidatingWebhookConfigurations{c}
+func (c *AdmissionregistrationV1ClusterClient) ValidatingAdmissionPolicyBindings() v1.ValidatingAdmissionPolicyBindingClusterInterface {
+	return &validatingAdmissionPolicyBindingsClusterClient{Fake: c.Fake}
+}
+
+func (c *AdmissionregistrationV1ClusterClient) ValidatingWebhookConfigurations() v1.ValidatingWebhookConfigurationClusterInterface {
+	return &validatingWebhookConfigurationsClusterClient{Fake: c.Fake}
+}
+
+type AdmissionregistrationV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAdmissionregistrationV1) RESTClient() rest.Interface {
+func (c *AdmissionregistrationV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AdmissionregistrationV1Client) MutatingWebhookConfigurations() upstreamadmissionregistrationv1client.MutatingWebhookConfigurationInterface {
+
+	return &mutatingWebhookConfigurationsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AdmissionregistrationV1Client) ValidatingAdmissionPolicies() upstreamadmissionregistrationv1client.ValidatingAdmissionPolicyInterface {
+
+	return &validatingAdmissionPoliciesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AdmissionregistrationV1Client) ValidatingAdmissionPolicyBindings() upstreamadmissionregistrationv1client.ValidatingAdmissionPolicyBindingInterface {
+
+	return &validatingAdmissionPolicyBindingsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AdmissionregistrationV1Client) ValidatingWebhookConfigurations() upstreamadmissionregistrationv1client.ValidatingWebhookConfigurationInterface {
+
+	return &validatingWebhookConfigurationsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

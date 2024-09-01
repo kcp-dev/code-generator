@@ -20,21 +20,40 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/crd/clientset/versioned/typed/example2/v1"
 )
 
-type clusterTestTypesClusterClient struct {
+type SecondExampleV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeSecondExampleV1) TestTypes(namespace string) v1.TestTypeInterface {
-	return &FakeTestTypes{c, namespace}
+func (c *SecondExampleV1ClusterClient) Cluster(clusterPath logicalcluster.Path) SecondExampleV1Client {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &SecondExampleV1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *SecondExampleV1ClusterClient) TestTypes(namespace string) v1.TestTypeClusterInterface {
+	return &testTypesClusterClient{Fake: c.Fake}
+}
+
+type SecondExampleV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeSecondExampleV1) RESTClient() rest.Interface {
+func (c *SecondExampleV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *SecondExampleV1Client) TestTypes(namespace string) SecondExampleV1Client {
+
+	return &testTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

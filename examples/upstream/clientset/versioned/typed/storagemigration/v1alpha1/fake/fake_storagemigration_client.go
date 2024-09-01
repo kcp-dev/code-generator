@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamstoragemigrationv1alpha1client "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storagemigration/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type StoragemigrationV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeStoragemigrationV1alpha1) StorageVersionMigrations() v1alpha1.StorageVersionMigrationInterface {
-	return &FakeStorageVersionMigrations{c}
+func (c *StoragemigrationV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamstoragemigrationv1alpha1client.StoragemigrationV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &StoragemigrationV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *StoragemigrationV1alpha1ClusterClient) StorageVersionMigrations() v1alpha1.StorageVersionMigrationClusterInterface {
+	return &storageVersionMigrationsClusterClient{Fake: c.Fake}
+}
+
+type StoragemigrationV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeStoragemigrationV1alpha1) RESTClient() rest.Interface {
+func (c *StoragemigrationV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *StoragemigrationV1alpha1Client) StorageVersionMigrations() upstreamstoragemigrationv1alpha1client.StorageVersionMigrationInterface {
+
+	return &storageVersionMigrationsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

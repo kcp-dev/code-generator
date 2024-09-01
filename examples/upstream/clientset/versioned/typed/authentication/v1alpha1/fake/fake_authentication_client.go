@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamauthenticationv1alpha1client "k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authentication/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type AuthenticationV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAuthenticationV1alpha1) SelfSubjectReviews() v1alpha1.SelfSubjectReviewInterface {
-	return &FakeSelfSubjectReviews{c}
+func (c *AuthenticationV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthenticationv1alpha1client.AuthenticationV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AuthenticationV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *AuthenticationV1alpha1ClusterClient) SelfSubjectReviews() v1alpha1.SelfSubjectReviewClusterInterface {
+	return &selfSubjectReviewsClusterClient{Fake: c.Fake}
+}
+
+type AuthenticationV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAuthenticationV1alpha1) RESTClient() rest.Interface {
+func (c *AuthenticationV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AuthenticationV1alpha1Client) SelfSubjectReviews() upstreamauthenticationv1alpha1client.SelfSubjectReviewInterface {
+
+	return &selfSubjectReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

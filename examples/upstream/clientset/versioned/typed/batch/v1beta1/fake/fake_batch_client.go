@@ -20,21 +20,41 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreambatchv1beta1client "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/batch/v1beta1"
 )
 
-type cSIDriversClusterClient struct {
+type BatchV1beta1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeBatchV1beta1) CronJobs(namespace string) v1beta1.CronJobInterface {
-	return &FakeCronJobs{c, namespace}
+func (c *BatchV1beta1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreambatchv1beta1client.BatchV1beta1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &BatchV1beta1Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+
+func (c *BatchV1beta1ClusterClient) CronJobs(namespace string) v1beta1.CronJobClusterInterface {
+	return &cronJobsClusterClient{Fake: c.Fake}
+}
+
+type BatchV1beta1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeBatchV1beta1) RESTClient() rest.Interface {
+func (c *BatchV1beta1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *BatchV1beta1Client) CronJobs(namespace string) upstreambatchv1beta1client.CronJobInterface {
+
+	return &cronJobsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }

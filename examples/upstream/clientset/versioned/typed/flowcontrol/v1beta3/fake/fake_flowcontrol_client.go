@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamflowcontrolv1beta3client "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 	rest "k8s.io/client-go/rest"
 	v1beta3 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/flowcontrol/v1beta3"
 )
 
-type cSIDriversClusterClient struct {
+type FlowcontrolV1beta3ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeFlowcontrolV1beta3) FlowSchemas() v1beta3.FlowSchemaInterface {
-	return &FakeFlowSchemas{c}
+func (c *FlowcontrolV1beta3ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamflowcontrolv1beta3client.FlowcontrolV1beta3Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &FlowcontrolV1beta3Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeFlowcontrolV1beta3) PriorityLevelConfigurations() v1beta3.PriorityLevelConfigurationInterface {
-	return &FakePriorityLevelConfigurations{c}
+func (c *FlowcontrolV1beta3ClusterClient) FlowSchemas() v1beta3.FlowSchemaClusterInterface {
+	return &flowSchemasClusterClient{Fake: c.Fake}
+}
+
+func (c *FlowcontrolV1beta3ClusterClient) PriorityLevelConfigurations() v1beta3.PriorityLevelConfigurationClusterInterface {
+	return &priorityLevelConfigurationsClusterClient{Fake: c.Fake}
+}
+
+type FlowcontrolV1beta3Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeFlowcontrolV1beta3) RESTClient() rest.Interface {
+func (c *FlowcontrolV1beta3Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *FlowcontrolV1beta3Client) FlowSchemas() upstreamflowcontrolv1beta3client.FlowSchemaInterface {
+
+	return &flowSchemasClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *FlowcontrolV1beta3Client) PriorityLevelConfigurations() upstreamflowcontrolv1beta3client.PriorityLevelConfigurationInterface {
+
+	return &priorityLevelConfigurationsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

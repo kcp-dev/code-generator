@@ -95,6 +95,7 @@ type testTypesClient struct {
 
 func (c *testTypesClient) Create(ctx context.Context, testType *v1.TestType, opts metav1.CreateOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(testtypesResource, c.ClusterPath, c.Namespace, testType), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -103,6 +104,7 @@ func (c *testTypesClient) Create(ctx context.Context, testType *v1.TestType, opt
 
 func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(testtypesResource, c.ClusterPath, c.Namespace, testType), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -111,6 +113,7 @@ func (c *testTypesClient) Update(ctx context.Context, testType *v1.TestType, opt
 
 func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestType, opts metav1.UpdateOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(testtypesResource, c.ClusterPath, "status", c.Namespace, testType), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -119,6 +122,7 @@ func (c *testTypesClient) UpdateStatus(ctx context.Context, testType *v1.TestTyp
 
 func (c *testTypesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(testtypesResource, c.ClusterPath, c.Namespace, name, opts), &v1.TestType{})
+
 	return err
 }
 
@@ -131,15 +135,16 @@ func (c *testTypesClient) DeleteCollection(ctx context.Context, opts metav1.Dele
 
 func (c *testTypesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(testtypesResource, c.ClusterPath, c.Namespace, name), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.TestType), err
 }
 
-// List takes label and field selectors, and returns the list of v1.TestType that match those selectors.
 func (c *testTypesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.TestTypeList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(testtypesResource, testtypesKind, c.ClusterPath, c.Namespace, opts), &v1.TestTypeList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -159,10 +164,12 @@ func (c *testTypesClient) List(ctx context.Context, opts metav1.ListOptions) (*v
 
 func (c *testTypesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(testtypesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *testTypesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.TestType, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(testtypesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -181,9 +188,29 @@ func (c *testTypesClient) Apply(ctx context.Context, applyConfiguration *apiv1.T
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(testtypesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.TestType{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.TestType), err
+}
+
+func (c *testTypesClient) ApplyStatus(ctx context.Context, applyConfiguration *apiv1.TestTypeApplyConfiguration, opts metav1.ApplyOptions) (*v1.TestType, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(testtypesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.TestType{})
+
 	return obj.(*v1.TestType), err
 }

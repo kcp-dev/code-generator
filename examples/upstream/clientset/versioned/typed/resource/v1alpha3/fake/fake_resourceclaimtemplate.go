@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1alpha3 "k8s.io/api/resource/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type resourceClaimTemplatesClient struct {
 
 func (c *resourceClaimTemplatesClient) Create(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.CreateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, resourceClaimTemplate), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *resourceClaimTemplatesClient) Create(ctx context.Context, resourceClaim
 
 func (c *resourceClaimTemplatesClient) Update(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, resourceClaimTemplate), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *resourceClaimTemplatesClient) Update(ctx context.Context, resourceClaim
 
 func (c *resourceClaimTemplatesClient) UpdateStatus(ctx context.Context, resourceClaimTemplate *v1alpha3.ResourceClaimTemplate, opts metav1.UpdateOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(resourceclaimtemplatesResource, c.ClusterPath, "status", c.Namespace, resourceClaimTemplate), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *resourceClaimTemplatesClient) UpdateStatus(ctx context.Context, resourc
 
 func (c *resourceClaimTemplatesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, name, opts), &v1alpha3.ResourceClaimTemplate{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *resourceClaimTemplatesClient) DeleteCollection(ctx context.Context, opt
 
 func (c *resourceClaimTemplatesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, name), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }
 
-// List takes label and field selectors, and returns the list of v1alpha3.ResourceClaimTemplate that match those selectors.
 func (c *resourceClaimTemplatesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha3.ResourceClaimTemplateList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(resourceclaimtemplatesResource, resourceclaimtemplatesKind, c.ClusterPath, c.Namespace, opts), &v1alpha3.ResourceClaimTemplateList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *resourceClaimTemplatesClient) List(ctx context.Context, opts metav1.Lis
 
 func (c *resourceClaimTemplatesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *resourceClaimTemplatesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1alpha3.ResourceClaimTemplate, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *resourceClaimTemplatesClient) Apply(ctx context.Context, applyConfigura
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1alpha3.ResourceClaimTemplate{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1alpha3.ResourceClaimTemplate), err
+}
+
+func (c *resourceClaimTemplatesClient) ApplyStatus(ctx context.Context, applyConfiguration *resourcev1alpha3.ResourceClaimTemplateApplyConfiguration, opts metav1.ApplyOptions) (*v1alpha3.ResourceClaimTemplate, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(resourceclaimtemplatesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1alpha3.ResourceClaimTemplate{})
+
 	return obj.(*v1alpha3.ResourceClaimTemplate), err
 }

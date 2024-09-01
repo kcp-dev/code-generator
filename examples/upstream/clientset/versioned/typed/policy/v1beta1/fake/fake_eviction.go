@@ -25,7 +25,9 @@ import (
 
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	v1beta1 "k8s.io/api/policy/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +98,7 @@ type evictionsClient struct {
 
 func (c *evictionsClient) Create(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.CreateOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(evictionsResource, c.ClusterPath, c.Namespace, eviction), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +107,7 @@ func (c *evictionsClient) Create(ctx context.Context, eviction *v1beta1.Eviction
 
 func (c *evictionsClient) Update(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.UpdateOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(evictionsResource, c.ClusterPath, c.Namespace, eviction), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +116,7 @@ func (c *evictionsClient) Update(ctx context.Context, eviction *v1beta1.Eviction
 
 func (c *evictionsClient) UpdateStatus(ctx context.Context, eviction *v1beta1.Eviction, opts metav1.UpdateOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(evictionsResource, c.ClusterPath, "status", c.Namespace, eviction), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +125,7 @@ func (c *evictionsClient) UpdateStatus(ctx context.Context, eviction *v1beta1.Ev
 
 func (c *evictionsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(evictionsResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.Eviction{})
+
 	return err
 }
 
@@ -132,15 +138,16 @@ func (c *evictionsClient) DeleteCollection(ctx context.Context, opts metav1.Dele
 
 func (c *evictionsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(evictionsResource, c.ClusterPath, c.Namespace, name), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.Eviction), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.Eviction that match those selectors.
 func (c *evictionsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.EvictionList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(evictionsResource, evictionsKind, c.ClusterPath, c.Namespace, opts), &v1beta1.EvictionList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +167,12 @@ func (c *evictionsClient) List(ctx context.Context, opts metav1.ListOptions) (*v
 
 func (c *evictionsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(evictionsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *evictionsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.Eviction, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(evictionsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +191,29 @@ func (c *evictionsClient) Apply(ctx context.Context, applyConfiguration *policyv
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(evictionsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.Eviction{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1beta1.Eviction), err
+}
+
+func (c *evictionsClient) ApplyStatus(ctx context.Context, applyConfiguration *policyv1beta1.EvictionApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.Eviction, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(evictionsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.Eviction{})
+
 	return obj.(*v1beta1.Eviction), err
 }

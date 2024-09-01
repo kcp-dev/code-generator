@@ -96,6 +96,7 @@ type servicesClient struct {
 
 func (c *servicesClient) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(servicesResource, c.ClusterPath, c.Namespace, service), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *servicesClient) Create(ctx context.Context, service *v1.Service, opts m
 
 func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(servicesResource, c.ClusterPath, c.Namespace, service), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *servicesClient) Update(ctx context.Context, service *v1.Service, opts m
 
 func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(servicesResource, c.ClusterPath, "status", c.Namespace, service), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *servicesClient) UpdateStatus(ctx context.Context, service *v1.Service, 
 
 func (c *servicesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(servicesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Service{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *servicesClient) DeleteCollection(ctx context.Context, opts metav1.Delet
 
 func (c *servicesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(servicesResource, c.ClusterPath, c.Namespace, name), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Service), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Service that match those selectors.
 func (c *servicesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.ServiceList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(servicesResource, servicesKind, c.ClusterPath, c.Namespace, opts), &v1.ServiceList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *servicesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1
 
 func (c *servicesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(servicesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *servicesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Service, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(servicesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *servicesClient) Apply(ctx context.Context, applyConfiguration *corev1.S
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(servicesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Service{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Service), err
+}
+
+func (c *servicesClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (*v1.Service, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(servicesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Service{})
+
 	return obj.(*v1.Service), err
 }

@@ -20,37 +20,77 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamresourcev1alpha3client "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
 	rest "k8s.io/client-go/rest"
 	v1alpha3 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/resource/v1alpha3"
 )
 
-type cSIDriversClusterClient struct {
+type ResourceV1alpha3ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeResourceV1alpha3) DeviceClasses() v1alpha3.DeviceClassInterface {
-	return &FakeDeviceClasses{c}
+func (c *ResourceV1alpha3ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamresourcev1alpha3client.ResourceV1alpha3Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &ResourceV1alpha3Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeResourceV1alpha3) PodSchedulingContexts(namespace string) v1alpha3.PodSchedulingContextInterface {
-	return &FakePodSchedulingContexts{c, namespace}
+func (c *ResourceV1alpha3ClusterClient) DeviceClasses() v1alpha3.DeviceClassClusterInterface {
+	return &deviceClassesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeResourceV1alpha3) ResourceClaims(namespace string) v1alpha3.ResourceClaimInterface {
-	return &FakeResourceClaims{c, namespace}
+func (c *ResourceV1alpha3ClusterClient) PodSchedulingContexts(namespace string) v1alpha3.PodSchedulingContextClusterInterface {
+	return &podSchedulingContextsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeResourceV1alpha3) ResourceClaimTemplates(namespace string) v1alpha3.ResourceClaimTemplateInterface {
-	return &FakeResourceClaimTemplates{c, namespace}
+func (c *ResourceV1alpha3ClusterClient) ResourceClaims(namespace string) v1alpha3.ResourceClaimClusterInterface {
+	return &resourceClaimsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeResourceV1alpha3) ResourceSlices() v1alpha3.ResourceSliceInterface {
-	return &FakeResourceSlices{c}
+func (c *ResourceV1alpha3ClusterClient) ResourceClaimTemplates(namespace string) v1alpha3.ResourceClaimTemplateClusterInterface {
+	return &resourceClaimTemplatesClusterClient{Fake: c.Fake}
+}
+
+func (c *ResourceV1alpha3ClusterClient) ResourceSlices() v1alpha3.ResourceSliceClusterInterface {
+	return &resourceSlicesClusterClient{Fake: c.Fake}
+}
+
+type ResourceV1alpha3Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeResourceV1alpha3) RESTClient() rest.Interface {
+func (c *ResourceV1alpha3Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *ResourceV1alpha3Client) DeviceClasses() upstreamresourcev1alpha3client.DeviceClassInterface {
+
+	return &deviceClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *ResourceV1alpha3Client) PodSchedulingContexts(namespace string) upstreamresourcev1alpha3client.PodSchedulingContextInterface {
+
+	return &podSchedulingContextsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ResourceV1alpha3Client) ResourceClaims(namespace string) upstreamresourcev1alpha3client.ResourceClaimInterface {
+
+	return &resourceClaimsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ResourceV1alpha3Client) ResourceClaimTemplates(namespace string) upstreamresourcev1alpha3client.ResourceClaimTemplateInterface {
+
+	return &resourceClaimTemplatesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *ResourceV1alpha3Client) ResourceSlices() upstreamresourcev1alpha3client.ResourceSliceInterface {
+
+	return &resourceSlicesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

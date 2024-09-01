@@ -96,6 +96,7 @@ type endpointsClient struct {
 
 func (c *endpointsClient) Create(ctx context.Context, endpoints *v1.Endpoints, opts metav1.CreateOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(endpointsResource, c.ClusterPath, c.Namespace, endpoints), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *endpointsClient) Create(ctx context.Context, endpoints *v1.Endpoints, o
 
 func (c *endpointsClient) Update(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(endpointsResource, c.ClusterPath, c.Namespace, endpoints), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *endpointsClient) Update(ctx context.Context, endpoints *v1.Endpoints, o
 
 func (c *endpointsClient) UpdateStatus(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(endpointsResource, c.ClusterPath, "status", c.Namespace, endpoints), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *endpointsClient) UpdateStatus(ctx context.Context, endpoints *v1.Endpoi
 
 func (c *endpointsClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(endpointsResource, c.ClusterPath, c.Namespace, name, opts), &v1.Endpoints{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *endpointsClient) DeleteCollection(ctx context.Context, opts metav1.Dele
 
 func (c *endpointsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(endpointsResource, c.ClusterPath, c.Namespace, name), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Endpoints), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Endpoints that match those selectors.
 func (c *endpointsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.EndpointsList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(endpointsResource, endpointsKind, c.ClusterPath, c.Namespace, opts), &v1.EndpointsList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *endpointsClient) List(ctx context.Context, opts metav1.ListOptions) (*v
 
 func (c *endpointsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(endpointsResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *endpointsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Endpoints, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointsResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *endpointsClient) Apply(ctx context.Context, applyConfiguration *corev1.
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Endpoints{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Endpoints), err
+}
+
+func (c *endpointsClient) ApplyStatus(ctx context.Context, applyConfiguration *corev1.EndpointsApplyConfiguration, opts metav1.ApplyOptions) (*v1.Endpoints, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(endpointsResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Endpoints{})
+
 	return obj.(*v1.Endpoints), err
 }

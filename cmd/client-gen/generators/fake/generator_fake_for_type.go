@@ -20,6 +20,7 @@ import (
 	"io"
 	"path"
 	"strings"
+	"sync"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -72,6 +73,15 @@ func (g *genFakeForType) Imports(c *generator.Context) (imports []string) {
 	}
 
 	imports = append(imports, "kcp "+"\""+g.typedClientPackage+"\"")
+	imports = append(imports, "restclient \"k8s.io/client-go/rest\"")
+	imports = append(imports, "fakerest \"k8s.io/client-go/rest/fake\"")
+	imports = append(imports, "policyv1 \"k8s.io/api/policy/v1\"")
+	imports = append(imports, "policyv1beta1 \"k8s.io/api/policy/v1beta1\"")
+	imports = append(imports, "autoscalingv1 \"k8s.io/api/autoscaling/v1\"")
+	imports = append(imports, "authenticationv1 \"k8s.io/api/authentication/v1\"")
+	imports = append(imports, "metav1 \"k8s.io/apimachinery/pkg/apis/meta/v1\"")
+	imports = append(imports, "applyconfigurationsautoscalingv1 \"k8s.io/client-go/applyconfigurations/autoscaling/v1\"")
+
 	return imports
 }
 
@@ -84,6 +94,8 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 		return err
 	}
 
+	namespaced := !tags.NonNamespaced
+
 	const pkgClientGoTesting = "k8s.io/client-go/testing"
 	m := map[string]interface{}{
 		"type":               t,
@@ -92,7 +104,7 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 		"subresourcePath":    "",
 		"package":            pkg,
 		"Package":            namer.IC(pkg),
-		"namespaced":         !tags.NonNamespaced,
+		"namespaced":         namespaced,
 		"Group":              namer.IC(g.group),
 		"GroupGoName":        g.groupGoName,
 		"Version":            namer.IC(g.version),
@@ -150,8 +162,6 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 	m["kcpClusterResultType"] = types.Ref(g.typedClientPackage, t.Name.Name)
 	m["upstreamClientInterface"] = "upstream" + strings.ToLower(g.groupGoName+g.version+"client.") + t.Name.Name + "Interface"
 
-	namespaced := !tags.NonNamespaced
-
 	// Global structs for the types.
 	sw.Do(resource, m)
 	sw.Do(kind, m)
@@ -178,9 +188,29 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 		sw.Do(methodNamespacedClientPatchTemplate, m)
 		if generateApply {
 			sw.Do(methodNamespacedClientApplyTemplate, m)
+			sw.Do(methodNamespacedClientApplyStatusTemplate, m)
 		}
 	} else {
 		// Non namespaced types.
+		sw.Do(methodClusterClusterTemplate, m)
+		sw.Do(methodClusterListTemplate, m)
+		sw.Do(methodClusterWatchTemplate, m)
+
+		sw.Do(structClient, m)
+
+		sw.Do(methodNamespacedClientCreateTemplate, m)
+		sw.Do(methodNamespacedClientUpdateTemplate, m)
+		sw.Do(methodNamespacedClientUpdateStatusTemplate, m)
+		sw.Do(methodNamespacedClientDeleteTemplate, m)
+		sw.Do(methodNamespacedClientDeleteCollectionTemplate, m)
+		sw.Do(methodNamespacedClientGetTemplate, m)
+		sw.Do(methodNamespacedClientListTemplate, m)
+		sw.Do(methodNamespacedClientWatchTemplate, m)
+		sw.Do(methodNamespacedClientPatchTemplate, m)
+		if generateApply {
+			sw.Do(methodNamespacedClientApplyTemplate, m)
+			sw.Do(methodNamespacedClientApplyStatusTemplate, m)
+		}
 	}
 
 	if len(g.staticFakeExpansions) > 0 {
@@ -197,7 +227,17 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 	_, typeGVString := util.ParsePathGroupVersion(g.inputPackage)
 
 	// generate extended client methods
+	var once sync.Once
 	for _, e := range tags.Extensions {
+		if e.SubResourcePath == "scale" {
+			// add scale methods.
+			once.Do(func() {
+				sw.Do(methodNamespacedClientGetScaleTemplate, m)
+				sw.Do(methodNamespacedClientUpdateScaleTemplate, m)
+				sw.Do(methodNamespacedClientApplyScaleTemplate, m)
+			})
+		}
+
 		if e.HasVerb("apply") && !generateApply {
 			continue
 		}
@@ -271,7 +311,41 @@ func (c *$.type|privatePlural$ClusterClient) Cluster(clusterPath logicalcluster.
 	return &$.type|privatePlural$Namespacer{Fake: c.Fake, ClusterPath: clusterPath}
 }
 `
+
+var methodClusterClusterTemplate = `
+// Cluster scopes the client down to a particular cluster.
+func (c *$.type|privatePlural$ClusterClient) Cluster(clusterPath logicalcluster.Path) $.upstreamClientInterface$ {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+
+	return &$.type|privatePlural$Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+`
+
 var methodNamespacedClusterListTemplate = `
+// List takes label and field selectors, and returns the list of $.type|publicPlural$ that match those selectors.
+func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
+	obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &$.type|raw$List{})
+	if obj == nil {
+		return nil, err
+	}
+
+	label, _, _ := testing.ExtractFromListOptions(opts)
+	if label == nil {
+		label = labels.Everything()
+	}
+	list := &$.type|raw$List{ListMeta: obj.(*$.type|raw$List).ListMeta}
+	for _, item := range obj.(*$.type|raw$List).Items {
+		if label.Matches(labels.Set(item.Labels)) {
+			list.Items = append(list.Items, item)
+		}
+	}
+	return list, err
+}
+`
+
+var methodClusterListTemplate = `
 // List takes label and field selectors, and returns the list of $.type|publicPlural$ that match those selectors.
 func (c *$.type|privatePlural$ClusterClient) List(ctx context.Context, opts $.ListOptions|raw$) (result *$.type|raw$List, err error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, logicalcluster.Wildcard, metav1.NamespaceAll, opts), &$.type|raw$List{})
@@ -300,8 +374,21 @@ func (c *$.type|privatePlural$ClusterClient) Watch(ctx context.Context, opts met
 }
 `
 
+var methodClusterWatchTemplate = `
+// Watch returns a watch.Interface that watches the requested $.type|private$s across all clusters.
+func (c *$.type|privatePlural$ClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.Fake.InvokesWatch(kcptesting.NewWatchAction($.type|allLowercasePlural$Resource, logicalcluster.Wildcard, metav1.NamespaceAll, opts))
+}
+`
+
 var structNamespacer = `
 type $.type|privatePlural$Namespacer struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
+}
+`
+var structClient = `
+type $.type|privatePlural$Client struct {
 	*kcptesting.Fake
 	ClusterPath logicalcluster.Path
 }
@@ -323,7 +410,8 @@ type $.type|privatePlural$Client struct {
 
 var methodNamespacedClientCreateTemplate = `
 func (c *$.type|privatePlural$Client) Create(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.CreateOptions) (*$.type|raw$, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewCreateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootCreateAction($.type|allLowercasePlural$Resource, c.ClusterPath, $.type|private$), &$.type|raw${})$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -333,7 +421,9 @@ func (c *$.type|privatePlural$Client) Create(ctx context.Context, $.type|private
 
 var methodNamespacedClientUpdateTemplate = `
 func (c *$.type|privatePlural$Client) Update(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.UpdateOptions) (*$.type|raw$, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, $.type|private$), &$.type|raw${})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateAction($.type|allLowercasePlural$Resource, c.ClusterPath, $.type|private$), &$.type|raw${})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -343,7 +433,9 @@ func (c *$.type|privatePlural$Client) Update(ctx context.Context, $.type|private
 
 var methodNamespacedClientUpdateStatusTemplate = `
 func (c *$.type|privatePlural$Client) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts metav1.UpdateOptions) (*$.type|raw$, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "status", c.Namespace, $.type|private$), &$.type|raw${})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "status", c.Namespace, $.type|private$), &$.type|raw${})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "status", $.type|private$), &$.type|raw${})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -352,15 +444,19 @@ func (c *$.type|privatePlural$Client) UpdateStatus(ctx context.Context, $.type|p
 `
 
 var methodNamespacedClientDeleteTemplate = `
-func (c *$.type|privatePlural$Client) Delete(ctx context.Context, name string, opts metav1.DeleteOptions)  error {
-	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, opts), &$.type|raw${})
+func (c *$.type|privatePlural$Client) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	$if .namespaced$_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, opts), &$.type|raw${})
+	$else$_, err := c.Fake.Invokes(kcptesting.NewRootDeleteActionWithOptions($.type|allLowercasePlural$Resource, c.ClusterPath, name, opts), &$.type|raw${})
+	$end$
 	return err
 }
 `
 
 var methodNamespacedClientDeleteCollectionTemplate = `
-func (c *$.type|privatePlural$Client) DeleteCollection(ctx context.Context,  opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := kcptesting.NewDeleteCollectionAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, listOpts)
+func (c *$.type|privatePlural$Client) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	$if .namespaced$action := kcptesting.NewDeleteCollectionAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, listOpts)
+	$else$action := kcptesting.NewRootDeleteCollectionAction($.type|allLowercasePlural$Resource, c.ClusterPath, listOpts)
+	$end$
 
 	_, err := c.Fake.Invokes(action, &$.type|raw$List{})
 	return err
@@ -369,7 +465,9 @@ func (c *$.type|privatePlural$Client) DeleteCollection(ctx context.Context,  opt
 
 var methodNamespacedClientGetTemplate = `
 func (c *$.type|privatePlural$Client) Get(ctx context.Context, name string, options metav1.GetOptions) (*$.type|raw$, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewGetAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name), &$.type|raw${})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewGetAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name), &$.type|raw${})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootGetAction($.type|allLowercasePlural$Resource, c.ClusterPath, name), &$.type|raw${})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -378,9 +476,10 @@ func (c *$.type|privatePlural$Client) Get(ctx context.Context, name string, opti
 `
 
 var methodNamespacedClientListTemplate = `
-// List takes label and field selectors, and returns the list of $.type|raw$ that match those selectors.
 func (c *$.type|privatePlural$Client) List(ctx context.Context, opts metav1.ListOptions) (*$.type|raw$List, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ClusterPath, c.Namespace, opts), &$.type|raw$List{})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ClusterPath, c.Namespace, opts), &$.type|raw$List{})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootListAction($.type|allLowercasePlural$Resource, $.type|allLowercasePlural$Kind, c.ClusterPath, opts), &$.type|raw$List{})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -398,14 +497,20 @@ func (c *$.type|privatePlural$Client) List(ctx context.Context, opts metav1.List
 	return list, err
 }
 `
+
 var methodNamespacedClientWatchTemplate = `
 func (c *$.type|privatePlural$Client) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewWatchAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, opts))
+	$if .namespaced$return c.Fake.InvokesWatch(kcptesting.NewWatchAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, opts))
+	$else$return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction($.type|allLowercasePlural$Resource, c.ClusterPath, opts))
+	$end$
 }
 `
+
 var methodNamespacedClientPatchTemplate = `
 func (c *$.type|privatePlural$Client) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*$.type|raw$, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &$.type|raw${})
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &$.type|raw${})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, name, pt, data, subresources...), &$.type|raw${})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
@@ -428,10 +533,80 @@ func (c *$.type|privatePlural$Client) Apply(ctx context.Context, applyConfigurat
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+	$if .namespaced$
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &$.resultType|raw${})
+	$else$
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, *name, types.ApplyPatchType, data), &$.resultType|raw${})
+	$end$
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*$.resultType|raw$), err
+}
+`
+
+var methodNamespacedClientApplyStatusTemplate = `
+func (c *$.type|privatePlural$Client) ApplyStatus(ctx context.Context, applyConfiguration *$.inputApplyConfig|raw$, opts metav1.ApplyOptions) (*$.resultType|raw$, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+	$if .namespaced$
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &$.resultType|raw${})
+	$else$
+	obj, err := c.Fake.Invokes(kcptesting.NewRootPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, *name, types.ApplyPatchType, data, "status"), &$.resultType|raw${})
+	$end$
+	return obj.(*$.resultType|raw$), err
+}
+`
+var methodNamespacedClientGetScaleTemplate = `
+func (c *$.type|privatePlural$Client) GetScale(ctx context.Context, replicationControllerName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewGetSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "scale", c.Namespace, replicationControllerName), &autoscalingv1.Scale{})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootGetSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "scale", replicationControllerName), &autoscalingv1.Scale{})
+	$end$
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+`
+
+var methodNamespacedClientUpdateScaleTemplate = `
+func (c *$.type|privatePlural$Client) UpdateScale(ctx context.Context, replicationControllerName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
+	$if .namespaced$obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "scale", c.Namespace, scale), &autoscalingv1.Scale{})
+	$else$obj, err := c.Fake.Invokes(kcptesting.NewRootUpdateSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, "scale", scale), &autoscalingv1.Scale{})
+	$end$
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+`
+
+var methodNamespacedClientApplyScaleTemplate = `
+func (c *$.type|privatePlural$Client) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction($.type|allLowercasePlural$Resource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &autoscalingv1.Scale{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
 }
 `

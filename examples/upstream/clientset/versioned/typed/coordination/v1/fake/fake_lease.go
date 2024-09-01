@@ -96,6 +96,7 @@ type leasesClient struct {
 
 func (c *leasesClient) Create(ctx context.Context, lease *v1.Lease, opts metav1.CreateOptions) (*v1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(leasesResource, c.ClusterPath, c.Namespace, lease), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (c *leasesClient) Create(ctx context.Context, lease *v1.Lease, opts metav1.
 
 func (c *leasesClient) Update(ctx context.Context, lease *v1.Lease, opts metav1.UpdateOptions) (*v1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(leasesResource, c.ClusterPath, c.Namespace, lease), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func (c *leasesClient) Update(ctx context.Context, lease *v1.Lease, opts metav1.
 
 func (c *leasesClient) UpdateStatus(ctx context.Context, lease *v1.Lease, opts metav1.UpdateOptions) (*v1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(leasesResource, c.ClusterPath, "status", c.Namespace, lease), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +123,7 @@ func (c *leasesClient) UpdateStatus(ctx context.Context, lease *v1.Lease, opts m
 
 func (c *leasesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(leasesResource, c.ClusterPath, c.Namespace, name, opts), &v1.Lease{})
+
 	return err
 }
 
@@ -132,15 +136,16 @@ func (c *leasesClient) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 
 func (c *leasesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(leasesResource, c.ClusterPath, c.Namespace, name), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1.Lease), err
 }
 
-// List takes label and field selectors, and returns the list of v1.Lease that match those selectors.
 func (c *leasesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.LeaseList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(leasesResource, leasesKind, c.ClusterPath, c.Namespace, opts), &v1.LeaseList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +165,12 @@ func (c *leasesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.L
 
 func (c *leasesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(leasesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *leasesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Lease, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(leasesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +189,29 @@ func (c *leasesClient) Apply(ctx context.Context, applyConfiguration *coordinati
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(leasesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1.Lease{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1.Lease), err
+}
+
+func (c *leasesClient) ApplyStatus(ctx context.Context, applyConfiguration *coordinationv1.LeaseApplyConfiguration, opts metav1.ApplyOptions) (*v1.Lease, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(leasesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1.Lease{})
+
 	return obj.(*v1.Lease), err
 }

@@ -26,6 +26,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"github.com/kcp-dev/logicalcluster/v3"
 	v1beta1 "k8s.io/api/storage/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,6 +97,7 @@ type cSIStorageCapacitiesClient struct {
 
 func (c *cSIStorageCapacitiesClient) Create(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts metav1.CreateOptions) (*v1beta1.CSIStorageCapacity, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, cSIStorageCapacity), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func (c *cSIStorageCapacitiesClient) Create(ctx context.Context, cSIStorageCapac
 
 func (c *cSIStorageCapacitiesClient) Update(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts metav1.UpdateOptions) (*v1beta1.CSIStorageCapacity, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, cSIStorageCapacity), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func (c *cSIStorageCapacitiesClient) Update(ctx context.Context, cSIStorageCapac
 
 func (c *cSIStorageCapacitiesClient) UpdateStatus(ctx context.Context, cSIStorageCapacity *v1beta1.CSIStorageCapacity, opts metav1.UpdateOptions) (*v1beta1.CSIStorageCapacity, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(csistoragecapacitiesResource, c.ClusterPath, "status", c.Namespace, cSIStorageCapacity), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -120,6 +124,7 @@ func (c *cSIStorageCapacitiesClient) UpdateStatus(ctx context.Context, cSIStorag
 
 func (c *cSIStorageCapacitiesClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.Invokes(kcptesting.NewDeleteActionWithOptions(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, name, opts), &v1beta1.CSIStorageCapacity{})
+
 	return err
 }
 
@@ -132,15 +137,16 @@ func (c *cSIStorageCapacitiesClient) DeleteCollection(ctx context.Context, opts 
 
 func (c *cSIStorageCapacitiesClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1beta1.CSIStorageCapacity, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewGetAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, name), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
 	return obj.(*v1beta1.CSIStorageCapacity), err
 }
 
-// List takes label and field selectors, and returns the list of v1beta1.CSIStorageCapacity that match those selectors.
 func (c *cSIStorageCapacitiesClient) List(ctx context.Context, opts metav1.ListOptions) (*v1beta1.CSIStorageCapacityList, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewListAction(csistoragecapacitiesResource, csistoragecapacitiesKind, c.ClusterPath, c.Namespace, opts), &v1beta1.CSIStorageCapacityList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -160,10 +166,12 @@ func (c *cSIStorageCapacitiesClient) List(ctx context.Context, opts metav1.ListO
 
 func (c *cSIStorageCapacitiesClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.InvokesWatch(kcptesting.NewWatchAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, opts))
+
 }
 
 func (c *cSIStorageCapacitiesClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1beta1.CSIStorageCapacity, error) {
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, name, pt, data, subresources...), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -182,9 +190,29 @@ func (c *cSIStorageCapacitiesClient) Apply(ctx context.Context, applyConfigurati
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
+
 	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data), &v1beta1.CSIStorageCapacity{})
+
 	if obj == nil {
 		return nil, err
 	}
+	return obj.(*v1beta1.CSIStorageCapacity), err
+}
+
+func (c *cSIStorageCapacitiesClient) ApplyStatus(ctx context.Context, applyConfiguration *storagev1beta1.CSIStorageCapacityApplyConfiguration, opts metav1.ApplyOptions) (*v1beta1.CSIStorageCapacity, error) {
+	if applyConfiguration == nil {
+		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(applyConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	name := applyConfiguration.Name
+	if name == nil {
+		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
+	}
+
+	obj, err := c.Fake.Invokes(kcptesting.NewPatchSubresourceAction(csistoragecapacitiesResource, c.ClusterPath, c.Namespace, *name, types.ApplyPatchType, data, "status"), &v1beta1.CSIStorageCapacity{})
+
 	return obj.(*v1beta1.CSIStorageCapacity), err
 }

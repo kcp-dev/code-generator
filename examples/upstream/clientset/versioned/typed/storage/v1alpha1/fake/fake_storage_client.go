@@ -20,29 +20,59 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamstoragev1alpha1client "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/storage/v1alpha1"
 )
 
-type cSIDriversClusterClient struct {
+type StorageV1alpha1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeStorageV1alpha1) CSIStorageCapacities(namespace string) v1alpha1.CSIStorageCapacityInterface {
-	return &FakeCSIStorageCapacities{c, namespace}
+func (c *StorageV1alpha1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamstoragev1alpha1client.StorageV1alpha1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &StorageV1alpha1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeStorageV1alpha1) VolumeAttachments() v1alpha1.VolumeAttachmentInterface {
-	return &FakeVolumeAttachments{c}
+func (c *StorageV1alpha1ClusterClient) CSIStorageCapacities(namespace string) v1alpha1.CSIStorageCapacityClusterInterface {
+	return &cSIStorageCapacitiesClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeStorageV1alpha1) VolumeAttributesClasses() v1alpha1.VolumeAttributesClassInterface {
-	return &FakeVolumeAttributesClasses{c}
+func (c *StorageV1alpha1ClusterClient) VolumeAttachments() v1alpha1.VolumeAttachmentClusterInterface {
+	return &volumeAttachmentsClusterClient{Fake: c.Fake}
+}
+
+func (c *StorageV1alpha1ClusterClient) VolumeAttributesClasses() v1alpha1.VolumeAttributesClassClusterInterface {
+	return &volumeAttributesClassesClusterClient{Fake: c.Fake}
+}
+
+type StorageV1alpha1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeStorageV1alpha1) RESTClient() rest.Interface {
+func (c *StorageV1alpha1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *StorageV1alpha1Client) CSIStorageCapacities(namespace string) upstreamstoragev1alpha1client.CSIStorageCapacityInterface {
+
+	return &cSIStorageCapacitiesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *StorageV1alpha1Client) VolumeAttachments() upstreamstoragev1alpha1client.VolumeAttachmentInterface {
+
+	return &volumeAttachmentsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *StorageV1alpha1Client) VolumeAttributesClasses() upstreamstoragev1alpha1client.VolumeAttributesClassInterface {
+
+	return &volumeAttributesClassesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

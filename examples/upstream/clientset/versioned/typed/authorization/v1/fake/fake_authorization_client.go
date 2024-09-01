@@ -20,33 +20,68 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamauthorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/authorization/v1"
 )
 
-type cSIDriversClusterClient struct {
+type AuthorizationV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeAuthorizationV1) LocalSubjectAccessReviews(namespace string) v1.LocalSubjectAccessReviewInterface {
-	return &FakeLocalSubjectAccessReviews{c, namespace}
+func (c *AuthorizationV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamauthorizationv1client.AuthorizationV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &AuthorizationV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeAuthorizationV1) SelfSubjectAccessReviews() v1.SelfSubjectAccessReviewInterface {
-	return &FakeSelfSubjectAccessReviews{c}
+func (c *AuthorizationV1ClusterClient) LocalSubjectAccessReviews(namespace string) v1.LocalSubjectAccessReviewClusterInterface {
+	return &localSubjectAccessReviewsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeAuthorizationV1) SelfSubjectRulesReviews() v1.SelfSubjectRulesReviewInterface {
-	return &FakeSelfSubjectRulesReviews{c}
+func (c *AuthorizationV1ClusterClient) SelfSubjectAccessReviews() v1.SelfSubjectAccessReviewClusterInterface {
+	return &selfSubjectAccessReviewsClusterClient{Fake: c.Fake}
 }
 
-func (c *FakeAuthorizationV1) SubjectAccessReviews() v1.SubjectAccessReviewInterface {
-	return &FakeSubjectAccessReviews{c}
+func (c *AuthorizationV1ClusterClient) SelfSubjectRulesReviews() v1.SelfSubjectRulesReviewClusterInterface {
+	return &selfSubjectRulesReviewsClusterClient{Fake: c.Fake}
+}
+
+func (c *AuthorizationV1ClusterClient) SubjectAccessReviews() v1.SubjectAccessReviewClusterInterface {
+	return &subjectAccessReviewsClusterClient{Fake: c.Fake}
+}
+
+type AuthorizationV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeAuthorizationV1) RESTClient() rest.Interface {
+func (c *AuthorizationV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *AuthorizationV1Client) LocalSubjectAccessReviews(namespace string) upstreamauthorizationv1client.LocalSubjectAccessReviewInterface {
+
+	return &localSubjectAccessReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
+}
+
+func (c *AuthorizationV1Client) SelfSubjectAccessReviews() upstreamauthorizationv1client.SelfSubjectAccessReviewInterface {
+
+	return &selfSubjectAccessReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AuthorizationV1Client) SelfSubjectRulesReviews() upstreamauthorizationv1client.SelfSubjectRulesReviewInterface {
+
+	return &selfSubjectRulesReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *AuthorizationV1Client) SubjectAccessReviews() upstreamauthorizationv1client.SubjectAccessReviewInterface {
+
+	return &subjectAccessReviewsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

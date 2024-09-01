@@ -20,25 +20,50 @@ package fake
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
+	"github.com/kcp-dev/logicalcluster/v3"
+	upstreamflowcontrolv1client "k8s.io/client-go/kubernetes/typed/flowcontrol/v1"
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/flowcontrol/v1"
 )
 
-type cSIDriversClusterClient struct {
+type FlowcontrolV1ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *FakeFlowcontrolV1) FlowSchemas() v1.FlowSchemaInterface {
-	return &FakeFlowSchemas{c}
+func (c *FlowcontrolV1ClusterClient) Cluster(clusterPath logicalcluster.Path) upstreamflowcontrolv1client.FlowcontrolV1Interface {
+
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &FlowcontrolV1Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *FakeFlowcontrolV1) PriorityLevelConfigurations() v1.PriorityLevelConfigurationInterface {
-	return &FakePriorityLevelConfigurations{c}
+func (c *FlowcontrolV1ClusterClient) FlowSchemas() v1.FlowSchemaClusterInterface {
+	return &flowSchemasClusterClient{Fake: c.Fake}
+}
+
+func (c *FlowcontrolV1ClusterClient) PriorityLevelConfigurations() v1.PriorityLevelConfigurationClusterInterface {
+	return &priorityLevelConfigurationsClusterClient{Fake: c.Fake}
+}
+
+type FlowcontrolV1Client struct {
+	*kcptesting.Fake
+	ClusterPath logicalcluster.Path
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeFlowcontrolV1) RESTClient() rest.Interface {
+func (c *FlowcontrolV1Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
+}
+
+func (c *FlowcontrolV1Client) FlowSchemas() upstreamflowcontrolv1client.FlowSchemaInterface {
+
+	return &flowSchemasClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
+}
+
+func (c *FlowcontrolV1Client) PriorityLevelConfigurations() upstreamflowcontrolv1client.PriorityLevelConfigurationInterface {
+
+	return &priorityLevelConfigurationsClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }
