@@ -21,11 +21,3 @@ package v1beta1
 // ClusterTestTypeListerExpansion allows custom methods to be added to
 // ClusterTestTypeLister.
 type ClusterTestTypeListerExpansion interface{}
-
-// TestTypeListerExpansion allows custom methods to be added to
-// TestTypeLister.
-type TestTypeListerExpansion interface{}
-
-// TestTypeNamespaceListerExpansion allows custom methods to be added to
-// TestTypeNamespaceLister.
-type TestTypeNamespaceListerExpansion interface{}

@@ -108,8 +108,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case examplev1alpha1.SchemeGroupVersion.WithResource("clustertesttypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V1alpha1().ClusterTestTypes().Informer()}, nil
 	// Group=example, Version=V1beta1
-	case examplev1beta1.SchemeGroupVersion.WithResource("testtypes"):
-		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V1beta1().TestTypes().Informer()}, nil
 	case examplev1beta1.SchemeGroupVersion.WithResource("clustertesttypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V1beta1().ClusterTestTypes().Informer()}, nil
 	// Group=example, Version=V2
@@ -158,9 +156,6 @@ func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionRe
 		informer := f.Example().V1alpha1().ClusterTestTypes().Informer()
 		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 	// Group=example, Version=V1beta1
-	case examplev1beta1.SchemeGroupVersion.WithResource("testtypes"):
-		informer := f.Example().V1beta1().TestTypes().Informer()
-		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 	case examplev1beta1.SchemeGroupVersion.WithResource("clustertesttypes"):
 		informer := f.Example().V1beta1().ClusterTestTypes().Informer()
 		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
