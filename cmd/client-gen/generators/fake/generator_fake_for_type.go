@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -80,7 +81,6 @@ func (g *genFakeForType) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, "autoscalingv1 \"k8s.io/api/autoscaling/v1\"")
 	imports = append(imports, "authenticationv1 \"k8s.io/api/authentication/v1\"")
 	imports = append(imports, "metav1 \"k8s.io/apimachinery/pkg/apis/meta/v1\"")
-	imports = append(imports, "applyconfigurationsautoscalingv1 \"k8s.io/client-go/applyconfigurations/autoscaling/v1\"")
 
 	return imports
 }
@@ -154,9 +154,17 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 
 	_, gvString := util.ParsePathGroupVersion(g.inputPackage)
 	if g.singleClusterTypedClientsPackagePath != "" {
-		m["inputApplyConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), t.Name.Name+"ApplyConfiguration")
+		spew.Dump(t.Name.Name)
+		if t.Name.Name == "StatefulSet" { // StatefulSet is a special case.
+			m["inputApplyScaleConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), "ScaleApplyConfiguration")
+			m["inputApplyConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), t.Name.Name+"ApplyConfiguration")
+		} else {
+			m["inputApplyConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), t.Name.Name+"ApplyConfiguration")
+			m["inputApplyScaleConfig"] = types.Ref(path.Join(g.singleClusterApplyConfigPackagePath, gvString), t.Name.Name+"ApplyConfiguration")
+		}
 	} else {
 		m["inputApplyConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
+		m["inputApplyScaleConfig"] = types.Ref(path.Join(g.applyConfigurationPackage, gvString), t.Name.Name+"ApplyConfiguration")
 	}
 
 	m["kcpClusterResultType"] = types.Ref(g.typedClientPackage, t.Name.Name)
@@ -229,7 +237,9 @@ func (g *genFakeForType) GenerateType(c *generator.Context, t *types.Type, w io.
 	// generate extended client methods
 	var once sync.Once
 	for _, e := range tags.Extensions {
+		spew.Dump(e)
 		if e.SubResourcePath == "scale" {
+			spew.Dump(t.Name.Name)
 			// add scale methods.
 			once.Do(func() {
 				sw.Do(methodNamespacedClientGetScaleTemplate, m)
@@ -591,8 +601,8 @@ func (c *$.type|privatePlural$Client) UpdateScale(ctx context.Context, replicati
 `
 
 var methodNamespacedClientApplyScaleTemplate = `
-func (c *$.type|privatePlural$Client) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
-	if applyConfiguration == nil {
+func (c *$.type|privatePlural$Client) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *$.inputApplyScaleConfig|raw$, opts metav1.ApplyOptions) (*$.resultType|raw$, error) {
+	if applyConfiguration == nil
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
 	data, err := json.Marshal(applyConfiguration)
@@ -607,6 +617,6 @@ func (c *$.type|privatePlural$Client) ApplyScale(ctx context.Context, deployment
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*autoscalingv1.Scale), err
+	return obj.(*$.resultType|raw${}), err
 }
 `

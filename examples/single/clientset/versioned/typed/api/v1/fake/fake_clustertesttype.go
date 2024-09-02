@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	applyconfigurationsautoscalingv1 "k8s.io/client-go/applyconfigurations/autoscaling/v1"
 	"k8s.io/client-go/testing"
 	v1 "k8s.io/code-generator/examples/single/api/v1"
 	apiv1 "k8s.io/code-generator/examples/single/applyconfiguration/api/v1"
@@ -223,7 +222,7 @@ func (c *clusterTestTypesClient) UpdateScale(ctx context.Context, replicationCon
 	return obj.(*autoscalingv1.Scale), err
 }
 
-func (c *clusterTestTypesClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+func (c *clusterTestTypesClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *apiv1.ClusterTestTypeApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}

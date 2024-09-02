@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
-	applyconfigurationsautoscalingv1 "k8s.io/client-go/applyconfigurations/autoscaling/v1"
 	upstreamappsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"k8s.io/client-go/testing"
 	kcp "k8s.io/code-generator/examples/upstream/clientset/versioned/typed/apps/v1"
@@ -236,7 +235,7 @@ func (c *replicaSetsClient) UpdateScale(ctx context.Context, replicationControll
 	return obj.(*autoscalingv1.Scale), err
 }
 
-func (c *replicaSetsClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *applyconfigurationsautoscalingv1.ScaleApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
+func (c *replicaSetsClient) ApplyScale(ctx context.Context, deploymentName string, applyConfiguration *appsv1.ReplicaSetApplyConfiguration, opts metav1.ApplyOptions) (*autoscalingv1.Scale, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
