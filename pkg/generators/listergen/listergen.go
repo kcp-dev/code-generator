@@ -50,13 +50,13 @@ type Generator struct {
 
 func (Generator) RegisterMarkers(into *markers.Registry) error {
 	return markers.RegisterAll(into,
-		parser.GenclientMarker,
-		parser.NonNamespacedMarker,
-		parser.GroupNameMarker,
-		parser.NoVerbsMarker,
-		parser.ReadOnlyMarker,
-		parser.SkipVerbsMarker,
-		parser.OnlyVerbsMarker,
+		parser.GenclientMarker(),
+		parser.NonNamespacedMarker(),
+		parser.GroupNameMarker(),
+		parser.NoVerbsMarker(),
+		parser.ReadOnlyMarker(),
+		parser.SkipVerbsMarker(),
+		parser.OnlyVerbsMarker(),
 	)
 }
 

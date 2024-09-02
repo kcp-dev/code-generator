@@ -70,7 +70,9 @@ var (
 func init() {
 	for genName, gen := range allGenerators {
 		// make the generator options marker itself.
-		defn := markers.Must(markers.MakeDefinition(genName, markers.DescribesPackage, gen))
+		def, err := markers.MakeDefinition(genName, markers.DescribesPackage, gen)
+		def.Strict = false
+		defn := markers.Must(def, err)
 		if err := optionsRegistry.Register(defn); err != nil {
 			panic(err)
 		}
@@ -82,7 +84,9 @@ func init() {
 
 		// make per-generation output rule markers.
 		for ruleName, rule := range allOutputRules {
-			ruleMarker := markers.Must(markers.MakeDefinition(fmt.Sprintf("output:%s:%s", genName, ruleName), markers.DescribesPackage, rule))
+			def, err := markers.MakeDefinition(fmt.Sprintf("output:%s:%s", genName, ruleName), markers.DescribesPackage, rule)
+			def.Strict = false
+			ruleMarker := markers.Must(def, err)
 			if err := optionsRegistry.Register(ruleMarker); err != nil {
 				panic(err)
 			}
@@ -96,7 +100,10 @@ func init() {
 
 	// make "default output" output rule markers.
 	for ruleName, rule := range allOutputRules {
-		ruleMarker := markers.Must(markers.MakeDefinition("output:"+ruleName, markers.DescribesPackage, rule))
+		def, err := markers.MakeDefinition("output:"+ruleName, markers.DescribesPackage, rule)
+		def.Strict = false
+
+		ruleMarker := markers.Must(def, err)
 		if err := optionsRegistry.Register(ruleMarker); err != nil {
 			panic(err)
 		}
@@ -129,7 +136,7 @@ func main() {
 		Long:  "Generate Cluster-Aware Kubernetes API libraries.",
 		Example: `	# Generate listers for all types under apis/,
 	# outputting them to /tmp/clients
-	code-generator lister:apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,headerFile=./../hack/boilerplate/boilerplate.go.txt paths=./apis/... output:dir=/tmp 
+	code-generator lister:apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,headerFile=./../hack/boilerplate/boilerplate.go.txt paths=./apis/... output:dir=/tmp
 
 	# Run all the generators for a given project
 	code-generator \

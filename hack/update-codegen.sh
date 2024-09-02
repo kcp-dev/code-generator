@@ -80,4 +80,12 @@ ${KUBE_INFORMER_GEN} \
   "paths=./pkg/apis/..." \
   "output:dir=./pkg/kcp/clients"
 
+# Generate cluster-aware clients, informers and listers assuming no single-cluster listers or informers
+./../bin/code-generator  \
+  "client:standalone=true,outputPackagePath=acme.corp/pkg/k8s/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+  "lister:apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+  "informer:standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+  "paths=$( go list -m -json k8s.io/api | jq --raw-output .Dir )/..." \
+  "output:dir=./pkg/k8s/clients"
+
 popd
