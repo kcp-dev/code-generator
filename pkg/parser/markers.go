@@ -28,23 +28,77 @@ import (
 var (
 	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
 	// markers are not a part of genclient, since they do not accept any values.
-	GenclientMarker     = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, extension{}))
-	NonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
+	genclientMarker     = markers.Must(markers.MakeDefinition("genclient", markers.DescribesType, extension{}))
+	nonNamespacedMarker = markers.Must(markers.MakeDefinition("genclient:nonNamespaced", markers.DescribesType, struct{}{}))
 
 	// These markers, are not a part of "+genclient", and are defined separately because they accept a list which is comma separated. In
 	// controller-tools, comma indicates another argument, as multiple arguments need to provided with a semi-colon separator.
-	SkipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
-	OnlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
+	skipVerbsMarker = markers.Must(markers.MakeDefinition("genclient:skipVerbs", markers.DescribesType, markers.RawArguments("")))
+	onlyVerbsMarker = markers.Must(markers.MakeDefinition("genclient:onlyVerbs", markers.DescribesType, markers.RawArguments("")))
 
-	GroupNameMarker   = markers.Must(markers.MakeDefinition("groupName", markers.DescribesPackage, markers.RawArguments("")))
-	GroupGoNameMarker = markers.Must(markers.MakeDefinition("groupGoName", markers.DescribesPackage, markers.RawArguments("")))
+	groupNameMarker   = markers.Must(markers.MakeDefinition("groupName", markers.DescribesPackage, markers.RawArguments("")))
+	groupGoNameMarker = markers.Must(markers.MakeDefinition("groupGoName", markers.DescribesPackage, markers.RawArguments("")))
 
 	// In controller-tool's terms marker's are defined in the following format: <makername>:<parameter>=<values>. These
 	// markers are not a part of genclient, since they do not accept any values.
-	NoStatusMarker = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
-	NoVerbsMarker  = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
-	ReadOnlyMarker = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
+	noStatusMarker = markers.Must(markers.MakeDefinition("genclient:noStatus", markers.DescribesType, struct{}{}))
+	noVerbsMarker  = markers.Must(markers.MakeDefinition("genclient:noVerbs", markers.DescribesType, struct{}{}))
+	readOnlyMarker = markers.Must(markers.MakeDefinition("genclient:readonly", markers.DescribesType, struct{}{}))
 )
+
+func GenclientMarker() *markers.Definition {
+	def := genclientMarker
+	def.Strict = false
+	return def
+}
+
+func NonNamespacedMarker() *markers.Definition {
+	def := nonNamespacedMarker
+	def.Strict = false
+	return def
+}
+
+func SkipVerbsMarker() *markers.Definition {
+	def := skipVerbsMarker
+	def.Strict = false
+	return def
+}
+
+func OnlyVerbsMarker() *markers.Definition {
+	def := onlyVerbsMarker
+	def.Strict = false
+	return def
+}
+
+func GroupNameMarker() *markers.Definition {
+	def := groupNameMarker
+	def.Strict = false
+	return def
+}
+
+func GroupGoNameMarker() *markers.Definition {
+	def := groupGoNameMarker
+	def.Strict = false
+	return def
+}
+
+func NoStatusMarker() *markers.Definition {
+	def := noStatusMarker
+	def.Strict = false
+	return def
+}
+
+func NoVerbsMarker() *markers.Definition {
+	def := noVerbsMarker
+	def.Strict = false
+	return def
+}
+
+func ReadOnlyMarker() *markers.Definition {
+	def := readOnlyMarker
+	def.Strict = false
+	return def
+}
 
 type extension struct {
 	Method      *string
@@ -85,13 +139,13 @@ func (e *extension) ResultType() (string, string) {
 // ClientsGeneratedForType verifies if the genclient marker is enabled for
 // this type or not.
 func ClientsGeneratedForType(info *markers.TypeInfo) bool {
-	return info.Markers.Get(GenclientMarker.Name) != nil
+	return info.Markers.Get(GenclientMarker().Name) != nil
 }
 
 // IsClusterScoped verifies if the genclient marker for this
 // type is namespaced or clusterscoped.
 func IsClusterScoped(info *markers.TypeInfo) bool {
-	return info.Markers.Get(NonNamespacedMarker.Name) != nil
+	return info.Markers.Get(NonNamespacedMarker().Name) != nil
 }
 
 // IsNamespaced verifies if the genclient marker for this
@@ -102,7 +156,7 @@ func IsNamespaced(info *markers.TypeInfo) bool {
 
 // SupportedVerbs determines which verbs the type supports.
 func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
-	if info.Markers.Get(NoVerbsMarker.Name) != nil {
+	if info.Markers.Get(NoVerbsMarker().Name) != nil {
 		return sets.New[string](), nil
 	}
 
@@ -110,14 +164,14 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
 		if items := info.Markers.Get(name); items != nil {
 			val, ok := items.(markers.RawArguments)
 			if !ok {
-				return nil, fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker.Name)
+				return nil, fmt.Errorf("marker defined in wrong format %q", OnlyVerbsMarker().Name)
 			}
 			return strings.Split(string(val), ","), nil
 		}
 		return nil, nil
 	}
 
-	onlyVerbs, err := extractVerbs(info, OnlyVerbsMarker.Name)
+	onlyVerbs, err := extractVerbs(info, OnlyVerbsMarker().Name)
 	if err != nil {
 		return sets.New[string](), err
 	}
@@ -126,15 +180,15 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
 	}
 
 	baseVerbs := sets.New[string](genutil.SupportedVerbs...)
-	if info.Markers.Get(ReadOnlyMarker.Name) != nil {
+	if info.Markers.Get(ReadOnlyMarker().Name) != nil {
 		baseVerbs = sets.New[string](genutil.ReadonlyVerbs...)
 	}
 
-	if info.Markers.Get(NoStatusMarker.Name) != nil {
+	if info.Markers.Get(NoStatusMarker().Name) != nil {
 		baseVerbs = baseVerbs.Difference(sets.New[string]("updateStatus", "applyStatus"))
 	}
 
-	skipVerbs, err := extractVerbs(info, SkipVerbsMarker.Name)
+	skipVerbs, err := extractVerbs(info, SkipVerbsMarker().Name)
 	if err != nil {
 		return sets.New[string](), err
 	}
@@ -142,7 +196,7 @@ func SupportedVerbs(info *markers.TypeInfo) (sets.Set[string], error) {
 }
 
 func ClientExtensions(info *markers.TypeInfo) []Extension {
-	values, ok := info.Markers[GenclientMarker.Name]
+	values, ok := info.Markers[GenclientMarker().Name]
 	if !ok || values == nil {
 		return nil
 	}
