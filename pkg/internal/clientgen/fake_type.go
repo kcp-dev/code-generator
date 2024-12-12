@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/code-generator/cmd/client-gen/types"
 
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
@@ -16,7 +15,7 @@ import (
 
 type FakeTypedClient struct {
 	// Group is the group in this client.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kind is the kinds in this file.
 	Kind parser.Kind

@@ -17,6 +17,8 @@ limitations under the License.
 package parser
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 
@@ -34,7 +36,32 @@ type Kind struct {
 
 type Group struct {
 	types.Group
-	GoName string
+	GoName               string `marker:",+groupGoName"`
+	Version              Version
+	PackageAlias         string
+	LowerCaseGroupGoName string
+}
+
+func (g Group) GoPackageAlias() string {
+	if g.PackageAlias == "" {
+		panic("PackageAlias is empty. Programmer error.")
+	}
+	return strings.ReplaceAll(g.PackageAlias, "-", "")
+}
+
+func (g Group) GroupGoName() string {
+	if g.GoName == "" {
+		panic("GroupGoName is empty. Programmer error.")
+	}
+	return strings.ReplaceAll(g.GoName, "-", "") // Code base is litterate with either GoName or GroupGoName. We should unify this.
+}
+
+func (g Group) PackagePath() string {
+	return strings.ToLower(g.Group.PackageName())
+}
+
+func (g Group) PackageName() string {
+	return strings.ToLower(strings.ReplaceAll(g.Group.PackageName(), "-", ""))
 }
 
 func (k *Kind) Plural() string {
@@ -51,6 +78,23 @@ func (k *Kind) IsNamespaced() bool {
 
 func (k *Kind) SupportsListWatch() bool {
 	return k.SupportedVerbs.HasAll("list", "watch")
+}
+
+type Version string
+
+func (v Version) String() string {
+	return string(v)
+}
+
+func (v Version) NonEmpty() string {
+	if v == "" {
+		return "internalVersion"
+	}
+	return v.String()
+}
+
+func (v Version) PackageName() string {
+	return strings.ToLower(v.NonEmpty())
 }
 
 // TODO(skuznets):

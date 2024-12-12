@@ -20,14 +20,12 @@ import (
 	"io"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
 type Informer struct {
 	// Group is the group in this informer.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kind is the kind in this file.
 	Kind parser.Kind

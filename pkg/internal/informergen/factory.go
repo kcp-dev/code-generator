@@ -92,7 +92,7 @@ import (
 	upstreaminformers "{{.singleClusterInformerPackagePath}}"
 	{{end -}}
 
-{{range .groups}}	{{.Group.PackageName}}informers "{{$.packagePath}}/{{.Group.PackageName}}"
+{{range .groups}}	{{.PackageName}}informers "{{$.packagePath}}/{{.Group.PackageName}}"
 {{end -}}
 
 	"{{.packagePath}}/internalinterfaces"
@@ -329,12 +329,12 @@ type SharedInformerFactory interface {
 	// InformerFor returns the SharedIndexInformer for obj.
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
-{{range .groups}}	{{.GoName}}() {{.Group.PackageName}}informers.ClusterInterface
+{{range .groups}}	{{.GroupGoName}}() {{.PackageName}}informers.ClusterInterface
 {{end -}}
 }
 
 {{range .groups}}
-func (f *sharedInformerFactory) {{.GoName}}() {{.Group.PackageName}}informers.ClusterInterface {
+func (f *sharedInformerFactory) {{.GroupGoName}}() {{.PackageName}}informers.ClusterInterface {
   return {{.Group.PackageName}}informers.New(f, f.tweakListOptions)
 }
 {{end}}
@@ -485,13 +485,13 @@ type SharedScopedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-{{range .groups}}	{{.GoName}}() {{.Group.PackageName}}informers.Interface
+{{range .groups}}	{{.GroupGoName}}() {{.PackageName}}informers.Interface
 {{end -}}
 }
 
 
 {{range .groups}}
-func (f *sharedScopedInformerFactory) {{.GoName}}() {{.Group.PackageName}}informers.Interface {
+func (f *sharedScopedInformerFactory) {{.GroupGoName}}() {{.PackageName}}informers.Interface {
   return {{.Group.PackageName}}informers.NewScoped(f, f.namespace, f.tweakListOptions)
 }
 {{end}}

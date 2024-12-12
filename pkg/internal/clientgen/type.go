@@ -5,15 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type TypedClient struct {
 	// Group is the group in this client.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kind is the kinds in this file.
 	Kind parser.Kind
@@ -62,10 +60,10 @@ import (
 	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
-	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 // {{.kind.Plural}}ClusterGetter has a method to return a {{.kind.String}}ClusterInterface.
