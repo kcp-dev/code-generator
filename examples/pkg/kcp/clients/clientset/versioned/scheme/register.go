@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	examplev1 "acme.corp/pkg/apis/example/v1"
 	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
@@ -42,6 +43,7 @@ var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	example3v1.AddToScheme,
+	exampledashedv1.AddToScheme,
 	examplev1.AddToScheme,
 	examplev1alpha1.AddToScheme,
 	examplev1beta1.AddToScheme,

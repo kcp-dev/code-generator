@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
+	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	examplev1 "acme.corp/pkg/apis/example/v1"
 	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
@@ -93,6 +94,11 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example3().V1().TestTypes().Informer()}, nil
 	case example3v1.SchemeGroupVersion.WithResource("clustertesttypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example3().V1().ClusterTestTypes().Informer()}, nil
+	// Group=example-dashed.some.corp, Version=V1
+	case exampledashedv1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Exampledashed().V1().TestTypes().Informer()}, nil
+	case exampledashedv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Exampledashed().V1().ClusterTestTypes().Informer()}, nil
 	// Group=example, Version=V1
 	case examplev1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example().V1().TestTypes().Informer()}, nil

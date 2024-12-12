@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 
 	client "acme.corp/pkg/generated/clientset/versioned"
+	exampledashedv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example-dashed/v1"
 	examplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1"
 	examplev1alpha1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v1beta1"
@@ -46,6 +47,7 @@ type ClusterInterface interface {
 	Cluster(logicalcluster.Path) client.Interface
 	Discovery() discovery.DiscoveryInterface
 	Example3V1() example3v1.Example3V1ClusterInterface
+	ExampledashedV1() exampledashedv1.ExampledashedV1ClusterInterface
 	ExampleV1() examplev1.ExampleV1ClusterInterface
 	ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1ClusterInterface
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1ClusterInterface
@@ -59,6 +61,7 @@ type ClusterClientset struct {
 	*discovery.DiscoveryClient
 	clientCache          kcpclient.Cache[*client.Clientset]
 	example3V1           *example3v1.Example3V1ClusterClient
+	exampledashedV1      *exampledashedv1.ExampledashedV1ClusterClient
 	exampleV1            *examplev1.ExampleV1ClusterClient
 	exampleV1alpha1      *examplev1alpha1.ExampleV1alpha1ClusterClient
 	exampleV1beta1       *examplev1beta1.ExampleV1beta1ClusterClient
@@ -78,6 +81,11 @@ func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 // Example3V1 retrieves the Example3V1ClusterClient.
 func (c *ClusterClientset) Example3V1() example3v1.Example3V1ClusterInterface {
 	return c.example3V1
+}
+
+// ExampledashedV1 retrieves the ExampledashedV1ClusterClient.
+func (c *ClusterClientset) ExampledashedV1() exampledashedv1.ExampledashedV1ClusterInterface {
+	return c.exampledashedV1
 }
 
 // ExampleV1 retrieves the ExampleV1ClusterClient.
@@ -163,6 +171,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*ClusterCli
 	cs.clientCache = cache
 	var err error
 	cs.example3V1, err = example3v1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	cs.exampledashedV1, err = exampledashedv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
