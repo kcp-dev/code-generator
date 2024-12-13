@@ -1,8 +1,8 @@
 module github.com/kcp-dev/code-generator/v2
 
-go 1.23.0
+go 1.22.2
 
-toolchain go1.23.3
+toolchain go1.22.2
 
 require (
 	github.com/onsi/ginkgo v1.16.5
