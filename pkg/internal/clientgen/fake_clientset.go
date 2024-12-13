@@ -5,8 +5,7 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
@@ -15,7 +14,7 @@ type FakeClientset struct {
 	Name string
 
 	// Groups are the groups in this client-set.
-	Groups []types.GroupVersionInfo
+	Groups []parser.Group
 
 	// PackagePath is the package under which this client-set will be exposed.
 	// TODO(skuznets) we should be able to figure this out from the output dir, ideally

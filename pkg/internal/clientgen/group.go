@@ -5,15 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Group struct {
 	// Group is the group in this client.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kinds are the kinds in the group.
 	Kinds []parser.Kind

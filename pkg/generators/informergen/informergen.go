@@ -34,7 +34,7 @@ import (
 
 type Generator struct {
 	// Name is the name of the clientset, e.g. "kubernetes"
-	ClientsetName string `marker:",optional"`
+	Name string `marker:",optional"`
 
 	// ExternalOnly toggles the creation of a "externalversions" sub-directory. Set to true if you are generating
 	// custom code for a project that's not using k8s.io/code-generator/generate-groups.sh for their types.
@@ -114,14 +114,14 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		onlyGroups = append(onlyGroups, group)
 	}
 	sort.Slice(onlyGroups, func(i, j int) bool {
-		return onlyGroups[i].Group.PackageName() < onlyGroups[j].Group.PackageName()
+		return onlyGroups[i].PackageName() < onlyGroups[j].PackageName()
 	})
 
-	if g.ClientsetName == "" {
-		g.ClientsetName = "clientset"
+	if g.Name == "" {
+		g.Name = "clientset"
 	}
 
-	clientsetDir := g.ClientsetName
+	clientsetDir := g.Name
 	if !g.ExternalOnly {
 		clientsetDir = filepath.Join(clientsetDir, "versioned")
 	}
@@ -137,7 +137,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	factoryPath := filepath.Join(informersDir, "factory.go")
 	logger.WithValues("path", factoryPath).Info("generating informer factory")
 	if err := util.WriteGeneratedCode(ctx, headerText, &informergen.Factory{
-		Groups:                           onlyGroups,
+		Groups:                           groupInfo,
 		PackagePath:                      filepath.Join(g.OutputPackagePath, informersDir),
 		ClientsetPackagePath:             filepath.Join(g.OutputPackagePath, clientsetDir),
 		SingleClusterClientPackagePath:   g.SingleClusterClientPackagePath,
@@ -146,12 +146,12 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	gvks := map[types.Group]map[types.Version][]parser.Kind{}
+	gvks := map[types.Group]map[parser.Version][]parser.Kind{}
 	for group, versions := range groupVersionKinds {
 		for version, kinds := range versions {
 			info := toGroupVersionInfo(group, version)
 			if _, exists := gvks[info.Group]; !exists {
-				gvks[info.Group] = map[types.Version][]parser.Kind{}
+				gvks[info.Group] = map[parser.Version][]parser.Kind{}
 			}
 			gvks[info.Group][info.Version] = kinds
 		}
@@ -246,8 +246,8 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []types.GroupVersionInfo {
-	var info []types.GroupVersionInfo
+func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []parser.Group {
+	var info []parser.Group
 	for group, versions := range groupVersionKinds {
 		for version := range versions {
 			info = append(info, toGroupVersionInfo(group, version))
@@ -260,12 +260,12 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) types.GroupVersionInfo {
-	return types.GroupVersionInfo{
+func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+	return parser.Group{
 		Group:                group.Group,
-		Version:              types.Version(namer.IC(version.Version.String())),
-		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
-		GroupGoName:          group.GoName,
+		Version:              parser.Version(namer.IC(version.Version.String())),
+		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
+		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
 		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

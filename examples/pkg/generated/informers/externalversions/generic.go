@@ -19,7 +19,7 @@ limitations under the License.
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -31,6 +31,7 @@ import (
 	example3v1 "acme.corp/pkg/apis/example3/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -82,6 +83,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().ClusterTestTypes().Informer()}, nil
 	case v2.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().TestTypes().Informer()}, nil
+
+		// Group=example-dashed.dev, Version=v2
+	case exampledashedv2.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V2().ClusterTestTypes().Informer()}, nil
+	case exampledashedv2.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V2().TestTypes().Informer()}, nil
 
 		// Group=example3.some.corp, Version=v1
 	case example3v1.SchemeGroupVersion.WithResource("clustertesttypes"):

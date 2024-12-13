@@ -17,6 +17,8 @@ limitations under the License.
 package parser
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 
@@ -34,7 +36,21 @@ type Kind struct {
 
 type Group struct {
 	types.Group
-	GoName string
+	Version              Version
+	PackageAlias         string
+	GoName               string
+	LowerCaseGroupGoName string
+}
+
+func (g Group) PackageName() string {
+	_g := strings.Split(g.NonEmpty(), ".")[0]
+	_g = strings.ReplaceAll(_g, "-", "")
+	return strings.ToLower(_g)
+}
+
+func (g Group) GroupGoName() string {
+	ggn := strings.ReplaceAll(g.GoName, "-", "")
+	return ggn
 }
 
 func (k *Kind) Plural() string {
@@ -51,6 +67,24 @@ func (k *Kind) IsNamespaced() bool {
 
 func (k *Kind) SupportsListWatch() bool {
 	return k.SupportedVerbs.HasAll("list", "watch")
+}
+
+type Version string
+
+func (v Version) String() string {
+	return string(v)
+}
+
+func (v Version) NonEmpty() string {
+	if v == "" {
+		return "internalVersion"
+	}
+	return v.String()
+}
+
+func (v Version) PackageName() string {
+	_v := strings.ReplaceAll(v.NonEmpty(), "-", "")
+	return strings.ToLower(_v)
 }
 
 // TODO(skuznets):

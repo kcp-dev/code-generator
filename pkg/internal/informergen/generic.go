@@ -27,10 +27,10 @@ import (
 
 type Generic struct {
 	// Groups are the groups in this informer factory.
-	Groups []types.GroupVersionInfo
+	Groups []parser.Group
 
 	// GroupVersionKinds are all the kinds we need to support,indexed by group and version.
-	GroupVersionKinds map[types.Group]map[types.Version][]parser.Kind
+	GroupVersionKinds map[types.Group]map[parser.Version][]parser.Kind
 
 	// APIPackagePath is the root directory under which API types exist.
 	// e.g. "k8s.io/api"

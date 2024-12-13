@@ -4,8 +4,6 @@ import (
 	"io"
 	"text/template"
 
-	clientgentypes "k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
@@ -13,7 +11,7 @@ type Lister struct {
 	// Group is:
 	// - the name of the API group, e.g. "authorization",
 	// - the version and package path of the API, e.g. "v1" and "k8s.io/api/rbac/v1"
-	Group clientgentypes.GroupVersionInfo
+	Group parser.Group
 	// Kind is the kind for which we are generating listers, e.g. "ClusterRole"
 	Kind parser.Kind
 

@@ -226,8 +226,8 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []types.GroupVersionInfo {
-	var info []types.GroupVersionInfo
+func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []parser.Group {
+	var info []parser.Group
 	for group, versions := range groupVersionKinds {
 		for version := range versions {
 			info = append(info, toGroupVersionInfo(group, version))
@@ -240,12 +240,13 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) types.GroupVersionInfo {
-	return types.GroupVersionInfo{
-		Group:                group.Group,
-		Version:              types.Version(namer.IC(version.Version.String())),
-		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
-		GroupGoName:          group.GoName,
-		LowerCaseGroupGoName: namer.IL(group.GoName),
+func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+	return parser.Group{
+		Group:   group.Group,
+		Version: parser.Version(namer.IC(version.Version.String())),
+		// HACK(mjudeikis): This replace is not quite here, but as we collect groups dyanmically, we can't provide global marker for it.
+		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
+		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
+		LowerCaseGroupGoName: strings.ReplaceAll(namer.IL(group.GoName), "-", ""),
 	}
 }

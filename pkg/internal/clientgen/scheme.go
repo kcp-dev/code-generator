@@ -5,14 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Scheme struct {
 	// Groups are the groups in this client-set.
-	Groups []types.GroupVersionInfo
+	Groups []parser.Group
 
 	// APIPackagePath is the root directory under which API types exist.
 	// e.g. "k8s.io/api"

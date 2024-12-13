@@ -31,6 +31,7 @@ import (
 	versioned "acme.corp/pkg/generated/clientset/versioned"
 	example "acme.corp/pkg/generated/informers/externalversions/example"
 	example3 "acme.corp/pkg/generated/informers/externalversions/example3"
+	exampledashed "acme.corp/pkg/generated/informers/externalversions/exampledashed"
 	existinginterfaces "acme.corp/pkg/generated/informers/externalversions/existinginterfaces"
 	internalinterfaces "acme.corp/pkg/generated/informers/externalversions/internalinterfaces"
 	secondexample "acme.corp/pkg/generated/informers/externalversions/secondexample"
@@ -260,6 +261,7 @@ type SharedInformerFactory interface {
 
 	Example() example.Interface
 	Example3() example3.Interface
+	ExampleDashed() exampledashed.Interface
 	Existinginterfaces() existinginterfaces.Interface
 	Secondexample() secondexample.Interface
 }
@@ -270,6 +272,10 @@ func (f *sharedInformerFactory) Example() example.Interface {
 
 func (f *sharedInformerFactory) Example3() example3.Interface {
 	return example3.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) ExampleDashed() exampledashed.Interface {
+	return exampledashed.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Existinginterfaces() existinginterfaces.Interface {
