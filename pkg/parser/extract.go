@@ -33,7 +33,7 @@ import (
 
 // isForbiddenGroupVersion hacks around the k8s client-set, where types have +genclient but aren't meant to have
 // generated clients ... ?
-func isForbiddenGroupVersion(group types.Group, version types.Version) bool {
+func isForbiddenGroupVersion(group types.Group, version Version) bool {
 	forbidden := map[string]sets.Set[string]{
 		"abac.authorization.kubernetes.io": sets.New[string]("v0", "v1beta1"),
 		"componentconfig":                  sets.New[string]("v1alpha1"),
@@ -49,15 +49,15 @@ func isForbiddenGroupVersion(group types.Group, version types.Version) bool {
 // When we are looking at a package, we can determine the group and version by copying the upstream
 // logic:
 // https://github.com/kubernetes/kubernetes/blob/f046bdf24e69ac31d3e1ed56926d9a7c715f1cc8/staging/src/k8s.io/code-generator/cmd/lister-gen/generators/lister.go#L93-L106
-func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map[types.PackageVersion][]Kind, error) {
-	groupVersionKinds := map[Group]map[types.PackageVersion][]Kind{}
+func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map[PackageVersion][]Kind, error) {
+	groupVersionKinds := map[Group]map[PackageVersion][]Kind{}
 	for _, root := range ctx.Roots {
 		logger := klog.Background()
 		logger.V(4).Info("processing " + root.PkgPath)
 		parts := strings.Split(root.PkgPath, "/")
 		groupName := types.Group(parts[len(parts)-2])
-		version := types.PackageVersion{
-			Version: types.Version(parts[len(parts)-1]),
+		version := PackageVersion{
+			Version: Version(parts[len(parts)-1]),
 			Package: root.PkgPath,
 		}
 
@@ -153,7 +153,7 @@ func CollectKinds(ctx *genall.GenerationContext, verbs ...string) (map[Group]map
 			continue
 		}
 		if _, recorded := groupVersionKinds[group]; !recorded {
-			groupVersionKinds[group] = map[types.PackageVersion][]Kind{}
+			groupVersionKinds[group] = map[PackageVersion][]Kind{}
 		}
 		groupVersionKinds[group][version] = append(groupVersionKinds[group][version], kinds...)
 	}

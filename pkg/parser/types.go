@@ -87,6 +87,12 @@ func (v Version) PackageName() string {
 	return strings.ToLower(_v)
 }
 
+type PackageVersion struct {
+	Version
+	// The fully qualified package, e.g. k8s.io/kubernetes/pkg/apis/apps, where the types.go is found.
+	Package string
+}
+
 // TODO(skuznets):
 // add an e2e for a kind that has no verbs, but uses an extension for something
 // then ensure we add in fake_type.go entries for the extension

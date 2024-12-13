@@ -35,9 +35,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	upstreaminformers "acme.corp/pkg/generated/informers/externalversions"
-	clientset "acme.corp/pkg/kcpexisting/clients/exampledashed/versioned"
-	exampledashedinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/exampledashed"
+	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
+	exampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example"
+	example3informers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example3"
+	existinginterfacesinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/existinginterfaces"
 	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
+	secondexampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/secondexample"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -268,11 +271,41 @@ type SharedInformerFactory interface {
 	// InformerFor returns the SharedIndexInformer for obj.
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
-	Exampledashed() exampledashedinformers.ClusterInterface
+	Example3() example3informers.ClusterInterface
+	Example() exampleinformers.ClusterInterface
+	Example() exampleinformers.ClusterInterface
+	Example() exampleinformers.ClusterInterface
+	Example() exampleinformers.ClusterInterface
+	Existinginterfaces() existinginterfacesinformers.ClusterInterface
+	Secondexample() secondexampleinformers.ClusterInterface
 }
 
-func (f *sharedInformerFactory) Exampledashed() exampledashedinformers.ClusterInterface {
-	return exampledashedinformers.New(f, f.tweakListOptions)
+func (f *sharedInformerFactory) Example3() example3informers.ClusterInterface {
+	return example3informers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
+	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
+	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
+	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
+	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Existinginterfaces() existinginterfacesinformers.ClusterInterface {
+	return existinginterfacesinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Secondexample() secondexampleinformers.ClusterInterface {
+	return secondexampleinformers.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Cluster(clusterName logicalcluster.Name) ScopedDynamicSharedInformerFactory {

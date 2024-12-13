@@ -21,6 +21,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/klog/v2"
@@ -246,7 +250,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []parser.Group {
+func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[parser.PackageVersion][]parser.Kind) []parser.Group {
 	var info []parser.Group
 	for group, versions := range groupVersionKinds {
 		for version := range versions {
@@ -260,12 +264,22 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+func toGroupVersionInfo(group parser.Group, version parser.PackageVersion) parser.Group {
+	// TODO(mjudeikis): This is a hack to get the goName from the group. We should probably store this in the group.
+	spew.Dump(group)
+	goName := strings.Split(group.GoName, ".")[0]
+	caser := cases.Title(language.English)
+	parts := strings.Split(goName, "-")
+	for i, part := range parts {
+		parts[i] = caser.String(part)
+	}
+	goName = strings.Join(parts, "")
+
 	return parser.Group{
 		Group:                group.Group,
 		Version:              parser.Version(namer.IC(version.Version.String())),
 		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
-		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
+		GoName:               goName,
 		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

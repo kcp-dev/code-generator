@@ -25,14 +25,26 @@ import (
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
+	examplev1 "acme.corp/pkg/apis/example/v1"
+	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
+	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
+	examplev2 "acme.corp/pkg/apis/example/v2"
+	example3v1 "acme.corp/pkg/apis/example3/v1"
+	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
+	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
-	exampledashedv2.AddToScheme,
+	examplev1.AddToScheme,
+	examplev1alpha1.AddToScheme,
+	examplev1beta1.AddToScheme,
+	examplev2.AddToScheme,
+	example3v1.AddToScheme,
+	existinginterfacesv1.AddToScheme,
+	secondexamplev1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

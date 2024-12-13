@@ -148,13 +148,13 @@ func NewFiltered{{.kind}}ClusterInformer(client clientset.ClusterInterface, resy
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}().List(context.TODO(), options)
+				return client.{{.group.GoName}}{{.group.Version}}().{{.kind.Plural}}().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}().Watch(context.TODO(), options)
+				return client.{{.group.GoName}}{{.group.Version}}().{{.kind.Plural}}().Watch(context.TODO(), options)
 			},
 		},
 		&{{.group.PackageAlias}}.{{.kind.String}}{},

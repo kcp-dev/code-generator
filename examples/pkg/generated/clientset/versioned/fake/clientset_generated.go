@@ -26,8 +26,20 @@ import (
 	"k8s.io/client-go/testing"
 
 	clientset "acme.corp/pkg/generated/clientset/versioned"
-	exampledashedv2 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v2"
-	fakeexampledashedv2 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v2/fake"
+	examplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
+	fakeexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1/fake"
+	examplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1"
+	fakeexamplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1/fake"
+	examplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
+	fakeexamplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1/fake"
+	examplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
+	fakeexamplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2/fake"
+	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
+	fakeexample3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
+	fakeexistinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1/fake"
+	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
+	fakesecondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -84,7 +96,37 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// ExampleDashedV2 retrieves the ExampleDashedV2Client
-func (c *Clientset) ExampleDashedV2() exampledashedv2.ExampleDashedV2Interface {
-	return &fakeexampledashedv2.FakeExampleDashedV2{Fake: &c.Fake}
+// ExampleV1 retrieves the ExampleV1Client
+func (c *Clientset) ExampleV1() examplev1.ExampleV1Interface {
+	return &fakeexamplev1.FakeExampleV1{Fake: &c.Fake}
+}
+
+// ExampleV1alpha1 retrieves the ExampleV1alpha1Client
+func (c *Clientset) ExampleV1alpha1() examplev1alpha1.ExampleV1alpha1Interface {
+	return &fakeexamplev1alpha1.FakeExampleV1alpha1{Fake: &c.Fake}
+}
+
+// ExampleV1beta1 retrieves the ExampleV1beta1Client
+func (c *Clientset) ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface {
+	return &fakeexamplev1beta1.FakeExampleV1beta1{Fake: &c.Fake}
+}
+
+// ExampleV2 retrieves the ExampleV2Client
+func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
+	return &fakeexamplev2.FakeExampleV2{Fake: &c.Fake}
+}
+
+// Example3V1 retrieves the Example3V1Client
+func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
+	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
+}
+
+// ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client
+func (c *Clientset) ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface {
+	return &fakeexistinginterfacesv1.FakeExistinginterfacesV1{Fake: &c.Fake}
+}
+
+// SecondexampleV1 retrieves the SecondexampleV1Client
+func (c *Clientset) SecondexampleV1() secondexamplev1.SecondexampleV1Interface {
+	return &fakesecondexamplev1.FakeSecondexampleV1{Fake: &c.Fake}
 }

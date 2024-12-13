@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strings"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
@@ -226,7 +225,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []parser.Group {
+func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[parser.PackageVersion][]parser.Kind) []parser.Group {
 	var info []parser.Group
 	for group, versions := range groupVersionKinds {
 		for version := range versions {
@@ -240,7 +239,7 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+func toGroupVersionInfo(group parser.Group, version parser.PackageVersion) parser.Group {
 	return parser.Group{
 		Group:   group.Group,
 		Version: parser.Version(namer.IC(version.Version.String())),
