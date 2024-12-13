@@ -244,7 +244,7 @@ func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser
 	return parser.Group{
 		Group:   group.Group,
 		Version: parser.Version(namer.IC(version.Version.String())),
-		// HACK(mjudeikis): This replace is not quite here, but as we collect groups dyanmically, we can't provide global marker for it.
+		// HACK(mjudeikis): This replace is not quite here, but as we collect groups dynamically, we can't provide global marker for it.
 		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
 		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
 		LowerCaseGroupGoName: strings.ReplaceAll(namer.IL(group.GoName), "-", ""),
