@@ -30,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	exampledashedv2 "acme.corp/pkg/apis/example-dashed/v2"
-	upstreaminformers "acme.corp/pkg/generated/informers/externalversions"
+	exampledashedv2 "acme.corp/pkg/apisv2/example-dashed/v2"
+	upstreaminformers "acme.corp/pkg/generated/informersv2/externalversions"
 )
 
 type GenericClusterInformer interface {

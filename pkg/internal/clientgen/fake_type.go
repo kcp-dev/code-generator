@@ -147,7 +147,7 @@ import (
 {{- if .hasMethods }}
 	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
 {{- if "watch" | .kind.SupportedVerbs.Has }}
@@ -167,13 +167,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 {{end}}
 {{- if and .generateApplyVerbs ("apply" | .kind.SupportedVerbs.Has) }}
-	applyconfigurations{{.group.PackageAlias}} "{{.singleClusterApplyConfigurationsPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	applyconfigurations{{.group.PackageAlias}} "{{.singleClusterApplyConfigurationsPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
 {{- if .kind.IsNamespaced}}
-	kcp{{.group.PackageAlias}} "{{.packagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	kcp{{.group.PackageAlias}} "{{.packagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
-	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 var {{.kind.Plural | lowerFirst}}Resource = schema.GroupVersionResource{Group: "{{.groupName}}", Version: "{{.group.Version.String | toLower}}", Resource: "{{.kind.Plural | toLower}}"}

@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	exampledashedv2 "acme.corp/pkg/apisv2/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
 )
 
 var Scheme = runtime.NewScheme()

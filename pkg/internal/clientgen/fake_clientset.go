@@ -64,11 +64,11 @@ import (
 	clientscheme "{{.singleClusterClientPackagePath}}/scheme"
 
 	kcpclient "{{.packagePath}}"
-{{range .groups}}	{{.PackageAlias}} "{{$.singleClusterClientPackagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.PackageAlias}} "{{$.singleClusterClientPackagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
-{{range .groups}}	kcp{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	kcp{{.PackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
-{{range .groups}}	fake{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}/fake"
+{{range .groups}}	fake{{.PackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}/fake"
 {{end -}}
 )
 

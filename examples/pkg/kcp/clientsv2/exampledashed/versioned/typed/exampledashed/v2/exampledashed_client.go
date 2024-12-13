@@ -29,42 +29,42 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	exampledashedv2 "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/generated/clientsetv2/versioned/typed/exampledashed/v2"
 )
 
-type ExampledashedV2ClusterInterface interface {
-	ExampledashedV2ClusterScoper
+type ExampleDashedV2ClusterInterface interface {
+	ExampleDashedV2ClusterScoper
 	TestTypesClusterGetter
 	ClusterTestTypesClusterGetter
 }
 
-type ExampledashedV2ClusterScoper interface {
-	Cluster(logicalcluster.Path) exampledashedv2.ExampledashedV2Interface
+type ExampleDashedV2ClusterScoper interface {
+	Cluster(logicalcluster.Path) exampledashedv2.ExampleDashedV2Interface
 }
 
-type ExampledashedV2ClusterClient struct {
-	clientCache kcpclient.Cache[*exampledashedv2.ExampledashedV2Client]
+type ExampleDashedV2ClusterClient struct {
+	clientCache kcpclient.Cache[*exampledashedv2.ExampleDashedV2Client]
 }
 
-func (c *ExampledashedV2ClusterClient) Cluster(clusterPath logicalcluster.Path) exampledashedv2.ExampledashedV2Interface {
+func (c *ExampleDashedV2ClusterClient) Cluster(clusterPath logicalcluster.Path) exampledashedv2.ExampleDashedV2Interface {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return c.clientCache.ClusterOrDie(clusterPath)
 }
 
-func (c *ExampledashedV2ClusterClient) TestTypes() TestTypeClusterInterface {
+func (c *ExampleDashedV2ClusterClient) TestTypes() TestTypeClusterInterface {
 	return &testTypesClusterInterface{clientCache: c.clientCache}
 }
 
-func (c *ExampledashedV2ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
+func (c *ExampleDashedV2ClusterClient) ClusterTestTypes() ClusterTestTypeClusterInterface {
 	return &clusterTestTypesClusterInterface{clientCache: c.clientCache}
 }
 
-// NewForConfig creates a new ExampledashedV2ClusterClient for the given config.
+// NewForConfig creates a new ExampleDashedV2ClusterClient for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*ExampledashedV2ClusterClient, error) {
+func NewForConfig(c *rest.Config) (*ExampleDashedV2ClusterClient, error) {
 	client, err := rest.HTTPClientFor(c)
 	if err != nil {
 		return nil, err
@@ -72,21 +72,21 @@ func NewForConfig(c *rest.Config) (*ExampledashedV2ClusterClient, error) {
 	return NewForConfigAndClient(c, client)
 }
 
-// NewForConfigAndClient creates a new ExampledashedV2ClusterClient for the given config and http client.
+// NewForConfigAndClient creates a new ExampleDashedV2ClusterClient for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampledashedV2ClusterClient, error) {
-	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*exampledashedv2.ExampledashedV2Client]{
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampleDashedV2ClusterClient, error) {
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*exampledashedv2.ExampleDashedV2Client]{
 		NewForConfigAndClient: exampledashedv2.NewForConfigAndClient,
 	})
 	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err
 	}
-	return &ExampledashedV2ClusterClient{clientCache: cache}, nil
+	return &ExampleDashedV2ClusterClient{clientCache: cache}, nil
 }
 
-// NewForConfigOrDie creates a new ExampledashedV2ClusterClient for the given config and
+// NewForConfigOrDie creates a new ExampleDashedV2ClusterClient for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ExampledashedV2ClusterClient {
+func NewForConfigOrDie(c *rest.Config) *ExampleDashedV2ClusterClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)

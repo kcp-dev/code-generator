@@ -32,21 +32,21 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 
-	client "acme.corp/pkg/generated/clientset/versioned"
-	exampledashedv2 "acme.corp/pkg/kcp/clients/exampledashed/versioned/typed/example-dashed/v2"
+	client "acme.corp/pkg/generated/clientsetv2/versioned"
+	exampledashedv2 "acme.corp/pkg/kcp/clientsv2/exampledashed/versioned/typed/exampledashed/v2"
 )
 
 type ClusterInterface interface {
 	Cluster(logicalcluster.Path) client.Interface
 	Discovery() discovery.DiscoveryInterface
-	ExampledashedV2() exampledashedv2.ExampledashedV2ClusterInterface
+	ExampleDashedV2() exampledashedv2.ExampleDashedV2ClusterInterface
 }
 
 // ClusterClientset contains the clients for groups.
 type ClusterClientset struct {
 	*discovery.DiscoveryClient
 	clientCache     kcpclient.Cache[*client.Clientset]
-	exampledashedV2 *exampledashedv2.ExampledashedV2ClusterClient
+	exampledashedV2 *exampledashedv2.ExampleDashedV2ClusterClient
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -57,8 +57,8 @@ func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 	return c.DiscoveryClient
 }
 
-// ExampledashedV2 retrieves the ExampledashedV2ClusterClient.
-func (c *ClusterClientset) ExampledashedV2() exampledashedv2.ExampledashedV2ClusterInterface {
+// ExampleDashedV2 retrieves the ExampleDashedV2ClusterClient.
+func (c *ClusterClientset) ExampleDashedV2() exampledashedv2.ExampleDashedV2ClusterInterface {
 	return c.exampledashedV2
 }
 

@@ -36,13 +36,13 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/testing"
 
-	exampledashedv2 "acme.corp/pkg/apisv1/example-dashed/v2"
-	applyconfigurationsexampledashedv2 "acme.corp/pkg/generated/applyconfigurations/example-dashed/v2"
-	exampledashedv2client "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
+	applyconfigurationsexampledashedv2 "acme.corp/pkg/generated/applyconfigurationsv2/exampledashed/v2"
+	exampledashedv2client "acme.corp/pkg/generated/clientsetv2/versioned/typed/exampledashed/v2"
 )
 
-var clusterTestTypesResource = schema.GroupVersionResource{Group: "example-dashed.dev", Version: "v2", Resource: "clustertesttypes"}
-var clusterTestTypesKind = schema.GroupVersionKind{Group: "example-dashed.dev", Version: "v2", Kind: "ClusterTestType"}
+var clusterTestTypesResource = schema.GroupVersionResource{Group: "exampledashed", Version: "v2", Resource: "clustertesttypes"}
+var clusterTestTypesKind = schema.GroupVersionKind{Group: "exampledashed", Version: "v2", Kind: "ClusterTestType"}
 
 type clusterTestTypesClusterClient struct {
 	*kcptesting.Fake

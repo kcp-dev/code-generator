@@ -103,11 +103,11 @@ import (
 	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	"github.com/kcp-dev/logicalcluster/v3"
 
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
-	{{.group.PackageAlias}}listers "{{.listerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}}listers "{{.listerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{if .useUpstreamInterfaces -}}
-	upstream{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
-	upstream{{.group.PackageAlias}}informers "{{.singleClusterInformerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	upstream{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
+	upstream{{.group.PackageAlias}}informers "{{.singleClusterInformerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{end -}}
 
 	clientset "{{.clientsetPackagePath}}"

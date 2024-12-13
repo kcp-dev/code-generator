@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
-	exampledashedv2 "acme.corp/pkg/apis/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
 )
 
 // ClusterTestTypeClusterLister can list ClusterTestTypes across all workspaces, or scope down to a ClusterTestTypeLister for one workspace.

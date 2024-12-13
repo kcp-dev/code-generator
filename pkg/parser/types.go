@@ -49,8 +49,7 @@ func (g Group) PackageName() string {
 }
 
 func (g Group) GroupGoName() string {
-	ggn := strings.ReplaceAll(g.GoName, "-", "")
-	return ggn
+	return g.GoName
 }
 
 func (k *Kind) Plural() string {

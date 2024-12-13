@@ -65,7 +65,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 
-{{range .groups}}	{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.PackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 

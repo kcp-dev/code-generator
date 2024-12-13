@@ -30,8 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	exampledashedv2 "acme.corp/pkg/apisv1/example-dashed/v2"
-	exampledashedv2client "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
+	exampledashedv2client "acme.corp/pkg/generated/clientsetv2/versioned/typed/exampledashed/v2"
 )
 
 // ClusterTestTypesClusterGetter has a method to return a ClusterTestTypeClusterInterface.
@@ -49,7 +49,7 @@ type ClusterTestTypeClusterInterface interface {
 }
 
 type clusterTestTypesClusterInterface struct {
-	clientCache kcpclient.Cache[*exampledashedv2client.ExampledashedV2Client]
+	clientCache kcpclient.Cache[*exampledashedv2client.ExampleDashedV2Client]
 }
 
 // Cluster scopes the client down to a particular cluster.

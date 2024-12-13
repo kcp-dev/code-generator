@@ -34,10 +34,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	upstreaminformers "acme.corp/pkg/generated/informers/externalversions"
-	clientset "acme.corp/pkg/kcpexisting/clients/exampledashed/versioned"
-	exampledashedinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/exampledashed"
-	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
+	upstreaminformers "acme.corp/pkg/generated/informersv2/externalversions"
+	clientset "acme.corp/pkg/kcpexisting/clientsv2/exampledashed/versioned"
+	exampledashedinformers "acme.corp/pkg/kcpexisting/clientsv2/informers/externalversions/exampledashed"
+	"acme.corp/pkg/kcpexisting/clientsv2/informers/externalversions/internalinterfaces"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.

@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -266,7 +265,6 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[parser.PackageVe
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
 func toGroupVersionInfo(group parser.Group, version parser.PackageVersion) parser.Group {
 	// TODO(mjudeikis): This is a hack to get the goName from the group. We should probably store this in the group.
-	spew.Dump(group)
 	goName := strings.Split(group.GoName, ".")[0]
 	caser := cases.Title(language.English)
 	parts := strings.Split(goName, "-")

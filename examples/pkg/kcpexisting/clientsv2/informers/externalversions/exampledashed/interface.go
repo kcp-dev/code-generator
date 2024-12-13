@@ -22,8 +22,8 @@ limitations under the License.
 package exampledashed
 
 import (
-	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/example-dashed/v2"
-	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
+	"acme.corp/pkg/kcpexisting/clientsv2/informers/externalversions/example-dashed/v2"
+	"acme.corp/pkg/kcpexisting/clientsv2/informers/externalversions/internalinterfaces"
 )
 
 type ClusterInterface interface {

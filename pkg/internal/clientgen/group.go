@@ -55,7 +55,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	{{.group.PackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterInterface interface {

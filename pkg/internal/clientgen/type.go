@@ -60,10 +60,10 @@ import (
 	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
-	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 // {{.kind.Plural}}ClusterGetter has a method to return a {{.kind.String}}ClusterInterface.

@@ -27,47 +27,47 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"k8s.io/client-go/rest"
 
-	exampledashedv2 "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v2"
-	kcpexampledashedv2 "acme.corp/pkg/kcpexisting/clients/exampledashed/versioned/typed/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/generated/clientsetv2/versioned/typed/exampledashed/v2"
+	kcpexampledashedv2 "acme.corp/pkg/kcpexisting/clientsv2/exampledashed/versioned/typed/exampledashed/v2"
 )
 
-var _ kcpexampledashedv2.ExampledashedV2ClusterInterface = (*ExampledashedV2ClusterClient)(nil)
+var _ kcpexampledashedv2.ExampleDashedV2ClusterInterface = (*ExampleDashedV2ClusterClient)(nil)
 
-type ExampledashedV2ClusterClient struct {
+type ExampleDashedV2ClusterClient struct {
 	*kcptesting.Fake
 }
 
-func (c *ExampledashedV2ClusterClient) Cluster(clusterPath logicalcluster.Path) exampledashedv2.ExampledashedV2Interface {
+func (c *ExampleDashedV2ClusterClient) Cluster(clusterPath logicalcluster.Path) exampledashedv2.ExampleDashedV2Interface {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return &ExampledashedV2Client{Fake: c.Fake, ClusterPath: clusterPath}
+	return &ExampleDashedV2Client{Fake: c.Fake, ClusterPath: clusterPath}
 }
 
-func (c *ExampledashedV2ClusterClient) TestTypes() kcpexampledashedv2.TestTypeClusterInterface {
+func (c *ExampleDashedV2ClusterClient) TestTypes() kcpexampledashedv2.TestTypeClusterInterface {
 	return &testTypesClusterClient{Fake: c.Fake}
 }
 
-func (c *ExampledashedV2ClusterClient) ClusterTestTypes() kcpexampledashedv2.ClusterTestTypeClusterInterface {
+func (c *ExampleDashedV2ClusterClient) ClusterTestTypes() kcpexampledashedv2.ClusterTestTypeClusterInterface {
 	return &clusterTestTypesClusterClient{Fake: c.Fake}
 }
 
-var _ exampledashedv2.ExampledashedV2Interface = (*ExampledashedV2Client)(nil)
+var _ exampledashedv2.ExampleDashedV2Interface = (*ExampleDashedV2Client)(nil)
 
-type ExampledashedV2Client struct {
+type ExampleDashedV2Client struct {
 	*kcptesting.Fake
 	ClusterPath logicalcluster.Path
 }
 
-func (c *ExampledashedV2Client) RESTClient() rest.Interface {
+func (c *ExampleDashedV2Client) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
 
-func (c *ExampledashedV2Client) TestTypes(namespace string) exampledashedv2.TestTypeInterface {
+func (c *ExampleDashedV2Client) TestTypes(namespace string) exampledashedv2.TestTypeInterface {
 	return &testTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath, Namespace: namespace}
 }
 
-func (c *ExampledashedV2Client) ClusterTestTypes() exampledashedv2.ClusterTestTypeInterface {
+func (c *ExampleDashedV2Client) ClusterTestTypes() exampledashedv2.ClusterTestTypeInterface {
 	return &clusterTestTypesClient{Fake: c.Fake, ClusterPath: c.ClusterPath}
 }

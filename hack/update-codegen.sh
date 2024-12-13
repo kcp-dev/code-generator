@@ -112,23 +112,23 @@ ${CONTROLLER_GEN} object paths=./pkg/apisv2/...
   --versioned-clientset-package acme.corp/pkg/generated/clientset/versioned \
   --listers-package acme.corp/pkg/generated/listersv2 \
   --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --output-dir ./pkg/generated/informerv2s \
+  --output-dir ./pkg/generated/informersv2 \
   --output-pkg acme.corp/pkg/generated/informersv2 \
    acme.corp/pkg/apisv2/exampledashed/v2 
 
     # Generate cluster-aware clients, informers and listers using generated single-cluster code
   ./../bin/code-generator \
-      "client:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clients,apiPackagePath=acme.corp/pkg/apisv1,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-      "lister:name=exampledashed,apiPackagePath=acme.corp/pkg/apis,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-      "informer:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterListerPackagePath=acme.corp/pkg/generated/listers,singleClusterInformerPackagePath=acme.corp/pkg/generated/informers/externalversions,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+      "client:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clientsv2,apiPackagePath=acme.corp/pkg/apisv2,singleClusterClientPackagePath=acme.corp/pkg/generated/clientsetv2/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurationsv2,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+      "lister:name=exampledashed,apiPackagePath=acme.corp/pkg/apisv2,singleClusterListerPackagePath=acme.corp/pkg/generated/listersv2,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+      "informer:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcpexisting/clientsv2,apiPackagePath=acme.corp/pkg/apisv2,singleClusterClientPackagePath=acme.corp/pkg/generated/clientsetv2/versioned,singleClusterListerPackagePath=acme.corp/pkg/generated/listersv2,singleClusterInformerPackagePath=acme.corp/pkg/generated/informersv2/externalversions,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
       "paths=./pkg/apisv2/..."\
       "output:dir=./pkg/kcpexisting/clientsv2"
 
   # Generate cluster-aware clients, informers and listers assuming no single-cluster listers or informers
   ./../bin/code-generator \
-    "client:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apisv2,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurations,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-    "lister:name=exampledashed,apiPackagePath=acme.corp/pkg/apis,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
-    "informer:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcp/clients,apiPackagePath=acme.corp/pkg/apis,singleClusterClientPackagePath=acme.corp/pkg/generated/clientset/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+    "client:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcp/clientsv2,apiPackagePath=acme.corp/pkg/apisv2,singleClusterClientPackagePath=acme.corp/pkg/generated/clientsetv2/versioned,singleClusterApplyConfigurationsPackagePath=acme.corp/pkg/generated/applyconfigurationsv2,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+    "lister:name=exampledashed,apiPackagePath=acme.corp/pkg/apisv2,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
+    "informer:name=exampledashed,standalone=true,outputPackagePath=acme.corp/pkg/kcp/clientsv2,apiPackagePath=acme.corp/pkg/apisv2,singleClusterClientPackagePath=acme.corp/pkg/generated/clientsetv2/versioned,headerFile=./../hack/boilerplate/boilerplate.go.txt" \
     "paths=./pkg/apisv2/..." \
     "output:dir=./pkg/kcp/clientsv2"
 }

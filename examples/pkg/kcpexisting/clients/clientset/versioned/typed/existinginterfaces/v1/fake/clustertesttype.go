@@ -41,8 +41,8 @@ import (
 	existinginterfacesv1client "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 )
 
-var clusterTestTypesResource = schema.GroupVersionResource{Group: "existinginterfaces.acme.corp", Version: "v1", Resource: "clustertesttypes"}
-var clusterTestTypesKind = schema.GroupVersionKind{Group: "existinginterfaces.acme.corp", Version: "v1", Kind: "ClusterTestType"}
+var clusterTestTypesResource = schema.GroupVersionResource{Group: "existinginterfaces", Version: "v1", Resource: "clustertesttypes"}
+var clusterTestTypesKind = schema.GroupVersionKind{Group: "existinginterfaces", Version: "v1", Kind: "ClusterTestType"}
 
 type clusterTestTypesClusterClient struct {
 	*kcptesting.Fake

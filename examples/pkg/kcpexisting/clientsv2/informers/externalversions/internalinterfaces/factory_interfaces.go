@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
-	clientset "acme.corp/pkg/kcpexisting/clients/exampledashed/versioned"
+	clientset "acme.corp/pkg/kcpexisting/clientsv2/exampledashed/versioned"
 )
 
 // NewInformerFunc takes clientset.ClusterInterface and time.Duration to return a ScopeableSharedIndexInformer.

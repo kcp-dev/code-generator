@@ -34,12 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
-	exampledashedv2 "acme.corp/pkg/apis/example-dashed/v2"
-	upstreamexampledashedv2informers "acme.corp/pkg/generated/informers/externalversions/example-dashed/v2"
-	upstreamexampledashedv2listers "acme.corp/pkg/generated/listers/example-dashed/v2"
-	clientset "acme.corp/pkg/kcpexisting/clients/exampledashed/versioned"
-	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
-	exampledashedv2listers "acme.corp/pkg/kcpexisting/clients/listers/example-dashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
+	upstreamexampledashedv2informers "acme.corp/pkg/generated/informersv2/externalversions/exampledashed/v2"
+	upstreamexampledashedv2listers "acme.corp/pkg/generated/listersv2/exampledashed/v2"
+	clientset "acme.corp/pkg/kcpexisting/clientsv2/exampledashed/versioned"
+	"acme.corp/pkg/kcpexisting/clientsv2/informers/externalversions/internalinterfaces"
+	exampledashedv2listers "acme.corp/pkg/kcpexisting/clientsv2/listers/exampledashed/v2"
 )
 
 // ClusterTestTypeClusterInformer provides access to a shared informer and lister for

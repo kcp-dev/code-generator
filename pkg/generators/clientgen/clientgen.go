@@ -21,6 +21,10 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
+	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
@@ -240,12 +244,23 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[parser.PackageVe
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
 func toGroupVersionInfo(group parser.Group, version parser.PackageVersion) parser.Group {
+	goName := strings.Split(group.GoName, ".")[0]
+	caser := cases.Title(language.English)
+	parts := strings.Split(goName, "-")
+	for i, part := range parts {
+		parts[i] = caser.String(part)
+	}
+	goName = strings.Join(parts, "")
+
+	// HACK(mjudeikis): Somehow fake client generation breaks the pattern :/
+	group.Group = types.Group(strings.ToLower(goName))
+
 	return parser.Group{
 		Group:   group.Group,
 		Version: parser.Version(namer.IC(version.Version.String())),
 		// HACK(mjudeikis): This replace is not quite here, but as we collect groups dynamically, we can't provide global marker for it.
 		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
-		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
+		GoName:               goName,
 		LowerCaseGroupGoName: strings.ReplaceAll(namer.IL(group.GoName), "-", ""),
 	}
 }

@@ -56,9 +56,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{if .useUpstreamInterfaces -}}
-	{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{end -}}
 )
 
