@@ -19,7 +19,7 @@ limitations under the License.
 package v2
 
 import (
-	context "context"
+	"context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,17 +27,17 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 
-	apisv2exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
+	exampledashedv2 "acme.corp/pkg/apisv2/exampledashed/v2"
 	versioned "acme.corp/pkg/generated/clientset/versioned"
 	internalinterfaces "acme.corp/pkg/generated/informers/externalversions/internalinterfaces"
-	exampledashedv2 "acme.corp/pkg/generated/listers/exampledashed/v2"
+	v2 "acme.corp/pkg/generated/listers/exampledashed/v2"
 )
 
 // TestTypeInformer provides access to a shared informer and lister for
 // TestTypes.
 type TestTypeInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() exampledashedv2.TestTypeLister
+	Lister() v2.TestTypeLister
 }
 
 type testTypeInformer struct {
@@ -72,7 +72,7 @@ func NewFilteredTestTypeInformer(client versioned.Interface, namespace string, r
 				return client.ExampleDashedV2().TestTypes(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&apisv2exampledashedv2.TestType{},
+		&exampledashedv2.TestType{},
 		resyncPeriod,
 		indexers,
 	)
@@ -83,9 +83,9 @@ func (f *testTypeInformer) defaultInformer(client versioned.Interface, resyncPer
 }
 
 func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisv2exampledashedv2.TestType{}, f.defaultInformer)
+	return f.factory.InformerFor(&exampledashedv2.TestType{}, f.defaultInformer)
 }
 
-func (f *testTypeInformer) Lister() exampledashedv2.TestTypeLister {
-	return exampledashedv2.NewTestTypeLister(f.Informer().GetIndexer())
+func (f *testTypeInformer) Lister() v2.TestTypeLister {
+	return v2.NewTestTypeLister(f.Informer().GetIndexer())
 }
