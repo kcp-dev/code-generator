@@ -19,11 +19,12 @@ limitations under the License.
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 
+	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	v1 "acme.corp/pkg/apis/example/v1"
 	v1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
@@ -88,6 +89,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example3().V1().ClusterTestTypes().Informer()}, nil
 	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example3().V1().TestTypes().Informer()}, nil
+
+		// Group=exampledashed.some.corp, Version=v1
+	case exampledashedv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Exampledashed().V1().ClusterTestTypes().Informer()}, nil
+	case exampledashedv1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Exampledashed().V1().TestTypes().Informer()}, nil
 
 		// Group=existinginterfaces.acme.corp, Version=v1
 	case existinginterfacesv1.SchemeGroupVersion.WithResource("clustertesttypes"):

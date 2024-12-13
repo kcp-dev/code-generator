@@ -21,8 +21,6 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 )
 
@@ -31,7 +29,7 @@ type GroupInterface struct {
 	Group parser.Group
 
 	// Versions are the versions of this group for which we're generating interfaces
-	Versions []types.Version
+	Versions []parser.Version
 
 	// PackagePath is the package under which these informers will be exposed.
 	// e.g. "github.com/kcp-dev/client-go/clients/informers"
@@ -67,7 +65,7 @@ var groupInterface = `
 package {{.packageName}}
 
 import (
-{{range .versions}}	"{{$.packagePath}}/{{$.group.Group.PackageName}}/{{.PackageName}}"
+{{range .versions}}	"{{$.packagePath}}/{{$.group.PackageName}}/{{.PackageName}}"
 {{end -}}
 
 	"{{.packagePath}}/internalinterfaces"

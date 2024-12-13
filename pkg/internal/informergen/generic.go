@@ -78,7 +78,7 @@ import (
 	upstreaminformers "{{.singleClusterInformerPackagePath}}"
 	{{end -}}
 
-{{range .groups}}	{{.GoPackageAlias}} "{{$.apiPackagePath}}/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.GoPackageAlias}} "{{$.apiPackagePath}}/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 
@@ -138,7 +138,7 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericClusterInformer, error) {
 	switch resource {
 {{range $group := .groups}}	// Group={{.Group.NonEmpty}}, Version={{.Version}}
-{{range $kind := index (index $.groupVersionKinds .Group) .Version}}	case {{$group.PackageAlias}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
+{{range $kind := index (index $.groupVersionKinds .Group) .Version}}	case {{$group.GoPackageAlias}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.{{$group.GroupGoName}}().{{$group.Version}}().{{$kind.Plural}}().Informer()}, nil
 {{end -}}
 {{end -}}
@@ -153,7 +153,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error) {
 	switch resource {
 {{range $group := .groups}}	// Group={{.Group.NonEmpty}}, Version={{.Version}}
-{{range $kind := index (index $.groupVersionKinds .Group) .Version}}	case {{$group.PackageAlias}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
+{{range $kind := index (index $.groupVersionKinds .Group) .Version}}	case {{$group.GoPackageAlias}}.SchemeGroupVersion.WithResource("{{$kind.Plural|toLower}}"):
 		informer := f.{{$group.GroupGoName}}().{{$group.Version}}().{{$kind.Plural}}().Informer()
 		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 {{end -}}

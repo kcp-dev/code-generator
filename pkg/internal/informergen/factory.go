@@ -92,7 +92,7 @@ import (
 	upstreaminformers "{{.singleClusterInformerPackagePath}}"
 	{{end -}}
 
-{{range .groups}}	{{.PackageName}}informers "{{$.packagePath}}/{{.Group.PackageName}}"
+{{range .groups}}	{{.PackageName}}informers "{{$.packagePath}}/{{.PackageName}}"
 {{end -}}
 
 	"{{.packagePath}}/internalinterfaces"
@@ -335,7 +335,7 @@ type SharedInformerFactory interface {
 
 {{range .groups}}
 func (f *sharedInformerFactory) {{.GroupGoName}}() {{.PackageName}}informers.ClusterInterface {
-  return {{.Group.PackageName}}informers.New(f, f.tweakListOptions)
+  return {{.PackageName}}informers.New(f, f.tweakListOptions)
 }
 {{end}}
 
@@ -492,7 +492,7 @@ type SharedScopedInformerFactory interface {
 
 {{range .groups}}
 func (f *sharedScopedInformerFactory) {{.GroupGoName}}() {{.PackageName}}informers.Interface {
-  return {{.Group.PackageName}}informers.NewScoped(f, f.namespace, f.tweakListOptions)
+  return {{.PackageName}}informers.NewScoped(f, f.namespace, f.tweakListOptions)
 }
 {{end}}
 {{end}}

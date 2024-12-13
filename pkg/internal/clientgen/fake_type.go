@@ -147,7 +147,7 @@ import (
 {{- if .hasMethods }}
 	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
 {{- if "watch" | .kind.SupportedVerbs.Has }}
@@ -167,13 +167,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 {{end}}
 {{- if and .generateApplyVerbs ("apply" | .kind.SupportedVerbs.Has) }}
-	applyconfigurations{{.group.PackageAlias}} "{{.singleClusterApplyConfigurationsPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	applyconfigurations{{.group.GoPackageAlias}} "{{.singleClusterApplyConfigurationsPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
 
 {{- if .kind.IsNamespaced}}
-	kcp{{.group.PackageAlias}} "{{.packagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	kcp{{.group.GoPackageAlias}} "{{.packagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 {{end}}
-	{{.group.PackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}}client "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 var {{.kind.Plural | lowerFirst}}Resource = schema.GroupVersionResource{Group: "{{.groupName}}", Version: "{{.group.Version.String | toLower}}", Resource: "{{.kind.Plural | toLower}}"}
@@ -184,7 +184,7 @@ type {{.kind.Plural | lowerFirst}}ClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *{{.kind.Plural | lowerFirst}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{if .kind.IsNamespaced}}kcp{{.group.PackageAlias}}.{{.kind.Plural}}Namespacer{{else}}{{.group.PackageAlias}}client.{{.kind.String}}Interface{{end}} {
+func (c *{{.kind.Plural | lowerFirst}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{if .kind.IsNamespaced}}kcp{{.group.GoPackageAlias}}.{{.kind.Plural}}Namespacer{{else}}{{.group.GoPackageAlias}}client.{{.kind.String}}Interface{{end}} {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -197,8 +197,8 @@ func (c *{{.kind.Plural | lowerFirst}}ClusterClient) Cluster(clusterPath logical
 
 {{ if .kind.SupportsListWatch }}
 // List takes label and field selectors, and returns the list of {{.kind.Plural}} that match those selectors across all clusters.
-func (c *{{.kind.Plural | lowerFirst}}ClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*{{.group.PackageAlias}}.{{.kind.String}}List, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}ListAction({{.kind.Plural | lowerFirst}}Resource, {{.kind.Plural | lowerFirst}}Kind, logicalcluster.Wildcard, {{if .kind.IsNamespaced}}metav1.NamespaceAll, {{end}}opts), &{{.group.PackageAlias}}.{{.kind.String}}List{})
+func (c *{{.kind.Plural | lowerFirst}}ClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}List, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}ListAction({{.kind.Plural | lowerFirst}}Resource, {{.kind.Plural | lowerFirst}}Kind, logicalcluster.Wildcard, {{if .kind.IsNamespaced}}metav1.NamespaceAll, {{end}}opts), &{{.group.GoPackageAlias}}.{{.kind.String}}List{})
 	if obj == nil {
 		return nil, err
 	}
@@ -207,8 +207,8 @@ func (c *{{.kind.Plural | lowerFirst}}ClusterClient) List(ctx context.Context, o
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &{{.group.PackageAlias}}.{{.kind.String}}List{ListMeta: obj.(*{{.group.PackageAlias}}.{{.kind.String}}List).ListMeta}
-	for _, item := range obj.(*{{.group.PackageAlias}}.{{.kind.String}}List).Items {
+	list := &{{.group.GoPackageAlias}}.{{.kind.String}}List{ListMeta: obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}List).ListMeta}
+	for _, item := range obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}List).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -228,7 +228,7 @@ type {{.kind.Plural | lowerFirst}}Namespacer struct {
 	ClusterPath logicalcluster.Path
 }
 
-func (n *{{.kind.Plural | lowerFirst}}Namespacer) Namespace(namespace string) {{.group.PackageAlias}}client.{{.kind.String}}Interface {
+func (n *{{.kind.Plural | lowerFirst}}Namespacer) Namespace(namespace string) {{.group.GoPackageAlias}}client.{{.kind.String}}Interface {
 	return &{{.kind.Plural | lowerFirst}}Client{Fake: n.Fake, ClusterPath: n.ClusterPath, Namespace: namespace}
 }
 {{ end -}}
@@ -240,38 +240,38 @@ type {{.kind.Plural | lowerFirst}}Client struct {
 }
 
 {{if "create" | .kind.SupportedVerbs.Has}}
-func (c *{{.kind.Plural | lowerFirst}}Client) Create(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.PackageAlias}}.{{.kind.String}}, opts metav1.CreateOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}CreateAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.PackageAlias}}.{{.kind.String}}{})
+func (c *{{.kind.Plural | lowerFirst}}Client) Create(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.GoPackageAlias}}.{{.kind.String}}, opts metav1.CreateOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}CreateAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if "update" | .kind.SupportedVerbs.Has}}
-func (c *{{.kind.Plural | lowerFirst}}Client) Update(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.PackageAlias}}.{{.kind.String}}, opts metav1.UpdateOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}UpdateAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.PackageAlias}}.{{.kind.String}}{})
+func (c *{{.kind.Plural | lowerFirst}}Client) Update(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.GoPackageAlias}}.{{.kind.String}}, opts metav1.UpdateOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}UpdateAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if "updateStatus" | .kind.SupportedVerbs.Has}}
-func (c *{{.kind.Plural | lowerFirst}}Client) UpdateStatus(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.PackageAlias}}.{{.kind.String}}, opts metav1.UpdateOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}UpdateSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, "status", {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.PackageAlias}}.{{.kind.String}}{})
+func (c *{{.kind.Plural | lowerFirst}}Client) UpdateStatus(ctx context.Context, {{.kind.String | lowerFirst}} *{{.group.GoPackageAlias}}.{{.kind.String}}, opts metav1.UpdateOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}UpdateSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, "status", {{if .kind.IsNamespaced}}c.Namespace, {{end}}{{.kind.String | lowerFirst}}), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if "delete" | .kind.SupportedVerbs.Has}}
 func (c *{{.kind.Plural | lowerFirst}}Client) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}DeleteActionWithOptions({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name, opts), &{{.group.PackageAlias}}.{{.kind.String}}{})
+	_, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}DeleteActionWithOptions({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name, opts), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	return err
 }
 {{end -}}
@@ -280,25 +280,25 @@ func (c *{{.kind.Plural | lowerFirst}}Client) Delete(ctx context.Context, name s
 func (c *{{.kind.Plural | lowerFirst}}Client) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}DeleteCollectionAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}listOpts)
 
-	_, err := c.Fake.Invokes(action, &{{.group.PackageAlias}}.{{.kind.String}}List{})
+	_, err := c.Fake.Invokes(action, &{{.group.GoPackageAlias}}.{{.kind.String}}List{})
 	return err
 }
 {{end -}}
 
 {{if "get" | .kind.SupportedVerbs.Has}}
-func (c *{{.kind.Plural | lowerFirst}}Client) Get(ctx context.Context, name string, options metav1.GetOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}GetAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name), &{{.group.PackageAlias}}.{{.kind.String}}{})
+func (c *{{.kind.Plural | lowerFirst}}Client) Get(ctx context.Context, name string, options metav1.GetOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}GetAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if "list" | .kind.SupportedVerbs.Has}}
 // List takes label and field selectors, and returns the list of {{.kind.Plural}} that match those selectors.
-func (c *{{.kind.Plural | lowerFirst}}Client) List(ctx context.Context, opts metav1.ListOptions) (*{{.group.PackageAlias}}.{{.kind.String}}List, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}ListAction({{.kind.Plural | lowerFirst}}Resource, {{.kind.Plural | lowerFirst}}Kind, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}opts), &{{.group.PackageAlias}}.{{.kind.String}}List{})
+func (c *{{.kind.Plural | lowerFirst}}Client) List(ctx context.Context, opts metav1.ListOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}List, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}ListAction({{.kind.Plural | lowerFirst}}Resource, {{.kind.Plural | lowerFirst}}Kind, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}opts), &{{.group.GoPackageAlias}}.{{.kind.String}}List{})
 	if obj == nil {
 		return nil, err
 	}
@@ -307,8 +307,8 @@ func (c *{{.kind.Plural | lowerFirst}}Client) List(ctx context.Context, opts met
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &{{.group.PackageAlias}}.{{.kind.String}}List{ListMeta: obj.(*{{.group.PackageAlias}}.{{.kind.String}}List).ListMeta}
-	for _, item := range obj.(*{{.group.PackageAlias}}.{{.kind.String}}List).Items {
+	list := &{{.group.GoPackageAlias}}.{{.kind.String}}List{ListMeta: obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}List).ListMeta}
+	for _, item := range obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}List).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -324,17 +324,17 @@ func (c *{{.kind.Plural | lowerFirst}}Client) Watch(ctx context.Context, opts me
 {{end -}}
 
 {{if "patch" | .kind.SupportedVerbs.Has}}
-func (c *{{.kind.Plural | lowerFirst}}Client) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name, pt, data, subresources...), &{{.group.PackageAlias}}.{{.kind.String}}{})
+func (c *{{.kind.Plural | lowerFirst}}Client) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}name, pt, data, subresources...), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if and .generateApplyVerbs ("apply" | .kind.SupportedVerbs.Has) }}
-func (c *{{.kind.Plural | lowerFirst}}Client) Apply(ctx context.Context, applyConfiguration *applyconfigurations{{.group.PackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (c *{{.kind.Plural | lowerFirst}}Client) Apply(ctx context.Context, applyConfiguration *applyconfigurations{{.group.GoPackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
@@ -346,16 +346,16 @@ func (c *{{.kind.Plural | lowerFirst}}Client) Apply(ctx context.Context, applyCo
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}*name, types.ApplyPatchType, data), &{{.group.PackageAlias}}.{{.kind.String}}{})
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}*name, types.ApplyPatchType, data), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{if and .generateApplyVerbs ("applyStatus" | .kind.SupportedVerbs.Has) }}
-func (c *{{.kind.Plural | lowerFirst}}Client) ApplyStatus(ctx context.Context, applyConfiguration *applyconfigurations{{.group.PackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (c *{{.kind.Plural | lowerFirst}}Client) ApplyStatus(ctx context.Context, applyConfiguration *applyconfigurations{{.group.GoPackageAlias}}.{{.kind.String}}ApplyConfiguration, opts metav1.ApplyOptions) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}
@@ -367,17 +367,17 @@ func (c *{{.kind.Plural | lowerFirst}}Client) ApplyStatus(ctx context.Context, a
 	if name == nil {
 		return nil, fmt.Errorf("applyConfiguration.Name must be provided to Apply")
 	}
-	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}*name, types.ApplyPatchType, data, "status"), &{{.group.PackageAlias}}.{{.kind.String}}{})
+	obj, err := c.Fake.Invokes(kcptesting.New{{if not .kind.IsNamespaced}}Root{{end}}PatchSubresourceAction({{.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{if .kind.IsNamespaced}}c.Namespace, {{end}}*name, types.ApplyPatchType, data, "status"), &{{.group.GoPackageAlias}}.{{.kind.String}}{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), err
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), err
 }
 {{end -}}
 
 {{range .kind.Extensions}}
 {{if eq .Verb "create"}}
-func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, {{$.kind.String | lowerFirst}}Name string, {{if .InputType}}{{.InputType | lowerFirst}} *{{index $.extraImports .InputPath}}.{{.InputType}}{{else}}{{$.kind.String | lowerFirst}} *{{.group.PackageAlias}}.{{$.kind.String}}{{end}}, opts metav1.CreateOptions) (*{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}, error) {
+func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, {{$.kind.String | lowerFirst}}Name string, {{if .InputType}}{{.InputType | lowerFirst}} *{{index $.extraImports .InputPath}}.{{.InputType}}{{else}}{{$.kind.String | lowerFirst}} *{{.group.GoPackageAlias}}.{{$.kind.String}}{{end}}, opts metav1.CreateOptions) (*{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}, error) {
 	obj, err := c.Fake.Invokes(kcptesting.New{{if not $.kind.IsNamespaced}}Root{{end}}CreateSubresourceAction({{$.kind.Plural | lowerFirst}}Resource, c.ClusterPath, {{$.kind.String | lowerFirst}}Name, "{{.Subresource}}", {{if $.kind.IsNamespaced}}c.Namespace, {{end}}{{if .InputType}}{{.InputType | lowerFirst}}{{else}}{{$.kind.String | lowerFirst}}{{end}}), &{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}{})
 	if obj == nil {
 		return nil, err
@@ -439,7 +439,7 @@ func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, 
 {{end -}}
 
 {{if and $.generateApplyVerbs (eq .Verb "apply") }}
-func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, {{$.kind.String | lowerFirst}}Name string, applyConfiguration {{if .InputType}}*{{index $.extraImports .InputPath}}.{{.InputType}}{{else}}*applyconfigurations{{$.group.PackageAlias}}.{{$.kind.String}}ApplyConfiguration,{{end}}, opts metav1.ApplyOptions) (*{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}, error) {
+func (c *{{$.kind.Plural | lowerFirst}}Client) {{.Method}}(ctx context.Context, {{$.kind.String | lowerFirst}}Name string, applyConfiguration {{if .InputType}}*{{index $.extraImports .InputPath}}.{{.InputType}}{{else}}*applyconfigurations{{$.group.GoPackageAlias}}.{{$.kind.String}}ApplyConfiguration,{{end}}, opts metav1.ApplyOptions) (*{{index $.extraImports .ResultPath}}.{{if .ResultType}}{{.ResultType}}{{else}}{{$.kind.String}}{{end}}, error) {
 	if applyConfiguration == nil {
 		return nil, fmt.Errorf("applyConfiguration provided to Apply must not be nil")
 	}

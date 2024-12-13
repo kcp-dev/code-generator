@@ -36,15 +36,15 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/testing"
 
-	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	examplev1 "acme.corp/pkg/apis/example/v1"
-	applyconfigurationsexampledashedv1 "acme.corp/pkg/generated/applyconfigurations/example-dashed/v1"
-	exampledashedv1client "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v1"
-	kcpexampledashedv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example-dashed/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
+	applyconfigurationsexampledashedv1 "acme.corp/pkg/generated/applyconfigurations/exampledashed/v1"
+	exampledashedv1client "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1"
+	kcpexampledashedv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/exampledashed/v1"
 )
 
-var testTypesResource = schema.GroupVersionResource{Group: "example-dashed.some.corp", Version: "v1", Resource: "testtypes"}
-var testTypesKind = schema.GroupVersionKind{Group: "example-dashed.some.corp", Version: "v1", Kind: "TestType"}
+var testTypesResource = schema.GroupVersionResource{Group: "exampledashed.some.corp", Version: "v1", Resource: "testtypes"}
+var testTypesKind = schema.GroupVersionKind{Group: "exampledashed.some.corp", Version: "v1", Kind: "TestType"}
 
 type testTypesClusterClient struct {
 	*kcptesting.Fake

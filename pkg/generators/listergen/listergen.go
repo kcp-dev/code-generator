@@ -86,7 +86,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		for version, kinds := range versions {
 			groupInfo := toGroupVersionInfo(group, version)
 			for _, kind := range kinds {
-				listerDir := filepath.Join("listers", group.PackagePath(), version.PackageName())
+				listerDir := filepath.Join("listers", group.PackageName(), version.PackageName())
 				outputFile := filepath.Join(listerDir, strings.ToLower(kind.String())+".go")
 				logger := klog.Background().WithValues(
 					"group", group.String(),
@@ -130,8 +130,8 @@ func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser
 	return parser.Group{
 		Group:                group.Group,
 		Version:              parser.Version(namer.IC(version.Version.String())),
-		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
-		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
-		LowerCaseGroupGoName: strings.ReplaceAll(namer.IL(group.GoName), "-", ""),
+		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
+		GoName:               group.GoName,
+		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

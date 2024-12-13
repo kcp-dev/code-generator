@@ -37,8 +37,8 @@ import (
 	upstreaminformers "acme.corp/pkg/generated/informers/externalversions"
 	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
 	exampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example"
-	exampledashedinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example-dashed"
 	example3informers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example3"
+	exampledashedinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/exampledashed"
 	existinginterfacesinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/existinginterfaces"
 	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
 	secondexampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/secondexample"
@@ -273,8 +273,8 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
 	Example() exampleinformers.ClusterInterface
-	Exampledashed() exampledashedinformers.ClusterInterface
 	Example3() example3informers.ClusterInterface
+	Exampledashed() exampledashedinformers.ClusterInterface
 	Existinginterfaces() existinginterfacesinformers.ClusterInterface
 	Secondexample() secondexampleinformers.ClusterInterface
 }
@@ -283,12 +283,12 @@ func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
 	return exampleinformers.New(f, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) Exampledashed() exampledashedinformers.ClusterInterface {
-	return example - dashedinformers.New(f, f.tweakListOptions)
-}
-
 func (f *sharedInformerFactory) Example3() example3informers.ClusterInterface {
 	return example3informers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Exampledashed() exampledashedinformers.ClusterInterface {
+	return exampledashedinformers.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Existinginterfaces() existinginterfacesinformers.ClusterInterface {

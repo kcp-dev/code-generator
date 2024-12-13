@@ -19,6 +19,9 @@ package parser
 import (
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 
@@ -53,11 +56,20 @@ func (g Group) GroupGoName() string {
 	if g.GoName == "" {
 		panic("GroupGoName is empty. Programmer error.")
 	}
-	return strings.ReplaceAll(g.GoName, "-", "") // Code base is litterate with either GoName or GroupGoName. We should unify this.
+	caser := cases.Title(language.English)
+	parts := strings.Split(g.GoName, "-")
+	for i, part := range parts {
+		parts[i] = caser.String(part)
+	}
+	return strings.Join(parts, "")
 }
 
-func (g Group) PackagePath() string {
-	return strings.ToLower(g.Group.PackageName())
+func (g Group) GroupGoNameLower() string {
+	if g.LowerCaseGroupGoName == "" {
+		panic("LowerCaseGroupGoName is empty. Programmer error.")
+	}
+	result := strings.ToLower(g.LowerCaseGroupGoName)
+	return strings.ReplaceAll(result, "-", "")
 }
 
 func (g Group) PackageName() string {
@@ -94,7 +106,8 @@ func (v Version) NonEmpty() string {
 }
 
 func (v Version) PackageName() string {
-	return strings.ToLower(v.NonEmpty())
+	_v := strings.ReplaceAll(v.NonEmpty(), "-", "")
+	return strings.ToLower(_v)
 }
 
 // TODO(skuznets):

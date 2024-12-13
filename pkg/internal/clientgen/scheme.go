@@ -50,7 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-{{range .groups}}	{{.GoPackageAlias}} "{{$.apiPackagePath}}/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.GoPackageAlias}} "{{$.apiPackagePath}}/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 

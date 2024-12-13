@@ -178,15 +178,15 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 	}
 
 	for group, versions := range groupVersionKinds {
-		groupDir := filepath.Join(informersDir, group.PackagePath())
+		groupDir := filepath.Join(informersDir, group.PackageName())
 		outputFile := filepath.Join(groupDir, "interface.go")
 		logger := logger.WithValues(
 			"group", group.String(),
 		)
 
-		var onlyVersions []types.Version
+		var onlyVersions []parser.Version
 		for version := range versions {
-			onlyVersions = append(onlyVersions, types.Version(namer.IC(version.Version.String())))
+			onlyVersions = append(onlyVersions, parser.Version(namer.IC(version.Version.String())))
 		}
 		sort.Slice(onlyVersions, func(i, j int) bool {
 			return onlyVersions[i].PackageName() < onlyVersions[j].PackageName()
@@ -263,9 +263,9 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
 	return parser.Group{
 		Group:                group.Group,
-		PackageAlias:         strings.ReplaceAll(strings.ToLower(group.GoName+version.Version.NonEmpty()), "-", ""),
+		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
 		Version:              parser.Version(namer.IC(version.Version.String())),
-		GoName:               strings.ReplaceAll(group.GoName, "-", ""),
-		LowerCaseGroupGoName: strings.ReplaceAll(namer.IL(group.GoName), "-", ""),
+		GoName:               group.GoName,
+		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

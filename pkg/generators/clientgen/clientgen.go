@@ -154,7 +154,7 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 
 	for group, versions := range groupVersionKinds {
 		for version, kinds := range versions {
-			groupDir := filepath.Join(clientsetDir, "typed", group.PackagePath(), version.PackageName())
+			groupDir := filepath.Join(clientsetDir, "typed", group.PackageName(), version.PackageName())
 			outputFile := filepath.Join(groupDir, group.PackageName()+"_client.go")
 			logger := logger.WithValues(
 				"group", group.String(),
@@ -241,12 +241,11 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
 func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
-	goName := strings.ReplaceAll(group.GoName, "-", "")
 	return parser.Group{
 		Group:                group.Group,
 		Version:              parser.Version(namer.IC(version.Version.String())),
-		PackageAlias:         strings.ToLower(goName + version.Version.NonEmpty()),
-		GoName:               goName,
-		LowerCaseGroupGoName: namer.IL(goName),
+		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
+		GoName:               group.GoName,
+		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

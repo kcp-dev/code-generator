@@ -56,9 +56,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{if .useUpstreamInterfaces -}}
-	{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{end -}}
 )
 
@@ -67,12 +67,12 @@ import (
 type {{.kind.String}}ClusterLister interface {
 	// List lists all {{.kind.Plural}} in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
+	List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error)
 	// Cluster returns a lister that can list and get {{.kind.Plural}} in one workspace.
 {{if not .useUpstreamInterfaces -}}
 	Cluster(clusterName logicalcluster.Name) {{.kind.String}}Lister
 {{else -}}
-	Cluster(clusterName logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister
+	Cluster(clusterName logicalcluster.Name){{.group.GoPackageAlias}}listers.{{.kind.String}}Lister
 {{end -}}
 	{{.kind.String}}ClusterListerExpansion
 }
@@ -94,9 +94,9 @@ func New{{.kind.String}}ClusterLister(indexer cache.Indexer) *{{.kind.String | l
 }
 
 // List lists all {{.kind.Plural}} in the indexer across all workspaces.
-func (s *{{.kind.String | lowerFirst}}ClusterLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+func (s *{{.kind.String | lowerFirst}}ClusterLister) List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*{{.group.PackageAlias}}.{{.kind.String}}))
+		ret = append(ret, m.(*{{.group.GoPackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
 }
@@ -105,7 +105,7 @@ func (s *{{.kind.String | lowerFirst}}ClusterLister) List(selector labels.Select
 {{if not .useUpstreamInterfaces -}}
 func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logicalcluster.Name) {{.kind.String}}Lister {
 {{else -}}
-func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logicalcluster.Name){{.group.PackageAlias}}listers.{{.kind.String}}Lister {
+func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logicalcluster.Name){{.group.GoPackageAlias}}listers.{{.kind.String}}Lister {
 {{end -}}
 	return &{{.kind.String | lowerFirst}}Lister{indexer: s.indexer, clusterName: clusterName}
 }
@@ -120,11 +120,11 @@ func (s *{{.kind.String | lowerFirst}}ClusterLister) Cluster(clusterName logical
 type {{.kind.String}}Lister interface {
 	// List lists all {{.kind.Plural}} in the workspace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
+	List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error)
 {{ if  not .kind.IsNamespaced -}}
 	// Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error)
+	Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error)
 {{else -}}
 	// {{.kind.Plural}} returns a lister that can list and get {{.kind.Plural}} in one workspace and namespace.
 	{{.kind.Plural}}(namespace string) {{.kind.String}}NamespaceLister
@@ -136,7 +136,7 @@ type {{.kind.String}}Lister interface {
 {{if not .useUpstreamInterfaces -}}
 // {{.kind.String | lowerFirst}}Lister can list all {{.kind.Plural}} inside a workspace{{ if .kind.IsNamespaced }} or scope down to a {{.kind.String}}Lister for one namespace{{end}}.
 {{else -}}
-// {{.kind.String | lowerFirst}}Lister implements the {{.group.PackageAlias}}listers.{{.kind.String}}Lister interface.
+// {{.kind.String | lowerFirst}}Lister implements the {{.group.GoPackageAlias}}listers.{{.kind.String}}Lister interface.
 {{end -}}
 type {{.kind.String | lowerFirst}}Lister struct {
 	indexer cache.Indexer
@@ -144,32 +144,32 @@ type {{.kind.String | lowerFirst}}Lister struct {
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a workspace.
-func (s *{{.kind.String | lowerFirst}}Lister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+func (s *{{.kind.String | lowerFirst}}Lister) List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error) {
 	err = kcpcache.ListAllByCluster(s.indexer, s.clusterName, selector, func(i interface{}) {
-		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+		ret = append(ret, i.(*{{.group.GoPackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
 }
 
 {{ if  not .kind.IsNamespaced -}}
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
-func (s *{{.kind.String | lowerFirst}}Lister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (s *{{.kind.String | lowerFirst}}Lister) Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), "", name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
+		return nil, errors.NewNotFound({{.group.GoPackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), nil
 }
 {{ else -}}
 // {{.kind.Plural}} returns an object that can list and get {{.kind.Plural}} in one namespace.
 {{if not .useUpstreamInterfaces -}}
 func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string) {{.kind.String}}NamespaceLister {
 {{else -}}
-func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string) {{.group.PackageAlias}}listers.{{.kind.String}}NamespaceLister {
+func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string) {{.group.GoPackageAlias}}listers.{{.kind.String}}NamespaceLister {
 {{end -}}
 	return &{{.kind.String | lowerFirst}}NamespaceLister{indexer: s.indexer, clusterName: s.clusterName, namespace: namespace}
 }
@@ -180,10 +180,10 @@ func (s *{{.kind.String | lowerFirst}}Lister) {{.kind.Plural}}(namespace string)
 type {{.kind.String}}NamespaceLister interface {
 	// List lists all {{.kind.Plural}} in the workspace and namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error)
+	List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error)
 	// Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error)
+	Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error)
 	{{.kind.String}}NamespaceListerExpansion
 }
 {{end -}}
@@ -193,7 +193,7 @@ type {{.kind.String}}NamespaceLister interface {
 // All objects returned here must be treated as read-only.
 {{ end -}}
 {{ if .useUpstreamInterfaces -}}
-// {{.kind.String | lowerFirst}}NamespaceLister implements the {{.group.PackageAlias}}listers.{{.kind.String}}NamespaceLister interface.
+// {{.kind.String | lowerFirst}}NamespaceLister implements the {{.group.GoPackageAlias}}listers.{{.kind.String}}NamespaceLister interface.
 {{ end -}}
 type {{.kind.String | lowerFirst}}NamespaceLister struct {
 	indexer   cache.Indexer
@@ -202,24 +202,24 @@ type {{.kind.String | lowerFirst}}NamespaceLister struct {
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a given workspace and namespace.
-func (s *{{.kind.String | lowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+func (s *{{.kind.String | lowerFirst}}NamespaceLister) List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error) {
 	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.clusterName, s.namespace, selector, func(i interface{}) {
-		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+		ret = append(ret, i.(*{{.group.GoPackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
 }
 
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
-func (s *{{.kind.String | lowerFirst}}NamespaceLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (s *{{.kind.String | lowerFirst}}NamespaceLister) Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	key := kcpcache.ToClusterAwareKey(s.clusterName.String(), s.namespace, name)
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
+		return nil, errors.NewNotFound({{.group.GoPackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), nil
 }
 {{ end -}}
 
@@ -241,25 +241,25 @@ type {{.kind.String | lowerFirst}}ScopedLister struct {
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a workspace.
-func (s *{{.kind.String | lowerFirst}}ScopedLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+func (s *{{.kind.String | lowerFirst}}ScopedLister) List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error) {
 	err = cache.ListAll(s.indexer, selector, func(i interface{}) {
-		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+		ret = append(ret, i.(*{{.group.GoPackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
 }
 
 {{ if  not .kind.IsNamespaced -}}
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace and name.
-func (s *{{.kind.String | lowerFirst}}ScopedLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (s *{{.kind.String | lowerFirst}}ScopedLister) Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	key := name
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
+		return nil, errors.NewNotFound({{.group.GoPackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), nil
 }
 {{ else -}}
 // {{.kind.Plural}} returns an object that can list and get {{.kind.Plural}} in one namespace.
@@ -274,24 +274,24 @@ type {{.kind.String | lowerFirst}}ScopedNamespaceLister struct {
 }
 
 // List lists all {{.kind.Plural}} in the indexer for a given workspace and namespace.
-func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) List(selector labels.Selector) (ret []*{{.group.PackageAlias}}.{{.kind.String}}, err error) {
+func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) List(selector labels.Selector) (ret []*{{.group.GoPackageAlias}}.{{.kind.String}}, err error) {
 	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(i interface{}) {
-		ret = append(ret, i.(*{{.group.PackageAlias}}.{{.kind.String}}))
+		ret = append(ret, i.(*{{.group.GoPackageAlias}}.{{.kind.String}}))
 	})
 	return ret, err
 }
 
 // Get retrieves the {{.kind.String}} from the indexer for a given workspace, namespace and name.
-func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) Get(name string) (*{{.group.PackageAlias}}.{{.kind.String}}, error) {
+func (s *{{.kind.String | lowerFirst}}ScopedNamespaceLister) Get(name string) (*{{.group.GoPackageAlias}}.{{.kind.String}}, error) {
 	key := s.namespace + "/" + name
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound({{.group.PackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
+		return nil, errors.NewNotFound({{.group.GoPackageAlias}}.Resource("{{.kind.Plural | toLower}}"), name)
 	}
-	return obj.(*{{.group.PackageAlias}}.{{.kind.String}}), nil
+	return obj.(*{{.group.GoPackageAlias}}.{{.kind.String}}), nil
 }
 {{ end -}}
 {{end -}}

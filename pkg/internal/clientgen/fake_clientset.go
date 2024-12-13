@@ -64,11 +64,11 @@ import (
 	clientscheme "{{.singleClusterClientPackagePath}}/scheme"
 
 	kcpclient "{{.packagePath}}"
-{{range .groups}}	{{.PackageAlias}} "{{$.singleClusterClientPackagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.GoPackageAlias}} "{{$.singleClusterClientPackagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
-{{range .groups}}	kcp{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	kcp{{.GoPackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
-{{range .groups}}	fake{{.PackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}/fake"
+{{range .groups}}	fake{{.GoPackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}/fake"
 {{end -}}
 )
 
@@ -108,8 +108,8 @@ func (c *ClusterClientset) Tracker() kcptesting.ObjectTracker {
 
 {{range .groups}}
 // {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}ClusterClient.  
-func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() kcp{{.PackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterInterface {
-	return &fake{{.PackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterClient{Fake: c.Fake}
+func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() kcp{{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterInterface {
+	return &fake{{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterClient{Fake: c.Fake}
 }
 {{end -}}
 
@@ -147,8 +147,8 @@ func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 
 {{range .groups}}
 // {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}Client.  
-func (c *Clientset) {{.GroupGoName}}{{.Version}}() {{.PackageAlias}}.{{.GroupGoName}}{{.Version}}Interface {
-	return &fake{{.PackageAlias}}.{{.GroupGoName}}{{.Version}}Client{Fake: c.Fake, ClusterPath: c.clusterPath}
+func (c *Clientset) {{.GroupGoName}}{{.Version}}() {{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}Interface {
+	return &fake{{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 {{end -}}
 `

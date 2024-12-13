@@ -103,11 +103,11 @@ import (
 	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	"github.com/kcp-dev/logicalcluster/v3"
 
-	{{.group.PackageAlias}} "{{.apiPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
-	{{.group.PackageAlias}}listers "{{.listerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.apiPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}}listers "{{.listerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{if .useUpstreamInterfaces -}}
-	upstream{{.group.PackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
-	upstream{{.group.PackageAlias}}informers "{{.singleClusterInformerPackagePath}}/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	upstream{{.group.GoPackageAlias}}listers "{{.singleClusterListerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
+	upstream{{.group.GoPackageAlias}}informers "{{.singleClusterInformerPackagePath}}/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 	{{end -}}
 
 	clientset "{{.clientsetPackagePath}}"
@@ -121,9 +121,9 @@ import (
 // {{.kind}}ClusterInformer provides access to a shared informer and lister for
 // {{.kind.Plural}}.
 type {{.kind}}ClusterInformer interface {
-	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer
+	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer
 	Informer() kcpcache.ScopeableSharedIndexInformer
-	Lister() {{.group.PackageAlias}}listers.{{.kind}}ClusterLister
+	Lister() {{.group.GoPackageAlias}}listers.{{.kind}}ClusterLister
 }
 
 type {{.kind.String | lowerFirst}}ClusterInformer struct {
@@ -157,7 +157,7 @@ func NewFiltered{{.kind}}ClusterInformer(client clientset.ClusterInterface, resy
 				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}().Watch(context.TODO(), options)
 			},
 		},
-		&{{.group.PackageAlias}}.{{.kind.String}}{},
+		&{{.group.GoPackageAlias}}.{{.kind.String}}{},
 		resyncPeriod,
 		indexers,
 	)
@@ -173,11 +173,11 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) defaultInformer(client clie
 }
 
 func (f *{{.kind.String|lowerFirst}}ClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
-	return f.factory.InformerFor(&{{.group.PackageAlias}}.{{.kind}}{}, f.defaultInformer)
+	return f.factory.InformerFor(&{{.group.GoPackageAlias}}.{{.kind}}{}, f.defaultInformer)
 }
 
-func (f *{{.kind.String|lowerFirst}}ClusterInformer) Lister() {{.group.PackageAlias}}listers.{{.kind.String}}ClusterLister {
-	return {{.group.PackageAlias}}listers.New{{.kind}}ClusterLister(f.Informer().GetIndexer())
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) Lister() {{.group.GoPackageAlias}}listers.{{.kind.String}}ClusterLister {
+	return {{.group.GoPackageAlias}}listers.New{{.kind}}ClusterLister(f.Informer().GetIndexer())
 }
 
 {{ if not .useUpstreamInterfaces }}
@@ -185,11 +185,11 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) Lister() {{.group.PackageAl
 // {{.kind.Plural}}.
 type {{.kind}}Informer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() {{.group.PackageAlias}}listers.{{.kind}}Lister
+	Lister() {{.group.GoPackageAlias}}listers.{{.kind}}Lister
 }
 {{end -}}
 
-func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.PackageAlias}}informers.{{end}}{{.kind}}Informer {
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer {
 	return &{{.kind.String|lowerFirst}}Informer{
 		informer: f.Informer().Cluster(clusterName),
 		lister:   f.Lister().Cluster(clusterName),
@@ -198,14 +198,14 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(clusterName logical
 
 type {{.kind.String|lowerFirst}}Informer struct {
 	informer cache.SharedIndexInformer
-	lister {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.PackageAlias}}listers.{{.kind.String}}Lister
+	lister {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.GoPackageAlias}}listers.{{.kind.String}}Lister
 }
 
 func (f *{{.kind.String|lowerFirst}}Informer) Informer() cache.SharedIndexInformer {
 	return f.informer
 }
 
-func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.PackageAlias}}listers.{{.kind.String}}Lister {
+func (f *{{.kind.String|lowerFirst}}Informer) Lister() {{if .useUpstreamInterfaces}}upstream{{end}}{{.group.GoPackageAlias}}listers.{{.kind.String}}Lister {
 	return f.lister
 }
 
@@ -217,11 +217,11 @@ type {{.kind.String | lowerFirst}}ScopedInformer struct {
 }
 
 func (f *{{.kind.String|lowerFirst}}ScopedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&{{.group.PackageAlias}}.{{.kind}}{}, f.defaultInformer)
+	return f.factory.InformerFor(&{{.group.GoPackageAlias}}.{{.kind}}{}, f.defaultInformer)
 }
 
-func (f *{{.kind.String|lowerFirst}}ScopedInformer) Lister() {{.group.PackageAlias}}listers.{{.kind.String}}Lister {
-	return {{.group.PackageAlias}}listers.New{{.kind}}Lister(f.Informer().GetIndexer())
+func (f *{{.kind.String|lowerFirst}}ScopedInformer) Lister() {{.group.GoPackageAlias}}listers.{{.kind.String}}Lister {
+	return {{.group.GoPackageAlias}}listers.New{{.kind}}Lister(f.Informer().GetIndexer())
 }
 
 // New{{.kind}}Informer constructs a new informer for {{.kind.String}} type.
@@ -250,7 +250,7 @@ func NewFiltered{{.kind}}Informer(client scopedclientset.Interface, resyncPeriod
 				return client.{{.group.GroupGoName}}{{.group.Version}}().{{.kind.Plural}}({{if .kind.IsNamespaced}}namespace{{end -}}).Watch(context.TODO(), options)
 			},
 		},
-		&{{.group.PackageAlias}}.{{.kind.String}}{},
+		&{{.group.GoPackageAlias}}.{{.kind.String}}{},
 		resyncPeriod,
 		indexers,
 	)

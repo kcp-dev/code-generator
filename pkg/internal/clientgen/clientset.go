@@ -66,7 +66,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 
-{{range .groups}}	{{.GoPackageAlias}} "{{$.packagePath}}/typed/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.GoPackageAlias}} "{{$.packagePath}}/typed/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 
@@ -81,7 +81,7 @@ type ClusterInterface interface {
 type ClusterClientset struct {
 	*discovery.DiscoveryClient
 	clientCache kcpclient.Cache[*client.Clientset]
-{{range .groups}}	{{.LowerCaseGroupGoName}}{{.Version}} *{{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterClient
+{{range .groups}}	{{.GroupGoNameLower}}{{.Version}} *{{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterClient
 {{end -}}
 }
 
@@ -95,8 +95,8 @@ func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 
 {{range .groups}}
 // {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}ClusterClient.  
-func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() {{.PackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterInterface {
-	return c.{{.LowerCaseGroupGoName}}{{.Version}}
+func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() {{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterInterface {
+	return c.{{.GroupGoNameLower}}{{.Version}}
 }
 {{end -}}
 
@@ -152,7 +152,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*ClusterCli
 	var cs ClusterClientset
 	cs.clientCache = cache
 	var err error
-{{range .groups}}    cs.{{.LowerCaseGroupGoName}}{{.Version}}, err = {{.PackageAlias}}.NewForConfigAndClient(&configShallowCopy, httpClient)
+{{range .groups}}    cs.{{.GroupGoNameLower}}{{.Version}}, err = {{.GoPackageAlias}}.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}

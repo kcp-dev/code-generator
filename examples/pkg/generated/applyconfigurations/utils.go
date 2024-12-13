@@ -23,6 +23,7 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	testing "k8s.io/client-go/testing"
 
+	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	v1 "acme.corp/pkg/apis/example/v1"
 	v1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
@@ -30,6 +31,7 @@ import (
 	example3v1 "acme.corp/pkg/apis/example3/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
+	applyconfigurationsexampledashedv1 "acme.corp/pkg/generated/applyconfigurations/example-dashed/v1"
 	examplev1 "acme.corp/pkg/generated/applyconfigurations/example/v1"
 	examplev1alpha1 "acme.corp/pkg/generated/applyconfigurations/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/generated/applyconfigurations/example/v1beta1"
@@ -85,6 +87,14 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &applyconfigurationsexample3v1.ClusterTestTypeStatusApplyConfiguration{}
 	case example3v1.SchemeGroupVersion.WithKind("TestType"):
 		return &applyconfigurationsexample3v1.TestTypeApplyConfiguration{}
+
+		// Group=exampledashed.some.corp, Version=v1
+	case exampledashedv1.SchemeGroupVersion.WithKind("ClusterTestType"):
+		return &applyconfigurationsexampledashedv1.ClusterTestTypeApplyConfiguration{}
+	case exampledashedv1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
+		return &applyconfigurationsexampledashedv1.ClusterTestTypeStatusApplyConfiguration{}
+	case exampledashedv1.SchemeGroupVersion.WithKind("TestType"):
+		return &applyconfigurationsexampledashedv1.TestTypeApplyConfiguration{}
 
 		// Group=existinginterfaces.acme.corp, Version=v1
 	case existinginterfacesv1.SchemeGroupVersion.WithKind("ClusterTestType"):

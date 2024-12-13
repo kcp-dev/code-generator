@@ -27,8 +27,8 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	"k8s.io/client-go/rest"
 
-	exampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/example-dashed/v1"
-	kcpexampledashedv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example-dashed/v1"
+	exampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1"
+	kcpexampledashedv1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/exampledashed/v1"
 )
 
 var _ kcpexampledashedv1.ExampledashedV1ClusterInterface = (*ExampledashedV1ClusterClient)(nil)

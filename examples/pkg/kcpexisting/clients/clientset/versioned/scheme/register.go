@@ -28,12 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	exampledashedv1 "acme.corp/pkg/apis/example-dashed/v1"
 	examplev1 "acme.corp/pkg/apis/example/v1"
 	examplev1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
