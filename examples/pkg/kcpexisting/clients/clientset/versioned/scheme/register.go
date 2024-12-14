@@ -33,6 +33,7 @@ import (
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
@@ -41,6 +42,7 @@ var Scheme = runtime.NewScheme()
 var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
+	exampledashedv1.AddToScheme,
 	example3v1.AddToScheme,
 	examplev1.AddToScheme,
 	examplev1alpha1.AddToScheme,

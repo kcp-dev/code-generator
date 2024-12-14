@@ -36,6 +36,8 @@ import (
 	fakeexamplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2/fake"
 	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
 	fakeexample3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1/fake"
+	exampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1"
+	fakeexampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1/fake"
 	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 	fakeexistinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1/fake"
 	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
@@ -119,6 +121,11 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 // Example3V1 retrieves the Example3V1Client
 func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
 	return &fakeexample3v1.FakeExample3V1{Fake: &c.Fake}
+}
+
+// ExampleDashedV1 retrieves the ExampleDashedV1Client
+func (c *Clientset) ExampleDashedV1() exampledashedv1.ExampleDashedV1Interface {
+	return &fakeexampledashedv1.FakeExampleDashedV1{Fake: &c.Fake}
 }
 
 // ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client

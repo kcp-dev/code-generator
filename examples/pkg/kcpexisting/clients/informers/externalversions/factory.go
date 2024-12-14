@@ -38,6 +38,7 @@ import (
 	clientset "acme.corp/pkg/kcpexisting/clients/clientset/versioned"
 	exampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example"
 	example3informers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/example3"
+	exampledashedinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/exampledashed"
 	existinginterfacesinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/existinginterfaces"
 	"acme.corp/pkg/kcpexisting/clients/informers/externalversions/internalinterfaces"
 	secondexampleinformers "acme.corp/pkg/kcpexisting/clients/informers/externalversions/secondexample"
@@ -272,6 +273,7 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
 	Example() exampleinformers.ClusterInterface
+	ExampleDashed() exampledashedinformers.ClusterInterface
 	Example3() example3informers.ClusterInterface
 	Existinginterfaces() existinginterfacesinformers.ClusterInterface
 	Secondexample() secondexampleinformers.ClusterInterface
@@ -279,6 +281,10 @@ type SharedInformerFactory interface {
 
 func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
 	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) ExampleDashed() exampledashedinformers.ClusterInterface {
+	return exampledashedinformers.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Example3() example3informers.ClusterInterface {

@@ -31,6 +31,7 @@ import (
 	examplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
 	examplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
 	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
+	exampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
 )
@@ -42,6 +43,7 @@ type Interface interface {
 	ExampleV1beta1() examplev1beta1.ExampleV1beta1Interface
 	ExampleV2() examplev2.ExampleV2Interface
 	Example3V1() example3v1.Example3V1Interface
+	ExampleDashedV1() exampledashedv1.ExampleDashedV1Interface
 	ExistinginterfacesV1() existinginterfacesv1.ExistinginterfacesV1Interface
 	SecondexampleV1() secondexamplev1.SecondexampleV1Interface
 }
@@ -54,6 +56,7 @@ type Clientset struct {
 	exampleV1beta1       *examplev1beta1.ExampleV1beta1Client
 	exampleV2            *examplev2.ExampleV2Client
 	example3V1           *example3v1.Example3V1Client
+	exampleDashedV1      *exampledashedv1.ExampleDashedV1Client
 	existinginterfacesV1 *existinginterfacesv1.ExistinginterfacesV1Client
 	secondexampleV1      *secondexamplev1.SecondexampleV1Client
 }
@@ -81,6 +84,11 @@ func (c *Clientset) ExampleV2() examplev2.ExampleV2Interface {
 // Example3V1 retrieves the Example3V1Client
 func (c *Clientset) Example3V1() example3v1.Example3V1Interface {
 	return c.example3V1
+}
+
+// ExampleDashedV1 retrieves the ExampleDashedV1Client
+func (c *Clientset) ExampleDashedV1() exampledashedv1.ExampleDashedV1Interface {
+	return c.exampleDashedV1
 }
 
 // ExistinginterfacesV1 retrieves the ExistinginterfacesV1Client
@@ -157,6 +165,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.exampleDashedV1, err = exampledashedv1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.existinginterfacesV1, err = existinginterfacesv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -191,6 +203,7 @@ func New(c rest.Interface) *Clientset {
 	cs.exampleV1beta1 = examplev1beta1.New(c)
 	cs.exampleV2 = examplev2.New(c)
 	cs.example3V1 = example3v1.New(c)
+	cs.exampleDashedV1 = exampledashedv1.New(c)
 	cs.existinginterfacesV1 = existinginterfacesv1.New(c)
 	cs.secondexampleV1 = secondexamplev1.New(c)
 
