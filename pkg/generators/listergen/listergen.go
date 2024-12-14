@@ -126,12 +126,12 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) types.GroupVersionInfo {
-	return types.GroupVersionInfo{
+func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+	return parser.Group{
 		Group:                group.Group,
-		Version:              types.Version(namer.IC(version.Version.String())),
+		Version:              parser.Version(namer.IC(version.Version.String())),
 		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
-		GroupGoName:          group.GoName,
+		GoName:               group.GoName,
 		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

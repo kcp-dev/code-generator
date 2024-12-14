@@ -5,15 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type FakeGroup struct {
 	// Group is the group in this client.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kinds are the kinds in the group.
 	Kinds []parser.Kind
@@ -59,17 +57,17 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/rest"
-	kcp{{.group.PackageAlias}} "{{.packagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
-	{{.group.PackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	kcp{{.group.GoPackageAlias}} "{{.packagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
-var _ kcp{{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}ClusterInterface = (*{{.group.GroupGoName}}{{.group.Version}}ClusterClient)(nil)
+var _ kcp{{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}ClusterInterface = (*{{.group.GroupGoName}}{{.group.Version}}ClusterClient)(nil)
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterClient struct {
 	*kcptesting.Fake 
 }
 
-func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
+func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,12 +75,12 @@ func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterP
 }
 
 {{ range .kinds}}
-func (c *{{$.group.GroupGoName}}{{$.group.Version}}ClusterClient) {{.Plural}}() kcp{{$.group.PackageAlias}}.{{.String}}ClusterInterface {
+func (c *{{$.group.GroupGoName}}{{$.group.Version}}ClusterClient) {{.Plural}}() kcp{{$.group.GoPackageAlias}}.{{.String}}ClusterInterface {
 	return &{{.Plural | lowerFirst}}ClusterClient{Fake: c.Fake}
 }
 {{end -}}
 
-var _ {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface = (*{{.group.GroupGoName}}{{.group.Version}}Client)(nil)
+var _ {{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface = (*{{.group.GroupGoName}}{{.group.Version}}Client)(nil)
 
 type {{.group.GroupGoName}}{{.group.Version}}Client struct {
 	*kcptesting.Fake
@@ -95,7 +93,7 @@ func (c *{{.group.GroupGoName}}{{.group.Version}}Client) RESTClient() rest.Inter
 }
 
 {{ range .kinds}}
-func (c *{{$.group.GroupGoName}}{{$.group.Version}}Client) {{.Plural}}({{if .IsNamespaced}}namespace string{{end}}) {{$.group.PackageAlias}}.{{.String}}Interface {
+func (c *{{$.group.GroupGoName}}{{$.group.Version}}Client) {{.Plural}}({{if .IsNamespaced}}namespace string{{end}}) {{$.group.GoPackageAlias}}.{{.String}}Interface {
 	return &{{.Plural | lowerFirst}}Client{Fake: c.Fake, ClusterPath: c.ClusterPath{{if .IsNamespaced}}, Namespace: namespace{{end}}}
 }
 {{end -}}

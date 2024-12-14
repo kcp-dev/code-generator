@@ -17,6 +17,11 @@ limitations under the License.
 package parser
 
 import (
+	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/code-generator/cmd/client-gen/types"
 
@@ -34,7 +39,41 @@ type Kind struct {
 
 type Group struct {
 	types.Group
-	GoName string
+	GoName               string `marker:",+groupGoName"`
+	Version              Version
+	PackageAlias         string
+	LowerCaseGroupGoName string
+}
+
+func (g Group) GoPackageAlias() string {
+	if g.PackageAlias == "" {
+		panic("PackageAlias is empty. Programmer error.")
+	}
+	return strings.ReplaceAll(g.PackageAlias, "-", "")
+}
+
+func (g Group) GroupGoName() string {
+	if g.GoName == "" {
+		panic("GroupGoName is empty. Programmer error.")
+	}
+	caser := cases.Title(language.English)
+	parts := strings.Split(g.GoName, "-")
+	for i, part := range parts {
+		parts[i] = caser.String(part)
+	}
+	return strings.Join(parts, "")
+}
+
+func (g Group) GroupGoNameLower() string {
+	if g.LowerCaseGroupGoName == "" {
+		panic("LowerCaseGroupGoName is empty. Programmer error.")
+	}
+	result := strings.ToLower(g.LowerCaseGroupGoName)
+	return strings.ReplaceAll(result, "-", "")
+}
+
+func (g Group) PackageName() string {
+	return strings.ToLower(strings.ReplaceAll(g.Group.PackageName(), "-", ""))
 }
 
 func (k *Kind) Plural() string {
@@ -51,6 +90,24 @@ func (k *Kind) IsNamespaced() bool {
 
 func (k *Kind) SupportsListWatch() bool {
 	return k.SupportedVerbs.HasAll("list", "watch")
+}
+
+type Version string
+
+func (v Version) String() string {
+	return string(v)
+}
+
+func (v Version) NonEmpty() string {
+	if v == "" {
+		return "internalVersion"
+	}
+	return v.String()
+}
+
+func (v Version) PackageName() string {
+	_v := strings.ReplaceAll(v.NonEmpty(), "-", "")
+	return strings.ToLower(_v)
 }
 
 // TODO(skuznets):
