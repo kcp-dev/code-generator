@@ -38,6 +38,7 @@ import (
 	clientset "acme.corp/pkg/kcp/clients/clientset/versioned"
 	exampleinformers "acme.corp/pkg/kcp/clients/informers/externalversions/example"
 	example3informers "acme.corp/pkg/kcp/clients/informers/externalversions/example3"
+	exampledashedinformers "acme.corp/pkg/kcp/clients/informers/externalversions/exampledashed"
 	existinginterfacesinformers "acme.corp/pkg/kcp/clients/informers/externalversions/existinginterfaces"
 	"acme.corp/pkg/kcp/clients/informers/externalversions/internalinterfaces"
 	secondexampleinformers "acme.corp/pkg/kcp/clients/informers/externalversions/secondexample"
@@ -273,6 +274,7 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
 	Example() exampleinformers.ClusterInterface
+	ExampleDashed() exampledashedinformers.ClusterInterface
 	Example3() example3informers.ClusterInterface
 	Existinginterfaces() existinginterfacesinformers.ClusterInterface
 	Secondexample() secondexampleinformers.ClusterInterface
@@ -280,6 +282,10 @@ type SharedInformerFactory interface {
 
 func (f *sharedInformerFactory) Example() exampleinformers.ClusterInterface {
 	return exampleinformers.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) ExampleDashed() exampledashedinformers.ClusterInterface {
+	return exampledashedinformers.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Example3() example3informers.ClusterInterface {
@@ -439,6 +445,7 @@ type SharedScopedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Example() exampleinformers.Interface
+	ExampleDashed() exampledashedinformers.Interface
 	Example3() example3informers.Interface
 	Existinginterfaces() existinginterfacesinformers.Interface
 	Secondexample() secondexampleinformers.Interface
@@ -446,6 +453,10 @@ type SharedScopedInformerFactory interface {
 
 func (f *sharedScopedInformerFactory) Example() exampleinformers.Interface {
 	return exampleinformers.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) ExampleDashed() exampledashedinformers.Interface {
+	return exampledashedinformers.NewScoped(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedScopedInformerFactory) Example3() example3informers.Interface {

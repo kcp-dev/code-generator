@@ -36,6 +36,7 @@ import (
 	examplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
 	examplev2 "acme.corp/pkg/generated/clientset/versioned/typed/example/v2"
 	example3v1 "acme.corp/pkg/generated/clientset/versioned/typed/example3/v1"
+	exampledashedv1 "acme.corp/pkg/generated/clientset/versioned/typed/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/generated/clientset/versioned/typed/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/secondexample/v1"
 	kcpclient "acme.corp/pkg/kcp/clients/clientset/versioned"
@@ -49,6 +50,8 @@ import (
 	fakeexamplev2 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example/v2/fake"
 	kcpexample3v1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example3/v1"
 	fakeexample3v1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/example3/v1/fake"
+	kcpexampledashedv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/exampledashed/v1"
+	fakeexampledashedv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/exampledashed/v1/fake"
 	kcpexistinginterfacesv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/existinginterfaces/v1"
 	fakeexistinginterfacesv1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/existinginterfaces/v1/fake"
 	kcpsecondexamplev1 "acme.corp/pkg/kcp/clients/clientset/versioned/typed/secondexample/v1"
@@ -87,6 +90,11 @@ func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 
 func (c *ClusterClientset) Tracker() kcptesting.ObjectTracker {
 	return c.tracker
+}
+
+// ExampleDashedV1 retrieves the ExampleDashedV1ClusterClient.
+func (c *ClusterClientset) ExampleDashedV1() kcpexampledashedv1.ExampleDashedV1ClusterInterface {
+	return &fakeexampledashedv1.ExampleDashedV1ClusterClient{Fake: c.Fake}
 }
 
 // Example3V1 retrieves the Example3V1ClusterClient.
@@ -154,6 +162,11 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 	return c.tracker
+}
+
+// ExampleDashedV1 retrieves the ExampleDashedV1Client.
+func (c *Clientset) ExampleDashedV1() exampledashedv1.ExampleDashedV1Interface {
+	return &fakeexampledashedv1.ExampleDashedV1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // Example3V1 retrieves the Example3V1Client.

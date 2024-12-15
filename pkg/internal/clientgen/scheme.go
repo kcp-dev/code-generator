@@ -5,14 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
+	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Scheme struct {
 	// Groups are the groups in this client-set.
-	Groups []types.GroupVersionInfo
+	Groups []parser.Group
 
 	// APIPackagePath is the root directory under which API types exist.
 	// e.g. "k8s.io/api"
@@ -51,7 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-{{range .groups}}	{{.PackageAlias}} "{{$.apiPackagePath}}/{{.Group.PackageName}}/{{.Version.PackageName}}"
+{{range .groups}}	{{.GoPackageAlias}} "{{$.apiPackagePath}}/{{.PackageName}}/{{.Version.PackageName}}"
 {{end -}}
 )
 
@@ -59,7 +58,7 @@ var Scheme = runtime.NewScheme()
 var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
-{{range .groups}}	{{.PackageAlias}}.AddToScheme,
+{{range .groups}}	{{.GoPackageAlias}}.AddToScheme,
 {{end -}}
 }
 

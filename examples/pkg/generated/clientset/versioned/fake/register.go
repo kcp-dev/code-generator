@@ -30,6 +30,7 @@ import (
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
@@ -43,6 +44,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	examplev1beta1.AddToScheme,
 	examplev2.AddToScheme,
 	example3v1.AddToScheme,
+	exampledashedv1.AddToScheme,
 	existinginterfacesv1.AddToScheme,
 	secondexamplev1.AddToScheme,
 }

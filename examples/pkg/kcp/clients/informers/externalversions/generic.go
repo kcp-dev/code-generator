@@ -35,6 +35,7 @@ import (
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	examplev2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
@@ -92,6 +93,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericClusterInformer, error) {
 	switch resource {
+	// Group=example-dashed.some.corp, Version=V1
+	case exampledashedv1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V1().TestTypes().Informer()}, nil
+	case exampledashedv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V1().ClusterTestTypes().Informer()}, nil
 	// Group=example3.some.corp, Version=V1
 	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Example3().V1().TestTypes().Informer()}, nil
@@ -136,6 +142,13 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 // TODO extend this to unknown resources with a client pool
 func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
+	// Group=example-dashed.some.corp, Version=V1
+	case exampledashedv1.SchemeGroupVersion.WithResource("testtypes"):
+		informer := f.ExampleDashed().V1().TestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+	case exampledashedv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		informer := f.ExampleDashed().V1().ClusterTestTypes().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 	// Group=example3.some.corp, Version=V1
 	case example3v1.SchemeGroupVersion.WithResource("testtypes"):
 		informer := f.Example3().V1().TestTypes().Informer()

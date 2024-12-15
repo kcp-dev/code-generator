@@ -146,12 +146,12 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 		return err
 	}
 
-	gvks := map[types.Group]map[types.Version][]parser.Kind{}
+	gvks := map[types.Group]map[parser.Version][]parser.Kind{}
 	for group, versions := range groupVersionKinds {
 		for version, kinds := range versions {
 			info := toGroupVersionInfo(group, version)
 			if _, exists := gvks[info.Group]; !exists {
-				gvks[info.Group] = map[types.Version][]parser.Kind{}
+				gvks[info.Group] = map[parser.Version][]parser.Kind{}
 			}
 			gvks[info.Group][info.Version] = kinds
 		}
@@ -184,9 +184,9 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 			"group", group.String(),
 		)
 
-		var onlyVersions []types.Version
+		var onlyVersions []parser.Version
 		for version := range versions {
-			onlyVersions = append(onlyVersions, types.Version(namer.IC(version.Version.String())))
+			onlyVersions = append(onlyVersions, parser.Version(namer.IC(version.Version.String())))
 		}
 		sort.Slice(onlyVersions, func(i, j int) bool {
 			return onlyVersions[i].PackageName() < onlyVersions[j].PackageName()
@@ -246,8 +246,8 @@ func (g Generator) Generate(ctx *genall.GenerationContext) error {
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []types.GroupVersionInfo {
-	var info []types.GroupVersionInfo
+func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVersion][]parser.Kind) []parser.Group {
+	var info []parser.Group
 	for group, versions := range groupVersionKinds {
 		for version := range versions {
 			info = append(info, toGroupVersionInfo(group, version))
@@ -260,12 +260,12 @@ func toGroupVersionInfos(groupVersionKinds map[parser.Group]map[types.PackageVer
 }
 
 // adapted from https://github.com/kubernetes/kubernetes/blob/8f269d6df2a57544b73d5ca35e04451373ef334c/staging/src/k8s.io/code-generator/cmd/client-gen/types/helpers.go#L87-L103
-func toGroupVersionInfo(group parser.Group, version types.PackageVersion) types.GroupVersionInfo {
-	return types.GroupVersionInfo{
+func toGroupVersionInfo(group parser.Group, version types.PackageVersion) parser.Group {
+	return parser.Group{
 		Group:                group.Group,
-		Version:              types.Version(namer.IC(version.Version.String())),
 		PackageAlias:         strings.ToLower(group.GoName + version.Version.NonEmpty()),
-		GroupGoName:          group.GoName,
+		Version:              parser.Version(namer.IC(version.Version.String())),
+		GoName:               group.GoName,
 		LowerCaseGroupGoName: namer.IL(group.GoName),
 	}
 }

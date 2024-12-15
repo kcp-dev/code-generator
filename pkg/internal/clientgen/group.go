@@ -5,15 +5,13 @@ import (
 	"strings"
 	"text/template"
 
-	"k8s.io/code-generator/cmd/client-gen/types"
-
 	"github.com/kcp-dev/code-generator/v2/pkg/parser"
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 )
 
 type Group struct {
 	// Group is the group in this client.
-	Group types.GroupVersionInfo
+	Group parser.Group
 
 	// Kinds are the kinds in the group.
 	Kinds []parser.Kind
@@ -57,7 +55,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	{{.group.PackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.Group.PackageName}}/{{.group.Version.PackageName}}"
+	{{.group.GoPackageAlias}} "{{.singleClusterClientPackagePath}}/typed/{{.group.PackageName}}/{{.group.Version.PackageName}}"
 )
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterInterface interface {
@@ -67,14 +65,14 @@ type {{.group.GroupGoName}}{{.group.Version}}ClusterInterface interface {
 }
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterScoper interface {
-	Cluster(logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface
+	Cluster(logicalcluster.Path) {{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface
 }
 
 type {{.group.GroupGoName}}{{.group.Version}}ClusterClient struct {
-	clientCache kcpclient.Cache[*{{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]
+	clientCache kcpclient.Cache[*{{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]
 }
 
-func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
+func (c *{{.group.GroupGoName}}{{.group.Version}}ClusterClient) Cluster(clusterPath logicalcluster.Path) {{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Interface {
 	if clusterPath == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -101,8 +99,8 @@ func NewForConfig(c *rest.Config) (*{{.group.GroupGoName}}{{.group.Version}}Clus
 // NewForConfigAndClient creates a new {{.group.GroupGoName}}{{.group.Version}}ClusterClient for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
 func NewForConfigAndClient(c *rest.Config, h *http.Client) (*{{.group.GroupGoName}}{{.group.Version}}ClusterClient, error) {
-	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*{{.group.PackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]{
-		NewForConfigAndClient: {{.group.PackageAlias}}.NewForConfigAndClient,
+	cache := kcpclient.NewCache(c, h, &kcpclient.Constructor[*{{.group.GoPackageAlias}}.{{.group.GroupGoName}}{{.group.Version}}Client]{
+		NewForConfigAndClient: {{.group.GoPackageAlias}}.NewForConfigAndClient,
 	})
 	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
 		return nil, err

@@ -29,6 +29,7 @@ import (
 	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	v2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
+	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
 )
@@ -82,6 +83,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().ClusterTestTypes().Informer()}, nil
 	case v2.SchemeGroupVersion.WithResource("testtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Example().V2().TestTypes().Informer()}, nil
+
+		// Group=example-dashed.some.corp, Version=v1
+	case exampledashedv1.SchemeGroupVersion.WithResource("clustertesttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V1().ClusterTestTypes().Informer()}, nil
+	case exampledashedv1.SchemeGroupVersion.WithResource("testtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.ExampleDashed().V1().TestTypes().Informer()}, nil
 
 		// Group=example3.some.corp, Version=v1
 	case example3v1.SchemeGroupVersion.WithResource("clustertesttypes"):
