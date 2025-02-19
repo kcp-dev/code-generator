@@ -5,11 +5,11 @@ go 1.22.0
 replace acme.corp/pkg => ./pkg
 
 require (
-	github.com/kcp-dev/apimachinery/v2 v2.0.0-alpha.0.0.20240510131959-2fa3992332d0
+	github.com/kcp-dev/apimachinery/v2 v2.0.1-0.20240817110845-a9eb9752bfeb
 	github.com/kcp-dev/client-go v0.0.0-20230927101349-0416c830e3b1
-	github.com/kcp-dev/logicalcluster/v3 v3.0.4
-	k8s.io/apimachinery v0.31.0
-	k8s.io/client-go v0.31.0
+	github.com/kcp-dev/logicalcluster/v3 v3.0.5
+	k8s.io/apimachinery v0.31.6
+	k8s.io/client-go v0.31.6
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
 )
 
@@ -47,7 +47,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.31.0 // indirect
+	k8s.io/api v0.31.6 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
