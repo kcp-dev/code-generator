@@ -24,11 +24,10 @@ import (
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
+	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
 	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
-
-	"k8s.io/klog/v2"
 )
 
 // informerGenerator produces a file of listers for a given GroupVersion and

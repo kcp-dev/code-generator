@@ -22,10 +22,11 @@ import (
 	"path"
 	"strings"
 
-	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
+
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 // genClientset generates a package for a clientset.

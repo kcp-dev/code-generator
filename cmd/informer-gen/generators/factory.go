@@ -20,12 +20,12 @@ import (
 	"io"
 	"path"
 
-	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
-
 	"k8s.io/klog/v2"
+
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 // factoryGenerator produces a file of listers for a given GroupVersion and

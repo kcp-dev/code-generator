@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	genutil "github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	genutil "github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
 )
 
 var (

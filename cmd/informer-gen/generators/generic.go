@@ -21,11 +21,12 @@ import (
 	"sort"
 	"strings"
 
-	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 	codegennamer "k8s.io/code-generator/pkg/namer"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
+
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 // genericGenerator generates the generic informer.

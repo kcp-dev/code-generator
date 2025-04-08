@@ -24,10 +24,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
+
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 // GenScheme produces a package for a clientset with the scheme, codecs and parameter codecs.

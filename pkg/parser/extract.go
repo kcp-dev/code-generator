@@ -22,13 +22,14 @@ import (
 
 	"golang.org/x/tools/go/ast/astutil"
 
-	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
+
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 // isForbiddenGroupVersion hacks around the k8s client-set, where types have +genclient but aren't meant to have

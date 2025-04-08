@@ -23,14 +23,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
-	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
-	"github.com/kcp-dev/code-generator/v3/cmd/lister-gen/args"
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
 	"k8s.io/klog/v2"
+
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/lister-gen/args"
 )
 
 // NameSystems returns the name system used by the generators in this package.

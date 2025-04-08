@@ -19,13 +19,15 @@ package main
 import (
 	"flag"
 
-	"github.com/kcp-dev/code-generator/v3/cmd/informer-gen/args"
-	"github.com/kcp-dev/code-generator/v3/cmd/informer-gen/generators"
-	"github.com/kcp-dev/code-generator/v3/pkg/util"
 	"github.com/spf13/pflag"
+
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/klog/v2"
+
+	"github.com/kcp-dev/code-generator/v3/cmd/informer-gen/args"
+	"github.com/kcp-dev/code-generator/v3/cmd/informer-gen/generators"
+	"github.com/kcp-dev/code-generator/v3/pkg/util"
 )
 
 func main() {
