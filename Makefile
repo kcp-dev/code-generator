@@ -15,6 +15,8 @@
 SHELL := /usr/bin/env bash
 
 GO_INSTALL = ./hack/go-install.sh
+BUILD_DEST ?= _build
+CMD ?= $(notdir $(wildcard ./cmd/*))
 
 TOOLS_DIR=hack/tools
 GOBIN_DIR := $(abspath $(TOOLS_DIR))
@@ -72,11 +74,19 @@ $(KUBE_INFORMER_GEN):
 $(KUBE_APPLYCONFIGURATION_GEN):
 	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/$(KUBE_APPLYCONFIGURATION_GEN_BIN) $(KUBE_APPLYCONFIGURATION_GEN_BIN) $(KUBE_APPLYCONFIGURATION_GEN_VER)
 
+.PHONY: clean
+clean:
+	rm -rf $(BUILD_DEST)
+	@echo "Cleaned $(BUILD_DEST)"
 
 .PHONY: build
-build: ## Build the project
-	mkdir -p bin
-	go build -o bin
+build: $(CMD)
+
+.PHONY: $(CMD)
+$(CMD): %: $(BUILD_DEST)/%
+
+$(BUILD_DEST)/%: cmd/%
+	go build -o $@ ./cmd/$*
 
 .PHONY: install
 install:
