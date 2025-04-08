@@ -22,8 +22,8 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/code-generator/cmd/client-gen/types"
 
 	"github.com/kcp-dev/code-generator/v2/pkg/util"
 	"github.com/kcp-dev/code-generator/v2/third_party/namer"

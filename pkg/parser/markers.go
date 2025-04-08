@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	genutil "github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
 	"k8s.io/apimachinery/pkg/util/sets"
-	genutil "k8s.io/code-generator/cmd/client-gen/generators/util"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 

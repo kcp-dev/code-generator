@@ -22,9 +22,9 @@ import (
 
 	"golang.org/x/tools/go/ast/astutil"
 
+	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/code-generator/cmd/client-gen/types"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-tools/pkg/genall"
