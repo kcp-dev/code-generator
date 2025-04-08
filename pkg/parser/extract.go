@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/genall"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
-	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/types"
 )
 
 // isForbiddenGroupVersion hacks around the k8s client-set, where types have +genclient but aren't meant to have

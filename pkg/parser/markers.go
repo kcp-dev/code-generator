@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
-	genutil "github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
+	genutil "github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/generators/util"
 )
 
 var (
