@@ -16,7 +16,10 @@ limitations under the License.
 
 package util
 
-import "strings"
+import (
+	"path"
+	"strings"
+)
 
 func ParsePathGroupVersion(pgvString string) (gvPath string, gvString string) {
 	subs := strings.Split(pgvString, "/")
@@ -27,4 +30,12 @@ func ParsePathGroupVersion(pgvString string) (gvPath string, gvString string) {
 	default:
 		return strings.Join(subs[:length-2], "/"), strings.Join(subs[length-2:], "/")
 	}
+}
+
+// GroupVersionAliasFromPackage turns "acme.corp/pkg/apis/example/v2" into "examplev2".
+func GroupVersionAliasFromPackage(pkgName string) string {
+	version := path.Base(pkgName)
+	group := path.Base(path.Dir(pkgName))
+
+	return group + version
 }

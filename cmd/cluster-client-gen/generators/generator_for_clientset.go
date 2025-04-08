@@ -32,11 +32,12 @@ import (
 // genClientset generates a package for a clientset.
 type genClientset struct {
 	generator.GoGenerator
-	groups             []clientgentypes.GroupVersions
-	groupGoNames       map[clientgentypes.GroupVersion]string
-	clientsetPackage   string // must be a Go import-path
-	imports            namer.ImportTracker
-	clientsetGenerated bool
+	groups                 []clientgentypes.GroupVersions
+	groupGoNames           map[clientgentypes.GroupVersion]string
+	clientsetPackage       string // must be a Go import-path
+	imports                namer.ImportTracker
+	clientsetGenerated     bool
+	singleClusterClientPkg string
 }
 
 var _ generator.Generator = &genClientset{}
@@ -56,6 +57,10 @@ func (g *genClientset) Filter(c *generator.Context, t *types.Type) bool {
 
 func (g *genClientset) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
+	imports = append(imports,
+		fmt.Sprintf("client \"%s\"", g.singleClusterClientPkg),
+		"github.com/kcp-dev/logicalcluster/v3",
+	)
 	for _, group := range g.groups {
 		for _, version := range group.Versions {
 			typedClientPath := path.Join(g.clientsetPackage, "typed", strings.ToLower(group.PackageName), strings.ToLower(version.NonEmpty()))
@@ -77,7 +82,7 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		"fmtErrorf":                            c.Universe.Type(types.Name{Package: "fmt", Name: "Errorf"}),
 		"Config":                               c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Config"}),
 		"DefaultKubernetesUserAgent":           c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "DefaultKubernetesUserAgent"}),
-		"RESTClientInterface":                  c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Interface"}),
+		"RESTConfig":                           c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Config"}),
 		"RESTHTTPClientFor":                    c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "HTTPClientFor"}),
 		"DiscoveryInterface":                   c.Universe.Type(types.Name{Package: "k8s.io/client-go/discovery", Name: "DiscoveryInterface"}),
 		"DiscoveryClient":                      c.Universe.Type(types.Name{Package: "k8s.io/client-go/discovery", Name: "DiscoveryClient"}),
@@ -86,13 +91,15 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		"NewDiscoveryClientForConfigOrDie":     c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClientForConfigOrDie"}),
 		"NewDiscoveryClient":                   c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClient"}),
 		"flowcontrolNewTokenBucketRateLimiter": c.Universe.Function(types.Name{Package: "k8s.io/client-go/util/flowcontrol", Name: "NewTokenBucketRateLimiter"}),
+		"kcpclientCache":                       c.Universe.Type(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/client", Name: "Cache"}),
 	}
 	sw.Do(clientsetInterface, m)
 	sw.Do(clientsetTemplate, m)
+	sw.Do(getDiscoveryTemplate, m)
 	for _, g := range allGroups {
 		sw.Do(clientsetInterfaceImplTemplate, g)
 	}
-	sw.Do(getDiscoveryTemplate, m)
+	sw.Do(getClusterTemplate, m)
 	sw.Do(newClientsetForConfigTemplate, m)
 	sw.Do(newClientsetForConfigAndClientTemplate, m)
 	sw.Do(newClientsetForConfigOrDieTemplate, m)
@@ -102,32 +109,34 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 }
 
 var clientsetInterface = `
-type Interface interface {
+type ClusterInterface interface {
+	Cluster(logicalcluster.Path) client.Interface
 	Discovery() $.DiscoveryInterface|raw$
-    $range .allGroups$$.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface
+    $range .allGroups$$.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$ClusterInterface
 	$end$
 }
 `
 
 var clientsetTemplate = `
-// Clientset contains the clients for groups.
-type Clientset struct {
+// ClusterClientset contains the cluster clients for groups.
+type ClusterClientset struct {
 	*$.DiscoveryClient|raw$
-    $range .allGroups$$.LowerCaseGroupGoName$$.Version$ *$.PackageAlias$.$.GroupGoName$$.Version$Client
+	clientCache $.kcpclientCache|raw$[*client.Clientset]
+    $range .allGroups$$.LowerCaseGroupGoName$$.Version$ *$.PackageAlias$.$.GroupGoName$$.Version$ClusterClient
     $end$
 }
 `
 
 var clientsetInterfaceImplTemplate = `
-// $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$Client
-func (c *Clientset) $.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface {
+// $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$ClusterClient.
+func (c *ClusterClientset) $.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$ClusterInterface {
 	return c.$.LowerCaseGroupGoName$$.Version$
 }
 `
 
 var getDiscoveryTemplate = `
-// Discovery retrieves the DiscoveryClient
-func (c *Clientset) Discovery() $.DiscoveryInterface|raw$ {
+// Discovery retrieves the DiscoveryClient.
+func (c *ClusterClientset) Discovery() $.DiscoveryInterface|raw$ {
 	if c == nil {
 		return nil
 	}
@@ -135,13 +144,23 @@ func (c *Clientset) Discovery() $.DiscoveryInterface|raw$ {
 }
 `
 
+var getClusterTemplate = `
+// Cluster scopes this clientset to one cluster.
+func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) client.Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return c.clientCache.ClusterOrDie(clusterPath)
+}
+`
+
 var newClientsetForConfigTemplate = `
-// NewForConfig creates a new Clientset for the given config.
+// NewForConfig creates a new ClusterClientset for the given config.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfig will generate a rate-limiter in configShallowCopy.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *$.Config|raw$) (*Clientset, error) {
+func NewForConfig(c *$.Config|raw$) (*ClusterClientset, error) {
 	configShallowCopy := *c
 
 	if configShallowCopy.UserAgent == "" {
@@ -159,11 +178,11 @@ func NewForConfig(c *$.Config|raw$) (*Clientset, error) {
 `
 
 var newClientsetForConfigAndClientTemplate = `
-// NewForConfigAndClient creates a new Clientset for the given config and http client.
+// NewForConfigAndClient creates a new ClusterClientset for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfigAndClient will generate a rate-limiter in configShallowCopy.
-func NewForConfigAndClient(c *$.Config|raw$, httpClient *$.httpClient|raw$) (*Clientset, error) {
+func NewForConfigAndClient(c *$.Config|raw$, httpClient *$.httpClient|raw$) (*ClusterClientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
 		if configShallowCopy.Burst <= 0 {
@@ -172,7 +191,15 @@ func NewForConfigAndClient(c *$.Config|raw$, httpClient *$.httpClient|raw$) (*Cl
 		configShallowCopy.RateLimiter = $.flowcontrolNewTokenBucketRateLimiter|raw$(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 
-	var cs Clientset
+	cache := kcpclient.NewCache(c, httpClient, &kcpclient.Constructor[*client.Clientset]{
+		NewForConfigAndClient: client.NewForConfigAndClient,
+	})
+	if _, err := cache.Cluster(logicalcluster.Name("root").Path()); err != nil {
+		return nil, err
+	}
+
+	var cs ClusterClientset
+	cs.clientCache = cache
 	var err error
 $range .allGroups$    cs.$.LowerCaseGroupGoName$$.Version$, err =$.PackageAlias$.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err!=nil {
@@ -188,9 +215,9 @@ $end$
 `
 
 var newClientsetForConfigOrDieTemplate = `
-// NewForConfigOrDie creates a new Clientset for the given config and
+// NewForConfigOrDie creates a new ClusterClientset for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *$.Config|raw$) *Clientset {
+func NewForConfigOrDie(c *$.Config|raw$) *ClusterClientset {
 	cs, err := NewForConfig(c)
 	if err!=nil {
 		panic(err)
@@ -200,12 +227,12 @@ func NewForConfigOrDie(c *$.Config|raw$) *Clientset {
 `
 
 var newClientsetForRESTClientTemplate = `
-// New creates a new Clientset for the given RESTClient.
-func New(c $.RESTClientInterface|raw$) *Clientset {
-	var cs Clientset
-$range .allGroups$    cs.$.LowerCaseGroupGoName$$.Version$ =$.PackageAlias$.New(c)
+// New creates a new ClusterClientset for the given RESTClient.
+func New(c *$.RESTConfig|raw$) *ClusterClientset {
+	var cs ClusterClientset
+$range .allGroups$    cs.$.LowerCaseGroupGoName$$.Version$ = $.PackageAlias$.NewForConfigOrDie(c)
 $end$
-	cs.DiscoveryClient = $.NewDiscoveryClient|raw$(c)
+	cs.DiscoveryClient = $.NewDiscoveryClientForConfigOrDie|raw$(c)
 	return &cs
 }
 `

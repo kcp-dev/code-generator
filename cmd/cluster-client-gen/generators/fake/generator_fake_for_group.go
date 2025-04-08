@@ -40,7 +40,8 @@ type genFakeForGroup struct {
 	types   []*types.Type
 	imports namer.ImportTracker
 	// If the genGroup has been called. This generator should only execute once.
-	called bool
+	called                     bool
+	singleClusterClientPackage string
 }
 
 var _ generator.Generator = &genFakeForGroup{}
@@ -60,25 +61,51 @@ func (g *genFakeForGroup) Namers(c *generator.Context) namer.NameSystems {
 	}
 }
 
+func groupVersionFromPackage(pkg string) string {
+	version := path.Base(pkg)
+	group := path.Base(path.Dir(pkg))
+
+	return strings.ToLower(group + version)
+}
+
 func (g *genFakeForGroup) Imports(c *generator.Context) (imports []string) {
 	imports = g.imports.ImportLines()
 	if len(g.types) != 0 {
-		imports = append(imports, fmt.Sprintf("%s \"%s\"", strings.ToLower(path.Base(g.realClientPackage)), g.realClientPackage))
+		imports = append(imports,
+			"github.com/kcp-dev/logicalcluster/v3",
+			fmt.Sprintf("%s \"%s\"", groupVersionFromPackage(g.singleClusterClientPackage), g.singleClusterClientPackage),
+			fmt.Sprintf("kcp%s \"%s\"", groupVersionFromPackage(g.realClientPackage), g.realClientPackage),
+		)
 	}
 	return imports
 }
 
 func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
+	gv := groupVersionFromPackage(g.realClientPackage)
 
 	m := map[string]interface{}{
 		"GroupGoName":         g.groupGoName,
 		"Version":             namer.IC(g.version),
-		"Fake":                c.Universe.Type(types.Name{Package: "k8s.io/client-go/testing", Name: "Fake"}),
+		"Fake":                c.Universe.Type(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing", Name: "Fake"}),
 		"RESTClientInterface": c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Interface"}),
 		"RESTClient":          c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClient"}),
 		"FakeClient":          c.Universe.Type(types.Name{Package: "k8s.io/client-go/gentype", Name: "FakeClient"}),
 		"NewFakeClient":       c.Universe.Function(types.Name{Package: "k8s.io/client-go/gentype", Name: "NewFakeClient"}),
+		"realClientPackage":   gv,
+		"kcpClientPackage":    "kcp" + gv,
+	}
+
+	sw.Do(groupClusterClientTemplate, m)
+	for _, t := range g.types {
+		wrapper := map[string]interface{}{
+			"type":              t,
+			"GroupGoName":       g.groupGoName,
+			"Version":           namer.IC(g.version),
+			"realClientPackage": gv,
+			"kcpClientPackage":  "kcp" + gv,
+		}
+		sw.Do(clusterGetterImpl, wrapper)
 	}
 
 	sw.Do(groupClientTemplate, m)
@@ -91,7 +118,8 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 			"type":              t,
 			"GroupGoName":       g.groupGoName,
 			"Version":           namer.IC(g.version),
-			"realClientPackage": strings.ToLower(path.Base(g.realClientPackage)),
+			"realClientPackage": gv,
+			"kcpClientPackage":  "kcp" + gv,
 		}
 		if tags.NonNamespaced {
 			sw.Do(getterImplNonNamespaced, wrapper)
@@ -103,28 +131,50 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 	return sw.Error()
 }
 
-var groupClientTemplate = `
-type Fake$.GroupGoName$$.Version$ struct {
+var groupClusterClientTemplate = `
+var _ $.kcpClientPackage$.$.GroupGoName$$.Version$ClusterInterface = (*$.GroupGoName$$.Version$ClusterClient)(nil)
+
+type $.GroupGoName$$.Version$ClusterClient struct {
 	*$.Fake|raw$
+}
+
+func (c *$.GroupGoName$$.Version$ClusterClient) Cluster(clusterPath logicalcluster.Path) $.realClientPackage$.$.GroupGoName$$.Version$Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &$.GroupGoName$$.Version$Client{Fake: c.Fake, ClusterPath: clusterPath}
+}
+`
+
+var clusterGetterImpl = `
+func (c *$.GroupGoName$$.Version$ClusterClient) $.type|publicPlural$() $.kcpClientPackage$.$.type|public$ClusterInterface {
+	return newFake$.type|public$ClusterClient(c)
+}
+`
+
+var groupClientTemplate = `
+type $.GroupGoName$$.Version$Client struct {
+	*$.Fake|raw$
+	ClusterPath logicalcluster.Path
 }
 `
 
 var getterImplNamespaced = `
-func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$(namespace string) $.realClientPackage$.$.type|public$Interface {
-	return newFake$.type|publicPlural$(c, namespace)
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.realClientPackage$.$.type|public$Interface {
+	return newFake$.type|public$Client(c.Fake, namespace, c.ClusterPath)
 }
 `
 
 var getterImplNonNamespaced = `
-func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$() $.realClientPackage$.$.type|public$Interface {
-	return newFake$.type|publicPlural$(c)
+func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.realClientPackage$.$.type|public$Interface {
+	return newFake$.type|public$Client(c.Fake, c.ClusterPath)
 }
 `
 
 var getRESTClient = `
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *Fake$.GroupGoName$$.Version$) RESTClient() $.RESTClientInterface|raw$ {
+func (c *$.GroupGoName$$.Version$Client) RESTClient() $.RESTClientInterface|raw$ {
 	var ret *$.RESTClient|raw$
 	return ret
 }

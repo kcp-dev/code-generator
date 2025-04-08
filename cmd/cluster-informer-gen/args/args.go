@@ -32,6 +32,13 @@ type Args struct {
 	ListersPackage            string // must be a Go import-path
 	SingleDirectory           bool
 
+	// Path to the generated Kubernetes single-cluster versioned clientset package.
+	SingleClusterVersionedClientSetPackage string
+	// Path to the generated Kubernetes single-cluster informers package.
+	SingleClusterInformersPackage string
+	// Path to the generated Kubernetes single-cluster listers package.
+	SingleClusterListersPackage string
+
 	// PluralExceptions define a list of pluralizer exceptions in Type:PluralType format.
 	// The default list is "Endpoints:Endpoints"
 	PluralExceptions []string
@@ -52,14 +59,20 @@ func (args *Args) AddFlags(fs *pflag.FlagSet) {
 		"the Go import-path of the generated results")
 	fs.StringVar(&args.GoHeaderFile, "go-header-file", "",
 		"the path to a file containing boilerplate header text; the string \"YEAR\" will be replaced with the current 4-digit year")
-	fs.StringVar(&args.InternalClientSetPackage, "internal-clientset-package", args.InternalClientSetPackage,
+	fs.StringVar(&args.InternalClientSetPackage, "internal-clientset-pkg", args.InternalClientSetPackage,
 		"the Go import-path of the internal clientset to use")
-	fs.StringVar(&args.VersionedClientSetPackage, "versioned-clientset-package", args.VersionedClientSetPackage,
+	fs.StringVar(&args.VersionedClientSetPackage, "versioned-clientset-pkg", args.VersionedClientSetPackage,
 		"the Go import-path of the versioned clientset to use")
-	fs.StringVar(&args.ListersPackage, "listers-package", args.ListersPackage,
+	fs.StringVar(&args.ListersPackage, "listers-pkg", args.ListersPackage,
 		"the Go import-path of the listers to use")
 	fs.BoolVar(&args.SingleDirectory, "single-directory", args.SingleDirectory,
 		"if true, omit the intermediate \"internalversion\" and \"externalversions\" subdirectories")
+	fs.StringVar(&args.SingleClusterVersionedClientSetPackage, "single-cluster-versioned-clientset-pkg", args.SingleClusterVersionedClientSetPackage,
+		"package path to the generated Kubernetes single-cluster versioned clientset package")
+	fs.StringVar(&args.SingleClusterInformersPackage, "single-cluster-informers-pkg", args.SingleClusterInformersPackage,
+		"package path to the generated Kubernetes single-cluster informers package (optional)")
+	fs.StringVar(&args.SingleClusterListersPackage, "single-cluster-listers-pkg", args.SingleClusterListersPackage,
+		"package path to the generated Kubernetes single-cluster listers package (optional)")
 	fs.StringSliceVar(&args.PluralExceptions, "plural-exceptions", args.PluralExceptions,
 		"list of comma separated plural exception definitions in Type:PluralizedType format")
 }
@@ -73,10 +86,13 @@ func (args *Args) Validate() error {
 		return fmt.Errorf("--output-pkg must be specified")
 	}
 	if len(args.VersionedClientSetPackage) == 0 {
-		return fmt.Errorf("--versioned-clientset-package must be specified")
+		return fmt.Errorf("--versioned-clientset-pkg must be specified")
 	}
 	if len(args.ListersPackage) == 0 {
-		return fmt.Errorf("--listers-package must be specified")
+		return fmt.Errorf("--listers-pkg must be specified")
+	}
+	if len(args.SingleClusterVersionedClientSetPackage) == 0 {
+		return fmt.Errorf("--single-cluster-versioned-clientset-pkg must be specified")
 	}
 	return nil
 }

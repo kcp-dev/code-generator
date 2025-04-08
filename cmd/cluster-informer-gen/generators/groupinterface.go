@@ -31,11 +31,12 @@ import (
 // groupInterfaceGenerator generates the per-group interface file.
 type groupInterfaceGenerator struct {
 	generator.GoGenerator
-	outputPackage             string
-	imports                   namer.ImportTracker
-	groupVersions             clientgentypes.GroupVersions
-	filtered                  bool
-	internalInterfacesPackage string
+	outputPackage                 string
+	imports                       namer.ImportTracker
+	groupVersions                 clientgentypes.GroupVersions
+	filtered                      bool
+	internalInterfacesPackage     string
+	singleClusterInformersPackage string
 }
 
 var _ generator.Generator = &groupInterfaceGenerator{}
@@ -60,9 +61,11 @@ func (g *groupInterfaceGenerator) Imports(c *generator.Context) (imports []strin
 }
 
 type versionData struct {
-	Name      string
-	Interface *types.Type
-	New       *types.Type
+	Name             string
+	Interface        *types.Type
+	ClusterInterface *types.Type
+	New              *types.Type
+	NewScoped        *types.Type
 }
 
 func (g *groupInterfaceGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
@@ -73,47 +76,82 @@ func (g *groupInterfaceGenerator) GenerateType(c *generator.Context, t *types.Ty
 		gv := clientgentypes.GroupVersion{Group: g.groupVersions.Group, Version: version.Version}
 		versionPackage := path.Join(g.outputPackage, strings.ToLower(gv.Version.NonEmpty()))
 		iface := c.Universe.Type(types.Name{Package: versionPackage, Name: "Interface"})
+		clusterIface := c.Universe.Type(types.Name{Package: versionPackage, Name: "ClusterInterface"})
 		versions = append(versions, versionData{
-			Name:      namer.IC(version.Version.NonEmpty()),
-			Interface: iface,
-			New:       c.Universe.Function(types.Name{Package: versionPackage, Name: "New"}),
+			Name:             namer.IC(version.Version.NonEmpty()),
+			Interface:        iface,
+			ClusterInterface: clusterIface,
+			New:              c.Universe.Function(types.Name{Package: versionPackage, Name: "New"}),
+			NewScoped:        c.Universe.Function(types.Name{Package: versionPackage, Name: "NewScoped"}),
 		})
 	}
 	m := map[string]interface{}{
-		"interfacesTweakListOptionsFunc":  c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
-		"interfacesSharedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
-		"versions":                        versions,
+		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
+		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
+		"interfacesSharedScopedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),
+		"versions":                              versions,
 	}
 
-	sw.Do(groupTemplate, m)
+	sw.Do(clusterGroupTemplate, m)
+
+	if g.singleClusterInformersPackage == "" {
+		sw.Do(groupTemplate, m)
+	}
 
 	return sw.Error()
 }
+
+var clusterGroupTemplate = `
+// ClusterInterface provides access to each of this group's versions.
+type ClusterInterface interface {
+	$range .versions -$
+	// $.Name$ provides access to shared informers for resources in $.Name$.
+	$.Name$() $.ClusterInterface|raw$
+	$end$
+}
+
+type group struct {
+	factory          $.interfacesSharedInformerFactory|raw$
+	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
+}
+
+// New returns a new ClusterInterface.
+func New(f $.interfacesSharedInformerFactory|raw$, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) ClusterInterface {
+	return &group{factory: f, tweakListOptions: tweakListOptions}
+}
+
+$range .versions$
+// $.Name$ returns a new $.ClusterInterface|raw$.
+func (g *group) $.Name$() $.ClusterInterface|raw$ {
+	return $.New|raw$(g.factory, g.tweakListOptions)
+}
+$end$
+`
 
 var groupTemplate = `
 // Interface provides access to each of this group's versions.
 type Interface interface {
 	$range .versions -$
-		// $.Name$ provides access to shared informers for resources in $.Name$.
-		$.Name$() $.Interface|raw$
+	// $.Name$ provides access to shared informers for resources in $.Name$.
+	$.Name$() $.Interface|raw$
 	$end$
 }
 
-type group struct {
-	factory $.interfacesSharedInformerFactory|raw$
-	namespace string
-	tweakListOptions  $.interfacesTweakListOptionsFunc|raw$
+type scopedGroup struct {
+	factory          $.interfacesSharedScopedInformerFactory|raw$
+	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
+	namespace        string
 }
 
 // New returns a new Interface.
-func New(f $.interfacesSharedInformerFactory|raw$, namespace string, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) Interface {
-	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+func NewScoped(f $.interfacesSharedScopedInformerFactory|raw$, namespace string, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) Interface {
+	return &scopedGroup{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
 $range .versions$
 // $.Name$ returns a new $.Interface|raw$.
-func (g *group) $.Name$() $.Interface|raw$ {
-	return $.New|raw$(g.factory, g.namespace, g.tweakListOptions)
+func (g *scopedGroup) $.Name$() $.Interface|raw$ {
+	return $.NewScoped|raw$(g.factory, g.namespace, g.tweakListOptions)
 }
 $end$
 `

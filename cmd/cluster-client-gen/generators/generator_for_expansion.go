@@ -50,5 +50,5 @@ func (g *genExpansion) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 }
 
 var expansionInterfaceTemplate = `
-type $.|public$Expansion interface {}
+type $.|public$ClusterExpansion interface {}
 `

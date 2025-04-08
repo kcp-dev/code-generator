@@ -29,10 +29,12 @@ import (
 // informer registration
 type factoryInterfaceGenerator struct {
 	generator.GoGenerator
-	outputPackage    string
-	imports          namer.ImportTracker
-	clientSetPackage string
-	filtered         bool
+	outputPackage                          string
+	imports                                namer.ImportTracker
+	clientSetPackage                       string
+	filtered                               bool
+	singleClusterVersionedClientSetPackage string
+	singleClusterInformersPackage          string
 }
 
 var _ generator.Generator = &factoryInterfaceGenerator{}
@@ -57,33 +59,50 @@ func (g *factoryInterfaceGenerator) Imports(c *generator.Context) (imports []str
 }
 
 func (g *factoryInterfaceGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
-	sw := generator.NewSnippetWriter(w, c, "{{", "}}")
+	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	klog.V(5).Infof("processing type %v", t)
 
 	m := map[string]interface{}{
-		"cacheSharedIndexInformer": c.Universe.Type(cacheSharedIndexInformer),
-		"clientSetPackage":         c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "Interface"}),
-		"runtimeObject":            c.Universe.Type(runtimeObject),
-		"timeDuration":             c.Universe.Type(timeDuration),
-		"v1ListOptions":            c.Universe.Type(v1ListOptions),
+		"scopeableCacheSharedIndexInformer": c.Universe.Type(scopeableCacheSharedIndexInformer),
+		"cacheSharedIndexInformer":          c.Universe.Type(cacheSharedIndexInformer),
+		"clusterInterface":                  c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "ClusterInterface"}),
+		"interface":                         c.Universe.Type(types.Name{Package: g.singleClusterVersionedClientSetPackage, Name: "Interface"}),
+		"runtimeObject":                     c.Universe.Type(runtimeObject),
+		"timeDuration":                      c.Universe.Type(timeDuration),
+		"v1ListOptions":                     c.Universe.Type(v1ListOptions),
 	}
 
 	sw.Do(externalSharedInformerFactoryInterface, m)
+
+	if g.singleClusterInformersPackage == "" {
+		sw.Do(externalSharedScopedInformerFactoryInterface, m)
+	}
 
 	return sw.Error()
 }
 
 var externalSharedInformerFactoryInterface = `
-// NewInformerFunc takes {{.clientSetPackage|raw}} and {{.timeDuration|raw}} to return a SharedIndexInformer.
-type NewInformerFunc func({{.clientSetPackage|raw}}, {{.timeDuration|raw}}) cache.SharedIndexInformer
+// TweakListOptionsFunc is a function that transforms a $.v1ListOptions|raw$.
+type TweakListOptionsFunc func(*$.v1ListOptions|raw$)
+
+// NewInformerFunc takes $.clusterInterface|raw$ and $.timeDuration|raw$ to return a $.scopeableCacheSharedIndexInformer|raw$.
+type NewInformerFunc func($.clusterInterface|raw$, $.timeDuration|raw$) $.scopeableCacheSharedIndexInformer|raw$
 
 // SharedInformerFactory a small interface to allow for adding an informer without an import cycle
 type SharedInformerFactory interface {
 	Start(stopCh <-chan struct{})
-	InformerFor(obj {{.runtimeObject|raw}}, newFunc NewInformerFunc) {{.cacheSharedIndexInformer|raw}}
+	InformerFor(obj $.runtimeObject|raw$, newFunc NewInformerFunc) $.scopeableCacheSharedIndexInformer|raw$
 }
+`
 
-// TweakListOptionsFunc is a function that transforms a {{.v1ListOptions|raw}}.
-type TweakListOptionsFunc func(*{{.v1ListOptions|raw}})
+var externalSharedScopedInformerFactoryInterface = `
+// NewScopedInformerFunc takes $.interface|raw$ and $.timeDuration|raw$ to return a SharedIndexInformer.
+type NewScopedInformerFunc func($.interface|raw$, time.Duration) $.cacheSharedIndexInformer|raw$
+
+// SharedScopedInformerFactory a small interface to allow for adding an informer without an import cycle
+type SharedScopedInformerFactory interface {
+	Start(stopCh <-chan struct{})
+	InformerFor(obj $.runtimeObject|raw$, newFunc NewScopedInformerFunc) $.cacheSharedIndexInformer|raw$
+}
 `

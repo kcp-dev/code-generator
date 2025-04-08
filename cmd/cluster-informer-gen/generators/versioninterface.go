@@ -29,11 +29,12 @@ import (
 // versionInterfaceGenerator generates the per-version interface file.
 type versionInterfaceGenerator struct {
 	generator.GoGenerator
-	outputPackage             string
-	imports                   namer.ImportTracker
-	types                     []*types.Type
-	filtered                  bool
-	internalInterfacesPackage string
+	outputPackage                 string
+	imports                       namer.ImportTracker
+	types                         []*types.Type
+	filtered                      bool
+	internalInterfacesPackage     string
+	singleClusterInformersPackage string
 }
 
 var _ generator.Generator = &versionInterfaceGenerator{}
@@ -61,49 +62,83 @@ func (g *versionInterfaceGenerator) GenerateType(c *generator.Context, t *types.
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	m := map[string]interface{}{
-		"interfacesTweakListOptionsFunc":  c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
-		"interfacesSharedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
-		"types":                           g.types,
+		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
+		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
+		"interfacesSharedScopedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),
+		"types":                                 g.types,
 	}
 
-	sw.Do(versionTemplate, m)
+	sw.Do(clusterVersionTemplate, m)
 	for _, typeDef := range g.types {
-		tags, err := util.ParseClientGenTags(append(typeDef.SecondClosestCommentLines, typeDef.CommentLines...))
-		if err != nil {
-			return err
-		}
-		m["namespaced"] = !tags.NonNamespaced
 		m["type"] = typeDef
-		sw.Do(versionFuncTemplate, m)
+		sw.Do(clusterVersionFuncTemplate, m)
+	}
+
+	if g.singleClusterInformersPackage == "" {
+		sw.Do(versionTemplate, m)
+		for _, typeDef := range g.types {
+			tags, err := util.ParseClientGenTags(append(typeDef.SecondClosestCommentLines, typeDef.CommentLines...))
+			if err != nil {
+				return err
+			}
+			m["namespaced"] = !tags.NonNamespaced
+			m["type"] = typeDef
+			sw.Do(versionFuncTemplate, m)
+		}
 	}
 
 	return sw.Error()
 }
 
-var versionTemplate = `
-// Interface provides access to all the informers in this group version.
-type Interface interface {
+var clusterVersionTemplate = `
+type ClusterInterface interface {
 	$range .types -$
-		// $.|publicPlural$ returns a $.|public$Informer.
-		$.|publicPlural$() $.|public$Informer
+	// $.|publicPlural$ returns a $.|public$ClusterInformer.
+	$.|publicPlural$() $.|public$ClusterInformer
 	$end$
 }
 
 type version struct {
-	factory $.interfacesSharedInformerFactory|raw$
-	namespace string
+	factory          $.interfacesSharedInformerFactory|raw$
 	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
 }
 
 // New returns a new Interface.
-func New(f $.interfacesSharedInformerFactory|raw$, namespace string, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) Interface {
-	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+func New(f $.interfacesSharedInformerFactory|raw$, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) ClusterInterface {
+	return &version{factory: f, tweakListOptions: tweakListOptions}
+}
+`
+
+var clusterVersionFuncTemplate = `
+// $.type|publicPlural$ returns a $.type|public$ClusterInformer.
+func (v *version) $.type|publicPlural$() $.type|public$ClusterInformer {
+	return &$.type|private$ClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+`
+
+var versionTemplate = `
+type Interface interface {
+	$range .types -$
+	// $.|publicPlural$ returns a $.|public$Informer.
+	$.|publicPlural$() $.|public$Informer
+	$end$
+}
+
+type scopedVersion struct {
+	factory          $.interfacesSharedScopedInformerFactory|raw$
+	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
+	namespace        string
+}
+
+// New returns a new Interface.
+func NewScoped(f $.interfacesSharedScopedInformerFactory|raw$, namespace string, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) Interface {
+	return &scopedVersion{factory: f, tweakListOptions: tweakListOptions}
 }
 `
 
 var versionFuncTemplate = `
 // $.type|publicPlural$ returns a $.type|public$Informer.
-func (v *version) $.type|publicPlural$() $.type|public$Informer {
-	return &$.type|private$Informer{factory: v.factory$if .namespaced$, namespace: v.namespace$end$, tweakListOptions: v.tweakListOptions}
+func (v *scopedVersion) $.type|publicPlural$() $.type|public$Informer {
+	return &$.type|private$ScopedInformer{factory: v.factory$if .namespaced$, namespace: v.namespace$end$, tweakListOptions: v.tweakListOptions}
 }
 `

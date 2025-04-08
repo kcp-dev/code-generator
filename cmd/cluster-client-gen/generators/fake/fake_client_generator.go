@@ -28,9 +28,10 @@ import (
 	scheme "github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/generators/scheme"
 	"github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/generators/util"
 	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/pkg/imports"
 )
 
-func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, inputPkg string, applyBuilderPackage string, boilerplate []byte) generator.Target {
+func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, inputPkg string, applyBuilderPackage string, singleClusterClientPkg string, boilerplate []byte) generator.Target {
 	// TODO: should make this a function, called by here and in client-generator.go
 	subdir := []string{"typed", strings.ToLower(groupPkgName), strings.ToLower(gv.Version.NonEmpty())}
 	outputDir := filepath.Join(clientsetDir, filepath.Join(subdir...), "fake")
@@ -42,7 +43,7 @@ func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 		PkgPath:       outputPkg,
 		PkgDir:        outputDir,
 		HeaderComment: boilerplate,
-		PkgDocComment: []byte("// Package fake has the automatically generated clients.\n"),
+		PkgDocComment: []byte("// Package fake has the automatically generated cluster clients.\n"),
 		// GeneratorsFunc returns a list of generators. Each generator makes a
 		// single file.
 		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
@@ -55,29 +56,31 @@ func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 			for _, t := range typeList {
 				generators = append(generators, &genFakeForType{
 					GoGenerator: generator.GoGenerator{
-						OutputFilename: "fake_" + strings.ToLower(c.Namers["private"].Name(t)) + ".go",
+						OutputFilename: strings.ToLower(c.Namers["private"].Name(t)) + ".go",
 					},
-					outputPackage:             outputPkg,
-					realClientPackage:         realClientPkg,
-					inputPackage:              inputPkg,
-					version:                   gv.Version.String(),
-					groupGoName:               groupGoName,
-					typeToMatch:               t,
-					imports:                   generator.NewImportTrackerForPackage(outputPkg),
-					applyConfigurationPackage: applyBuilderPackage,
+					outputPackage:              outputPkg,
+					realClientPackage:          realClientPkg,
+					inputPackage:               inputPkg,
+					version:                    gv.Version.String(),
+					groupGoName:                groupGoName,
+					typeToMatch:                t,
+					imports:                    imports.NewImportTrackerForPackage(outputPkg),
+					applyConfigurationPackage:  applyBuilderPackage,
+					singleClusterClientPackage: singleClusterClientPkg,
 				})
 			}
 
 			generators = append(generators, &genFakeForGroup{
 				GoGenerator: generator.GoGenerator{
-					OutputFilename: "fake_" + groupPkgName + "_client.go",
+					OutputFilename: groupPkgName + "_client.go",
 				},
-				outputPackage:     outputPkg,
-				realClientPackage: realClientPkg,
-				version:           gv.Version.String(),
-				groupGoName:       groupGoName,
-				types:             typeList,
-				imports:           generator.NewImportTrackerForPackage(outputPkg),
+				outputPackage:              outputPkg,
+				realClientPackage:          realClientPkg,
+				version:                    gv.Version.String(),
+				groupGoName:                groupGoName,
+				types:                      typeList,
+				imports:                    imports.NewImportTrackerForPackage(outputPkg),
+				singleClusterClientPackage: singleClusterClientPkg,
 			})
 			return generators
 		},
@@ -87,7 +90,7 @@ func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 	}
 }
 
-func TargetForClientset(args *args.Args, clientsetDir, clientsetPkg string, applyConfigurationPkg string, groupGoNames map[clientgentypes.GroupVersion]string, boilerplate []byte) generator.Target {
+func TargetForClientset(args *args.Args, clientsetDir, clientsetPkg string, singleClusterClientPkg string, applyConfigurationPkg string, groupGoNames map[clientgentypes.GroupVersion]string, boilerplate []byte) generator.Target {
 	return &generator.SimpleTarget{
 		// TODO: we'll generate fake clientset for different release in the future.
 		// Package name and path are hard coded for now.
@@ -105,14 +108,15 @@ func TargetForClientset(args *args.Args, clientsetDir, clientsetPkg string, appl
 
 				&genClientset{
 					GoGenerator: generator.GoGenerator{
-						OutputFilename: "clientset_generated.go",
+						OutputFilename: "clientset.go",
 					},
-					groups:                    args.Groups,
-					groupGoNames:              groupGoNames,
-					fakeClientsetPackage:      clientsetPkg,
-					imports:                   generator.NewImportTrackerForPackage(clientsetPkg),
-					realClientsetPackage:      clientsetPkg,
-					applyConfigurationPackage: applyConfigurationPkg,
+					groups:                     args.Groups,
+					groupGoNames:               groupGoNames,
+					fakeClientsetPackage:       clientsetPkg,
+					imports:                    imports.NewImportTrackerForPackage(clientsetPkg),
+					realClientsetPackage:       clientsetPkg,
+					singleClusterClientPackage: singleClusterClientPkg,
+					applyConfigurationPackage:  applyConfigurationPkg,
 				},
 				&scheme.GenScheme{
 					GoGenerator: generator.GoGenerator{
@@ -122,7 +126,7 @@ func TargetForClientset(args *args.Args, clientsetDir, clientsetPkg string, appl
 					OutputPkg:     clientsetPkg,
 					Groups:        args.Groups,
 					GroupGoNames:  groupGoNames,
-					ImportTracker: generator.NewImportTrackerForPackage(clientsetPkg),
+					ImportTracker: imports.NewImportTrackerForPackage(clientsetPkg),
 					PrivateScheme: true,
 				},
 			}

@@ -32,6 +32,7 @@ import (
 	"github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/generators/util"
 	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/types"
 	"github.com/kcp-dev/code-generator/v3/cmd/cluster-lister-gen/args"
+	"github.com/kcp-dev/code-generator/v3/pkg/imports"
 )
 
 // NameSystems returns the name system used by the generators in this package.
@@ -133,12 +134,18 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 				return tags.GenerateClient && tags.HasVerb("list") && tags.HasVerb("get")
 			},
 			GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+				var singleClusterListersPkg string
+				if args.SingleClusterListersPackage != "" {
+					singleClusterListersPkg = path.Join(args.SingleClusterListersPackage, groupPackageName, string(gv.Version))
+				}
+
 				generators = append(generators, &expansionGenerator{
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: "expansion_generated.go",
 					},
-					outputPath: outputDir,
-					types:      typesToGenerate,
+					outputPath:              outputDir,
+					types:                   typesToGenerate,
+					singleClusterListersPkg: singleClusterListersPkg,
 				})
 
 				for _, t := range typesToGenerate {
@@ -146,12 +153,13 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 						GoGenerator: generator.GoGenerator{
 							OutputFilename: strings.ToLower(t.Name.Name) + ".go",
 						},
-						outputPackage:  outputPkg,
-						groupVersion:   gv,
-						internalGVPkg:  internalGVPkg,
-						typeToGenerate: t,
-						imports:        generator.NewImportTrackerForPackage(outputPkg),
-						objectMeta:     objectMeta,
+						outputPackage:           outputPkg,
+						groupVersion:            gv,
+						internalGVPkg:           internalGVPkg,
+						typeToGenerate:          t,
+						imports:                 imports.NewImportTrackerForPackage(outputPkg),
+						objectMeta:              objectMeta,
+						singleClusterListersPkg: singleClusterListersPkg,
 					})
 				}
 				return generators
@@ -192,12 +200,13 @@ func isInternal(m types.Member) bool {
 // type.
 type listerGenerator struct {
 	generator.GoGenerator
-	outputPackage  string
-	groupVersion   clientgentypes.GroupVersion
-	internalGVPkg  string
-	typeToGenerate *types.Type
-	imports        namer.ImportTracker
-	objectMeta     *types.Type
+	outputPackage           string
+	groupVersion            clientgentypes.GroupVersion
+	internalGVPkg           string
+	typeToGenerate          *types.Type
+	imports                 namer.ImportTracker
+	objectMeta              *types.Type
+	singleClusterListersPkg string
 }
 
 var _ generator.Generator = &listerGenerator{}
@@ -213,23 +222,23 @@ func (g *listerGenerator) Namers(c *generator.Context) namer.NameSystems {
 }
 
 func (g *listerGenerator) Imports(c *generator.Context) (imports []string) {
+	// gvAlias := util.GroupVersionAliasFromPackage(g.singleClusterListersPkg)
+
 	imports = append(imports, g.imports.ImportLines()...)
+	imports = append(imports,
+		`"github.com/kcp-dev/logicalcluster/v3"`,
+		`kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"`,
+	)
 	return
 }
 
 func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
-	klog.V(5).Infof("processing type %v", t)
-	m := map[string]interface{}{
-		"Resource":               c.Universe.Function(types.Name{Package: t.Name.Package, Name: "Resource"}),
-		"labelsSelector":         c.Universe.Function(types.Name{Package: "k8s.io/apimachinery/pkg/labels", Name: "Selector"}),
-		"listersResourceIndexer": c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "ResourceIndexer"}),
-		"listersNew":             c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "New"}),
-		"listersNewNamespaced":   c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "NewNamespaced"}),
-		"cacheIndexer":           c.Universe.Type(types.Name{Package: "k8s.io/client-go/tools/cache", Name: "Indexer"}),
-		"type":                   t,
-		"objectMeta":             g.objectMeta,
+	interfacesPkg := g.singleClusterListersPkg
+	if interfacesPkg == "" {
+		// This will make gengo not output an import statement at all for any references.
+		interfacesPkg = g.outputPackage
 	}
 
 	tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
@@ -237,98 +246,199 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 		return err
 	}
 
-	if tags.NonNamespaced {
-		sw.Do(typeListerInterfaceNonNamespaced, m)
-	} else {
+	klog.V(5).Infof("processing type %v", t)
+	m := map[string]interface{}{
+		"namespaced":                    !tags.NonNamespaced,
+		"Resource":                      c.Universe.Function(types.Name{Package: t.Name.Package, Name: "Resource"}),
+		"labelsSelector":                c.Universe.Function(types.Name{Package: "k8s.io/apimachinery/pkg/labels", Name: "Selector"}),
+		"listersResourceClusterIndexer": c.Universe.Function(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers", Name: "ResourceClusterIndexer"}),
+		"listersResourceIndexer":        c.Universe.Function(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers", Name: "ResourceIndexer"}),
+		"kubeListersResourceIndexer":    c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "ResourceIndexer"}),
+		"kubeListersNew":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "New"}),
+		"kubeListersNewNamespaced":      c.Universe.Function(types.Name{Package: "k8s.io/client-go/listers", Name: "NewNamespaced"}),
+		"listersNew":                    c.Universe.Function(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers", Name: "New"}),
+		"listersNewCluster":             c.Universe.Function(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers", Name: "NewCluster"}),
+		"listersNewNamespaced":          c.Universe.Function(types.Name{Package: "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers", Name: "NewNamespaced"}),
+		"cacheIndexer":                  c.Universe.Type(types.Name{Package: "k8s.io/client-go/tools/cache", Name: "Indexer"}),
+		"type":                          t,
+		"listerInterface":               c.Universe.Type(types.Name{Package: interfacesPkg, Name: t.Name.Name + "Lister"}),
+		"namespaceListerInterface":      c.Universe.Type(types.Name{Package: interfacesPkg, Name: t.Name.Name + "NamespaceLister"}),
+		"objectMeta":                    g.objectMeta,
+		"groupVersion":                  util.GroupVersionAliasFromPackage(g.singleClusterListersPkg),
+	}
+
+	sw.Do(typeClusterListerInterface, m)
+
+	sw.Do(typeListerStruct, m)
+
+	// no external interfaces provided, so we generate our own
+	if g.singleClusterListersPkg == "" {
 		sw.Do(typeListerInterface, m)
 	}
 
-	sw.Do(typeListerStruct, m)
-	sw.Do(typeListerConstructor, m)
+	if !tags.NonNamespaced {
+		sw.Do(typeListerNamespaceLister, m)
+		sw.Do(namespaceListerStruct, m)
 
-	if tags.NonNamespaced {
-		return sw.Error()
+		if g.singleClusterListersPkg == "" {
+			sw.Do(namespaceListerInterface, m)
+		}
+
+		sw.Do(namespaceListerConstructor, m)
 	}
 
-	sw.Do(typeListerNamespaceLister, m)
-	sw.Do(namespaceListerInterface, m)
-	sw.Do(namespaceListerStruct, m)
+	sw.Do(scopedLister, m)
 
 	return sw.Error()
 }
 
-var typeListerInterface = `
-// $.type|public$Lister helps list $.type|publicPlural$.
+var typeClusterListerInterface = `
+// $.type|public$ClusterLister helps list $.type|publicPlural$ across all workspaces,
+// or scope down to a $.type|public$Lister for one workspace.
 // All objects returned here must be treated as read-only.
-type $.type|public$Lister interface {
+type $.type|public$ClusterLister interface {
 	// List lists all $.type|publicPlural$ in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector $.labelsSelector|raw$) (ret []*$.type|raw$, err error)
-	// $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$.
-	$.type|publicPlural$(namespace string) $.type|public$NamespaceLister
-	$.type|public$ListerExpansion
+	// Cluster returns a lister that can list and get $.type|publicPlural$ in one workspace.
+	Cluster(clusterName logicalcluster.Name) $.listerInterface|raw$
+	$.type|public$ClusterListerExpansion
+}
+
+// $.type|private$ClusterLister implements the $.type|public$ClusterLister interface.
+type $.type|private$ClusterLister struct {
+	kcplisters.ResourceClusterIndexer[*$.type|raw$]
+	indexer $.cacheIndexer|raw$
+}
+
+var _ $.type|public$ClusterLister = new($.type|private$ClusterLister)
+
+// New$.type|public$ClusterLister returns a new $.type|public$ClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+$if .namespaced -$
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
+$end -$
+func New$.type|public$ClusterLister(indexer cache.Indexer) *$.type|private$ClusterLister {
+	return &$.type|private$ClusterLister{
+		$.listersNewCluster|raw$[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$")),
+		indexer,
+	}
+}
+
+// Cluster scopes the lister to one workspace, allowing users to list and get $.type|publicPlural$.
+func (l *$.type|private$ClusterLister) Cluster(clusterName logicalcluster.Name) $.listerInterface|raw$ {
+	return &$.type|private$Lister{
+ 		$.listersNew|raw$[*$.type|raw$](l.indexer, clusterName, $.Resource|raw$("$.type|lowercaseSingular$")),
+ 		l.indexer,
+		clusterName,
+ 	}
 }
 `
 
-var typeListerInterfaceNonNamespaced = `
-// $.type|public$Lister helps list $.type|publicPlural$.
+var typeListerInterface = `
+$if .namespaced -$
+// $.listerInterface|raw$ can list $.type|publicPlural$ across all namespaces, or scope down to a $.namespaceListerInterface|raw$ for one namespace.
+$else -$
+// $.listerInterface|raw$ can list all $.type|publicPlural$, or get one in particular.
+$end -$
 // All objects returned here must be treated as read-only.
-type $.type|public$Lister interface {
+type $.listerInterface|raw$ interface {
 	// List lists all $.type|publicPlural$ in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector $.labelsSelector|raw$) (ret []*$.type|raw$, err error)
-	// Get retrieves the $.type|public$ from the index for a given name.
+$if .namespaced -$
+	// $.type|publicPlural$ returns a lister that can list and get $.type|publicPlural$ in one workspace and namespace.
+	$.type|publicPlural$(namespace string) $.namespaceListerInterface|raw$
+$else -$
+	// Get retrieves the $.type|public$ from the indexer for a given workspace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*$.type|raw$, error)
+$end -$
 	$.type|public$ListerExpansion
 }
 `
 
-// This embeds a typed resource indexer instead of aliasing, so that the struct
-// is available as a receiver for methods specific to the generated type
-// (from the corresponding expansion interface).
 var typeListerStruct = `
-// $.type|private$Lister implements the $.type|public$Lister interface.
+// $.type|private$Lister can list all $.type|publicPlural$ inside a workspace
+// or scope down to a $.namespaceListerInterface|raw$ for one namespace.
 type $.type|private$Lister struct {
-	$.listersResourceIndexer|raw$[*$.type|raw$]
+	kcplisters.ResourceIndexer[*$.type|raw$]
+	indexer     $.cacheIndexer|raw$
+	clusterName logicalcluster.Name
 }
-`
 
-var typeListerConstructor = `
-// New$.type|public$Lister returns a new $.type|public$Lister.
-func New$.type|public$Lister(indexer $.cacheIndexer|raw$) $.type|public$Lister {
-	return &$.type|private$Lister{$.listersNew|raw$[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$"))}
-}
+var _ $.listerInterface|raw$ = new($.type|private$Lister)
 `
 
 var typeListerNamespaceLister = `
-// $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$.
-func (s *$.type|private$Lister) $.type|publicPlural$(namespace string) $.type|public$NamespaceLister {
-	return $.type|private$NamespaceLister{$.listersNewNamespaced|raw$[*$.type|raw$](s.ResourceIndexer, namespace)}
+// $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$ in one namespace.
+func (l *$.type|private$Lister) $.type|publicPlural$(namespace string) $.namespaceListerInterface|raw$ {
+	return new$.type|public$NamespaceLister(l.ResourceIndexer, namespace)
 }
 `
 
 var namespaceListerInterface = `
-// $.type|public$NamespaceLister helps list and get $.type|publicPlural$.
+// $.namespaceListerInterface|raw$ can list all $.type|publicPlural$, or get one in particular.
 // All objects returned here must be treated as read-only.
-type $.type|public$NamespaceLister interface {
-	// List lists all $.type|publicPlural$ in the indexer for a given namespace.
+type $.namespaceListerInterface|raw$ interface {
+	// List lists all $.type|publicPlural$ in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector $.labelsSelector|raw$) (ret []*$.type|raw$, err error)
-	// Get retrieves the $.type|public$ from the indexer for a given namespace and name.
+	// Get retrieves the $.type|public$ from the indexer for a given workspace, namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*$.type|raw$, error)
 	$.type|public$NamespaceListerExpansion
 }
 `
 
-// This embeds a typed namespaced resource indexer instead of aliasing, so that the struct
-// is available as a receiver for methods specific to the generated type
-// (from the corresponding expansion interface).
 var namespaceListerStruct = `
-// $.type|private$NamespaceLister implements the $.type|public$NamespaceLister
+// $.type|private$NamespaceLister implements the $.namespaceListerInterface|raw$
 // interface.
 type $.type|private$NamespaceLister struct {
 	$.listersResourceIndexer|raw$[*$.type|raw$]
 }
+
+var _ $.namespaceListerInterface|raw$ = new($.type|private$NamespaceLister)
+`
+
+var namespaceListerConstructor = `
+// new$.type|public$NamespaceLister returns a new $.namespaceListerInterface|raw$.
+func new$.type|public$NamespaceLister(indexer $.listersResourceIndexer|raw$[*$.type|raw$], namespace string) $.namespaceListerInterface|raw$ {
+	return &$.type|private$NamespaceLister{
+		$.listersNewNamespaced|raw$(indexer, namespace),
+	}
+}
+`
+
+var scopedLister = `
+// New$.type|public$Lister returns a new $.listerInterface|raw$.
+// We assume that the indexer:
+// - is fed by a workspace-scoped LIST+WATCH
+// - uses cache.MetaNamespaceKeyFunc as the key function
+$if .namespaced -$
+// - has the cache.NamespaceIndex as an index
+$end -$
+func New$.type|public$Lister(indexer cache.Indexer) $.listerInterface|raw$ {
+	return &$.type|private$ScopedLister{
+		$.kubeListersNew|raw$[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$")),
+		indexer,
+	}
+}
+
+// $.type|private$ScopedLister can list all $.type|publicPlural$ inside a workspace
+// or scope down to a $.namespaceListerInterface|raw$$if .namespaced$ for one namespace$end$.
+type $.type|private$ScopedLister struct {
+	$.kubeListersResourceIndexer|raw$[*$.type|raw$]
+	indexer $.cacheIndexer|raw$
+}
+
+$if .namespaced -$
+// $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$ in one namespace.
+func (l *$.type|private$ScopedLister) $.type|publicPlural$(namespace string) $.namespaceListerInterface|raw$ {
+	return $.kubeListersNewNamespaced|raw$(l.ResourceIndexer, namespace)
+}
+$end -$
 `

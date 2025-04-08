@@ -32,8 +32,9 @@ import (
 // expansionGenerator produces a file for a expansion interfaces.
 type expansionGenerator struct {
 	generator.GoGenerator
-	outputPath string
-	types      []*types.Type
+	outputPath              string
+	types                   []*types.Type
+	singleClusterListersPkg string
 }
 
 // We only want to call GenerateType() once per group.
@@ -44,29 +45,45 @@ func (g *expansionGenerator) Filter(c *generator.Context, t *types.Type) bool {
 func (g *expansionGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 	for _, t := range g.types {
-		tags := util.MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 		manualFile := filepath.Join(g.outputPath, strings.ToLower(t.Name.Name+"_expansion.go"))
 		if _, err := os.Stat(manualFile); err == nil {
 			klog.V(4).Infof("file %q exists, not generating", manualFile)
 		} else if os.IsNotExist(err) {
-			sw.Do(expansionInterfaceTemplate, t)
-			if !tags.NonNamespaced {
-				sw.Do(namespacedExpansionInterfaceTemplate, t)
+			tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
+			if err != nil {
+				return err
+			}
+
+			sw.Do(clusterListerExpansionInterfaceTemplate, t)
+			// no external interface means we generated our own, so we also generate our own expansion for it
+			if g.singleClusterListersPkg == "" {
+				sw.Do(listerExpansionInterfaceTemplate, t)
+
+				if !tags.NonNamespaced {
+					sw.Do(namespaceListerExpansionInterfaceTemplate, t)
+				}
 			}
 		} else {
 			return err
 		}
 	}
+
 	return sw.Error()
 }
 
-var expansionInterfaceTemplate = `
+var clusterListerExpansionInterfaceTemplate = `
+// $.|public$ClusterListerExpansion allows custom methods to be added to
+// $.|public$ClusterLister.
+type $.|public$ClusterListerExpansion interface {}
+`
+
+var listerExpansionInterfaceTemplate = `
 // $.|public$ListerExpansion allows custom methods to be added to
 // $.|public$Lister.
 type $.|public$ListerExpansion interface {}
 `
 
-var namespacedExpansionInterfaceTemplate = `
+var namespaceListerExpansionInterfaceTemplate = `
 // $.|public$NamespaceListerExpansion allows custom methods to be added to
 // $.|public$NamespaceLister.
 type $.|public$NamespaceListerExpansion interface {}

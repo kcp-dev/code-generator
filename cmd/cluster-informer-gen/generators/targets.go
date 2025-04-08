@@ -31,6 +31,7 @@ import (
 	"github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/generators/util"
 	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/cluster-client-gen/types"
 	"github.com/kcp-dev/code-generator/v3/cmd/cluster-informer-gen/args"
+	"github.com/kcp-dev/code-generator/v3/pkg/imports"
 	genutil "github.com/kcp-dev/code-generator/v3/pkg/util"
 )
 
@@ -193,14 +194,16 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 					internalVersionOutputDir, internalVersionOutputPkg,
 					groupPackageName, gv, groupGoNames[groupPackageName],
 					boilerplate, typesToGenerate,
-					args.InternalClientSetPackage, args.ListersPackage))
+					args.InternalClientSetPackage, args.ListersPackage, args.SingleClusterVersionedClientSetPackage,
+					args.SingleClusterListersPackage, args.SingleClusterInformersPackage))
 		} else {
 			targetList = append(targetList,
 				versionTarget(
 					externalVersionOutputDir, externalVersionOutputPkg,
 					groupPackageName, gv, groupGoNames[groupPackageName],
 					boilerplate, typesToGenerate,
-					args.VersionedClientSetPackage, args.ListersPackage))
+					args.VersionedClientSetPackage, args.ListersPackage, args.SingleClusterVersionedClientSetPackage,
+					args.SingleClusterListersPackage, args.SingleClusterInformersPackage))
 		}
 	}
 
@@ -208,37 +211,40 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		targetList = append(targetList,
 			factoryInterfaceTarget(
 				externalVersionOutputDir, externalVersionOutputPkg,
-				boilerplate, args.VersionedClientSetPackage))
+				boilerplate, args.VersionedClientSetPackage, args.SingleClusterVersionedClientSetPackage, args.SingleClusterInformersPackage))
 		targetList = append(targetList,
 			factoryTarget(
 				externalVersionOutputDir, externalVersionOutputPkg,
 				boilerplate, groupGoNames, genutil.PluralExceptionListToMapOrDie(args.PluralExceptions),
-				externalGroupVersions, args.VersionedClientSetPackage, typesForGroupVersion))
+				externalGroupVersions, args.VersionedClientSetPackage, args.SingleClusterVersionedClientSetPackage, args.SingleClusterInformersPackage, typesForGroupVersion))
 		for _, gvs := range externalGroupVersions {
 			targetList = append(targetList,
-				groupTarget(externalVersionOutputDir, externalVersionOutputPkg, gvs, boilerplate))
+				groupTarget(externalVersionOutputDir, externalVersionOutputPkg, gvs, args.SingleClusterInformersPackage, boilerplate))
 		}
 	}
 
 	if len(internalGroupVersions) != 0 {
 		targetList = append(targetList,
-			factoryInterfaceTarget(internalVersionOutputDir, internalVersionOutputPkg, boilerplate, args.InternalClientSetPackage))
+			factoryInterfaceTarget(internalVersionOutputDir, internalVersionOutputPkg, boilerplate, args.InternalClientSetPackage, args.SingleClusterVersionedClientSetPackage, args.SingleClusterInformersPackage))
 		targetList = append(targetList,
 			factoryTarget(
 				internalVersionOutputDir, internalVersionOutputPkg,
 				boilerplate, groupGoNames, genutil.PluralExceptionListToMapOrDie(args.PluralExceptions),
-				internalGroupVersions, args.InternalClientSetPackage, typesForGroupVersion))
+				internalGroupVersions, args.InternalClientSetPackage, args.SingleClusterVersionedClientSetPackage, args.SingleClusterInformersPackage, typesForGroupVersion))
 		for _, gvs := range internalGroupVersions {
 			targetList = append(targetList,
-				groupTarget(internalVersionOutputDir, internalVersionOutputPkg, gvs, boilerplate))
+				groupTarget(internalVersionOutputDir, internalVersionOutputPkg, gvs, args.SingleClusterInformersPackage, boilerplate))
 		}
 	}
 
 	return targetList
 }
 
-func factoryTarget(outputDirBase, outputPkgBase string, boilerplate []byte, groupGoNames, pluralExceptions map[string]string, groupVersions map[string]clientgentypes.GroupVersions, clientSetPackage string,
-	typesForGroupVersion map[clientgentypes.GroupVersion][]*types.Type) generator.Target {
+func factoryTarget(
+	outputDirBase, outputPkgBase string, boilerplate []byte, groupGoNames, pluralExceptions map[string]string,
+	groupVersions map[string]clientgentypes.GroupVersions, clientSetPackage string,
+	singleClusterVersionedClientSetPkg, singleClusterInformersPkg string, typesForGroupVersion map[clientgentypes.GroupVersion][]*types.Type,
+) generator.Target {
 	return &generator.SimpleTarget{
 		PkgName:       path.Base(outputDirBase),
 		PkgPath:       outputPkgBase,
@@ -249,24 +255,27 @@ func factoryTarget(outputDirBase, outputPkgBase string, boilerplate []byte, grou
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "factory.go",
 				},
-				outputPackage:             outputPkgBase,
-				imports:                   generator.NewImportTrackerForPackage(outputPkgBase),
-				groupVersions:             groupVersions,
-				clientSetPackage:          clientSetPackage,
-				internalInterfacesPackage: path.Join(outputPkgBase, subdirForInternalInterfaces),
-				gvGoNames:                 groupGoNames,
+				outputPackage:                          outputPkgBase,
+				imports:                                imports.NewImportTrackerForPackage(outputPkgBase),
+				groupVersions:                          groupVersions,
+				clientSetPackage:                       clientSetPackage,
+				internalInterfacesPackage:              path.Join(outputPkgBase, subdirForInternalInterfaces),
+				gvGoNames:                              groupGoNames,
+				singleClusterVersionedClientSetPackage: singleClusterVersionedClientSetPkg,
+				singleClusterInformersPackage:          singleClusterInformersPkg,
 			})
 
 			generators = append(generators, &genericGenerator{
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "generic.go",
 				},
-				outputPackage:        outputPkgBase,
-				imports:              generator.NewImportTrackerForPackage(outputPkgBase),
-				groupVersions:        groupVersions,
-				pluralExceptions:     pluralExceptions,
-				typesForGroupVersion: typesForGroupVersion,
-				groupGoNames:         groupGoNames,
+				outputPackage:             outputPkgBase,
+				imports:                   imports.NewImportTrackerForPackage(outputPkgBase),
+				groupVersions:             groupVersions,
+				pluralExceptions:          pluralExceptions,
+				typesForGroupVersion:      typesForGroupVersion,
+				groupGoNames:              groupGoNames,
+				singleClusterInformersPkg: singleClusterInformersPkg,
 			})
 
 			return generators
@@ -274,7 +283,7 @@ func factoryTarget(outputDirBase, outputPkgBase string, boilerplate []byte, grou
 	}
 }
 
-func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []byte, clientSetPackage string) generator.Target {
+func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []byte, clientSetPackage, singleClusterVersionedClientSetPackage, singleClusterInformersPackage string) generator.Target {
 	outputDir := filepath.Join(outputDirBase, subdirForInternalInterfaces)
 	outputPkg := path.Join(outputPkgBase, subdirForInternalInterfaces)
 
@@ -288,9 +297,11 @@ func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []b
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "factory_interfaces.go",
 				},
-				outputPackage:    outputPkg,
-				imports:          generator.NewImportTrackerForPackage(outputPkg),
-				clientSetPackage: clientSetPackage,
+				outputPackage:                          outputPkg,
+				imports:                                imports.NewImportTrackerForPackage(outputPkg),
+				clientSetPackage:                       clientSetPackage,
+				singleClusterVersionedClientSetPackage: singleClusterVersionedClientSetPackage,
+				singleClusterInformersPackage:          singleClusterInformersPackage,
 			})
 
 			return generators
@@ -298,7 +309,7 @@ func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []b
 	}
 }
 
-func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientgentypes.GroupVersions, boilerplate []byte) generator.Target {
+func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientgentypes.GroupVersions, singleClusterInformersPackage string, boilerplate []byte) generator.Target {
 	outputDir := filepath.Join(outputDirBase, groupVersions.PackageName)
 	outputPkg := path.Join(outputPackageBase, groupVersions.PackageName)
 	groupPkgName := strings.Split(string(groupVersions.PackageName), ".")[0]
@@ -313,10 +324,11 @@ func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientge
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "interface.go",
 				},
-				outputPackage:             outputPkg,
-				groupVersions:             groupVersions,
-				imports:                   generator.NewImportTrackerForPackage(outputPkg),
-				internalInterfacesPackage: path.Join(outputPackageBase, subdirForInternalInterfaces),
+				outputPackage:                 outputPkg,
+				groupVersions:                 groupVersions,
+				imports:                       imports.NewImportTrackerForPackage(outputPkg),
+				internalInterfacesPackage:     path.Join(outputPackageBase, subdirForInternalInterfaces),
+				singleClusterInformersPackage: singleClusterInformersPackage,
 			})
 			return generators
 		},
@@ -327,7 +339,11 @@ func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientge
 	}
 }
 
-func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv clientgentypes.GroupVersion, groupGoName string, boilerplate []byte, typesToGenerate []*types.Type, clientSetPackage, listersPackage string) generator.Target {
+func versionTarget(
+	outputDirBase, outputPkgBase string, groupPkgName string, gv clientgentypes.GroupVersion, groupGoName string,
+	boilerplate []byte, typesToGenerate []*types.Type, clientSetPackage, listersPackage, singleClusterVersionedClientSetPackage,
+	singleClusterListersPackage, singleClusterInformersPackage string,
+) generator.Target {
 	subdir := []string{groupPkgName, strings.ToLower(gv.Version.NonEmpty())}
 	outputDir := filepath.Join(outputDirBase, filepath.Join(subdir...))
 	outputPkg := path.Join(outputPkgBase, path.Join(subdir...))
@@ -342,10 +358,11 @@ func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv 
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "interface.go",
 				},
-				outputPackage:             outputPkg,
-				imports:                   generator.NewImportTrackerForPackage(outputPkg),
-				types:                     typesToGenerate,
-				internalInterfacesPackage: path.Join(outputPkgBase, subdirForInternalInterfaces),
+				outputPackage:                 outputPkg,
+				imports:                       imports.NewImportTrackerForPackage(outputPkg),
+				types:                         typesToGenerate,
+				internalInterfacesPackage:     path.Join(outputPkgBase, subdirForInternalInterfaces),
+				singleClusterInformersPackage: singleClusterInformersPackage,
 			})
 
 			for _, t := range typesToGenerate {
@@ -353,15 +370,18 @@ func versionTarget(outputDirBase, outputPkgBase string, groupPkgName string, gv 
 					GoGenerator: generator.GoGenerator{
 						OutputFilename: strings.ToLower(t.Name.Name) + ".go",
 					},
-					outputPackage:             outputPkg,
-					groupPkgName:              groupPkgName,
-					groupVersion:              gv,
-					groupGoName:               groupGoName,
-					typeToGenerate:            t,
-					imports:                   generator.NewImportTrackerForPackage(outputPkg),
-					clientSetPackage:          clientSetPackage,
-					listersPackage:            listersPackage,
-					internalInterfacesPackage: path.Join(outputPkgBase, subdirForInternalInterfaces),
+					outputPackage:                          outputPkg,
+					groupPkgName:                           groupPkgName,
+					groupVersion:                           gv,
+					groupGoName:                            groupGoName,
+					typeToGenerate:                         t,
+					imports:                                imports.NewImportTrackerForPackage(outputPkg),
+					clientSetPackage:                       clientSetPackage,
+					listersPackage:                         listersPackage,
+					internalInterfacesPackage:              path.Join(outputPkgBase, subdirForInternalInterfaces),
+					singleClusterListersPackage:            singleClusterListersPackage,
+					singleClusterInformersPackage:          singleClusterInformersPackage,
+					singleClusterVersionedClientSetPackage: singleClusterVersionedClientSetPackage,
 				})
 			}
 			return generators

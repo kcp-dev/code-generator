@@ -38,8 +38,9 @@ type genClientset struct {
 	imports              namer.ImportTracker
 	clientsetGenerated   bool
 	// the import path of the generated real clientset.
-	realClientsetPackage      string // must be a Go import-path
-	applyConfigurationPackage string
+	realClientsetPackage       string // must be a Go import-path
+	singleClusterClientPackage string
+	applyConfigurationPackage  string
 }
 
 var _ generator.Generator = &genClientset{}
@@ -62,23 +63,30 @@ func (g *genClientset) Imports(c *generator.Context) (imports []string) {
 	for _, group := range g.groups {
 		for _, version := range group.Versions {
 			groupClientPackage := path.Join(g.fakeClientsetPackage, "typed", strings.ToLower(group.PackageName), strings.ToLower(version.NonEmpty()))
+			singleClusterGroupClientPackage := path.Join(g.singleClusterClientPackage, "typed", strings.ToLower(group.PackageName), strings.ToLower(version.NonEmpty()))
 			fakeGroupClientPackage := path.Join(groupClientPackage, "fake")
 
 			groupAlias := strings.ToLower(g.groupGoNames[clientgentypes.GroupVersion{Group: group.Group, Version: version.Version}])
-			imports = append(imports, fmt.Sprintf("%s%s \"%s\"", groupAlias, strings.ToLower(version.NonEmpty()), groupClientPackage))
-			imports = append(imports, fmt.Sprintf("fake%s%s \"%s\"", groupAlias, strings.ToLower(version.NonEmpty()), fakeGroupClientPackage))
+			imports = append(imports, fmt.Sprintf("%s%s \"%s\"", groupAlias, strings.ToLower(version.NonEmpty()), singleClusterGroupClientPackage))
+			imports = append(imports, fmt.Sprintf("kcp%s%s \"%s\"", groupAlias, strings.ToLower(version.NonEmpty()), groupClientPackage))
+			imports = append(imports, fmt.Sprintf("kcpfake%s%s \"%s\"", groupAlias, strings.ToLower(version.NonEmpty()), fakeGroupClientPackage))
 		}
 	}
+
 	// the package that has the clientset Interface
-	imports = append(imports, fmt.Sprintf("clientset \"%s\"", g.realClientsetPackage))
+	imports = append(imports,
+		fmt.Sprintf("clientset \"%s\"", g.singleClusterClientPackage),
+		fmt.Sprintf("kcpclientset \"%s\"", g.realClientsetPackage),
+		fmt.Sprintf("kcpclientscheme \"%s\"", path.Join(g.realClientsetPackage, "scheme")),
+	)
+
 	// imports for the code in commonTemplate
 	imports = append(imports,
-		"k8s.io/client-go/testing",
+		"github.com/kcp-dev/logicalcluster/v3",
+		"kcptesting \"github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing\"",
+		"kcpfakediscovery \"github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake\"",
 		"k8s.io/client-go/discovery",
-		"fakediscovery \"k8s.io/client-go/discovery/fake\"",
 		"k8s.io/apimachinery/pkg/runtime",
-		"k8s.io/apimachinery/pkg/watch",
-		"metav1 \"k8s.io/apimachinery/pkg/apis/meta/v1\"",
 	)
 
 	return
@@ -93,15 +101,27 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 
 	allGroups := clientgentypes.ToGroupVersionInfo(g.groups, g.groupGoNames)
 
-	sw.Do(common, nil)
+	sw.Do(clusterCommon, nil)
+
+	for _, group := range allGroups {
+		m := map[string]interface{}{
+			"group":        group.Group,
+			"version":      group.Version,
+			"PackageAlias": group.PackageAlias,
+			"GroupGoName":  group.GroupGoName,
+			"Version":      namer.IC(group.Version.String()),
+		}
+
+		sw.Do(clusterClientsetInterfaceImplTemplate, m)
+	}
+
+	sw.Do(singleCommon, nil)
 
 	if generateApply {
 		sw.Do(managedFieldsClientset, map[string]any{
 			"newTypeConverter": types.Ref(g.applyConfigurationPackage, "NewTypeConverter"),
 		})
 	}
-
-	sw.Do(checkImpl, nil)
 
 	for _, group := range allGroups {
 		m := map[string]interface{}{
@@ -125,40 +145,24 @@ var managedFieldsClientset = `
 // It's backed by a very simple object tracker that processes creates, updates and deletions as-is,
 // without applying any validations and/or defaults. It shouldn't be considered a replacement
 // for a real clientset and is mostly useful in simple unit tests.
-func NewClientset(objects ...runtime.Object) *Clientset {
-	o := testing.NewFieldManagedObjectTracker(
-		scheme,
-		codecs.UniversalDecoder(),
-		$.newTypeConverter|raw$(scheme),
+func NewClientset(objects ...runtime.Object) *ClusterClientset {
+	o := kcptesting.NewFieldManagedObjectTracker(
+		kcpclientscheme.Scheme,
+		kcpclientscheme.Codecs.UniversalDecoder(),
+		$.newTypeConverter|raw$(kcpclientscheme.Scheme),
 	)
-	for _, obj := range objects {
-		if err := o.Add(obj); err != nil {
-			panic(err)
-		}
-	}
+	o.AddAll(objects...)
 
-	cs := &Clientset{tracker: o}
-	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
+	cs := &ClusterClientset{Fake: kcptesting.Fake{}, tracker: o}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: &cs.Fake, ClusterPath: logicalcluster.Wildcard}
 	cs.AddReactor("*", "*", testing.ObjectReaction(o))
-	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
-        var opts metav1.ListOptions
-        if watchActcion, ok := action.(testing.WatchActionImpl); ok {
-            opts = watchActcion.ListOptions
-        }
-		gvr := action.GetResource()
-		ns := action.GetNamespace()
-		watch, err := o.Watch(gvr, ns, opts)
-		if err != nil {
-			return false, nil, err
-		}
-		return true, watch, nil
-	})
+	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
 	return cs
 }
 `
 
-var common = `
+var clusterCommon = `
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
 // It's backed by a very simple object tracker that processes creates, updates and deletions as-is,
 // without applying any field management, validations and/or defaults. It shouldn't be considered a replacement
@@ -167,62 +171,85 @@ var common = `
 // DEPRECATED: NewClientset replaces this with support for field management, which significantly improves
 // server side apply testing. NewClientset is only available when apply configurations are generated (e.g.
 // via --with-applyconfig).
-func NewSimpleClientset(objects ...runtime.Object) *Clientset {
-	o := testing.NewObjectTracker(scheme, codecs.UniversalDecoder())
-	for _, obj := range objects {
-		if err := o.Add(obj); err != nil {
-			panic(err)
-		}
-	}
+func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
+	o := kcptesting.NewObjectTracker(kcpclientscheme.Scheme, kcpclientscheme.Codecs.UniversalDecoder())
+	o.AddAll(objects...)
 
-	cs := &Clientset{tracker: o}
-	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
-	cs.AddReactor("*", "*", testing.ObjectReaction(o))
-	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
-        var opts metav1.ListOptions
-        if watchActcion, ok := action.(testing.WatchActionImpl); ok {
-            opts = watchActcion.ListOptions
-        }
-		gvr := action.GetResource()
-		ns := action.GetNamespace()
-		watch, err := o.Watch(gvr, ns, opts)
-		if err != nil {
-			return false, nil, err
-		}
-		return true, watch, nil
-	})
+	cs := &ClusterClientset{Fake: kcptesting.Fake{}, tracker: o}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: &cs.Fake, ClusterPath: logicalcluster.Wildcard}
+	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
+	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
 	return cs
 }
 
+// ClusterClientset contains the clients for groups.
+type ClusterClientset struct {
+	kcptesting.Fake
+	discovery *kcpfakediscovery.FakeDiscovery
+	tracker   kcptesting.ObjectTracker
+}
+
+var _ kcpclientset.ClusterInterface = (*ClusterClientset)(nil)
+
+// Discovery retrieves the DiscoveryClient
+func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
+	return c.discovery
+}
+
+func (c *ClusterClientset) Tracker() kcptesting.ObjectTracker {
+	return c.tracker
+}
+
+// Cluster scopes this clientset to one cluster.
+func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) clientset.Interface {
+	if clusterPath == logicalcluster.Wildcard {
+		panic("A specific cluster must be provided when scoping, not the wildcard.")
+	}
+	return &Clientset{
+		Fake:        &c.Fake,
+		discovery:   &kcpfakediscovery.FakeDiscovery{Fake: &c.Fake, ClusterPath: clusterPath},
+		tracker:     c.tracker.Cluster(clusterPath),
+		clusterPath: clusterPath,
+	}
+}
+`
+
+var clusterClientsetInterfaceImplTemplate = `
+// $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$ClusterClient
+func (c *ClusterClientset) $.GroupGoName$$.Version$() kcp$.PackageAlias$.$.GroupGoName$$.Version$ClusterInterface {
+	return &kcpfake$.PackageAlias$.$.GroupGoName$$.Version$ClusterClient{Fake: &c.Fake}
+}
+`
+
+var singleCommon = `
 // Clientset implements clientset.Interface. Meant to be embedded into a
 // struct to get a default implementation. This makes faking out just the method
 // you want to test easier.
 type Clientset struct {
-	testing.Fake
-	discovery *fakediscovery.FakeDiscovery
-	tracker testing.ObjectTracker
+	*kcptesting.Fake
+	discovery   *kcpfakediscovery.FakeDiscovery
+	tracker     kcptesting.ScopedObjectTracker
+	clusterPath logicalcluster.Path
 }
+
+var (
+	_ clientset.Interface         = &Clientset{}
+	_ kcptesting.FakeScopedClient = &Clientset{}
+)
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
 }
 
-func (c *Clientset) Tracker() testing.ObjectTracker {
+func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 	return c.tracker
 }
-`
-
-var checkImpl = `
-var (
-	_ clientset.Interface = &Clientset{}
-	_ testing.FakeClient  = &Clientset{}
-)
 `
 
 var clientsetInterfaceImplTemplate = `
 // $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$Client
 func (c *Clientset) $.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface {
-	return &fake$.PackageAlias$.Fake$.GroupGoName$$.Version${Fake: &c.Fake}
+	return &kcpfake$.PackageAlias$.$.GroupGoName$$.Version$Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 `

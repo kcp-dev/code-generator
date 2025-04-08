@@ -16,6 +16,7 @@ SHELL := /usr/bin/env bash
 
 GO_INSTALL = ./hack/go-install.sh
 BUILD_DEST ?= _build
+BUILDFLAGS ?=
 CMD ?= $(notdir $(wildcard ./cmd/*))
 
 TOOLS_DIR=hack/tools
@@ -86,7 +87,7 @@ build: $(CMD)
 $(CMD): %: $(BUILD_DEST)/%
 
 $(BUILD_DEST)/%: cmd/%
-	go build -o $@ ./cmd/$*
+	go build $(BUILDFLAGS) -o $@ ./cmd/$*
 
 .PHONY: install
 install:

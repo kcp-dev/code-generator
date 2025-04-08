@@ -32,13 +32,14 @@ import (
 // genericGenerator generates the generic informer.
 type genericGenerator struct {
 	generator.GoGenerator
-	outputPackage        string
-	imports              namer.ImportTracker
-	groupVersions        map[string]clientgentypes.GroupVersions
-	groupGoNames         map[string]string
-	pluralExceptions     map[string]string
-	typesForGroupVersion map[clientgentypes.GroupVersion][]*types.Type
-	filtered             bool
+	outputPackage             string
+	imports                   namer.ImportTracker
+	groupVersions             map[string]clientgentypes.GroupVersions
+	groupGoNames              map[string]string
+	pluralExceptions          map[string]string
+	typesForGroupVersion      map[clientgentypes.GroupVersion][]*types.Type
+	singleClusterInformersPkg string
+	filtered                  bool
 }
 
 var _ generator.Generator = &genericGenerator{}
@@ -62,6 +63,10 @@ func (g *genericGenerator) Namers(c *generator.Context) namer.NameSystems {
 
 func (g *genericGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
+	imports = append(imports,
+		`"github.com/kcp-dev/logicalcluster/v3"`,
+		`kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"`,
+	)
 	return
 }
 
@@ -123,6 +128,13 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 	}
 	sort.Sort(groupSort(groups))
 
+	genericInformerPkg := g.singleClusterInformersPkg
+	generateInformerInterface := false
+	if genericInformerPkg == "" {
+		genericInformerPkg = g.outputPackage
+		generateInformerInterface = true
+	}
+
 	m := map[string]interface{}{
 		"cacheGenericLister":         c.Universe.Type(cacheGenericLister),
 		"cacheNewGenericLister":      c.Universe.Function(cacheNewGenericLister),
@@ -132,25 +144,63 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 		"schemeGVs":                  schemeGVs,
 		"schemaGroupResource":        c.Universe.Type(schemaGroupResource),
 		"schemaGroupVersionResource": c.Universe.Type(schemaGroupVersionResource),
+		"genericInformer":            c.Universe.Type(types.Name{Package: genericInformerPkg, Name: "GenericInformer"}),
+		"generateInformerInterface":  generateInformerInterface,
 	}
 
+	sw.Do(genericClusterInformer, m)
 	sw.Do(genericInformer, m)
 	sw.Do(forResource, m)
+
+	if generateInformerInterface {
+		sw.Do(forScopedResource, m)
+	}
 
 	return sw.Error()
 }
 
-var genericInformer = `
-// GenericInformer is type of SharedIndexInformer which will locate and delegate to other
-// sharedInformers based on type
+var genericClusterInformer = `
+type GenericClusterInformer interface {
+	Cluster(logicalcluster.Name) {{.genericInformer|raw}}
+	Informer() kcpcache.ScopeableSharedIndexInformer
+	Lister() kcpcache.GenericClusterLister
+}
+{{ if .generateInformerInterface }}
+
 type GenericInformer interface {
 	Informer() {{.cacheSharedIndexInformer|raw}}
 	Lister() {{.cacheGenericLister|raw}}
 }
+{{ end }}
 
+type genericClusterInformer struct {
+	informer kcpcache.ScopeableSharedIndexInformer
+	resource {{.schemaGroupResource|raw}}
+}
+
+// Informer returns the SharedIndexInformer.
+func (f *genericClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
+	return f.informer
+}
+
+// Lister returns the GenericLister.
+func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
+	return kcpcache.NewGenericClusterLister(f.Informer().GetIndexer(), f.resource)
+}
+
+// Cluster scopes to a GenericInformer.
+func (f *genericClusterInformer) Cluster(clusterName logicalcluster.Name) {{.genericInformer|raw}} {
+	return &genericInformer{
+		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().ByCluster(clusterName),
+	}
+}
+`
+
+var genericInformer = `
 type genericInformer struct {
 	informer {{.cacheSharedIndexInformer|raw}}
-	resource {{.schemaGroupResource|raw}}
+	lister   {{.cacheGenericLister|raw}}
 }
 
 // Informer returns the SharedIndexInformer.
@@ -160,21 +210,42 @@ func (f *genericInformer) Informer() {{.cacheSharedIndexInformer|raw}} {
 
 // Lister returns the GenericLister.
 func (f *genericInformer) Lister() {{.cacheGenericLister|raw}} {
-	return {{.cacheNewGenericLister|raw}}(f.Informer().GetIndexer(), f.resource)
+	return f.lister
 }
 `
 
 var forResource = `
 // ForResource gives generic access to a shared informer of the matching type
 // TODO extend this to unknown resources with a client pool
-func (f *sharedInformerFactory) ForResource(resource {{.schemaGroupVersionResource|raw}}) (GenericInformer, error) {
+func (f *sharedInformerFactory) ForResource(resource {{.schemaGroupVersionResource|raw}}) (GenericClusterInformer, error) {
 	switch resource {
 		{{range $group := .groups -}}{{$GroupGoName := .GroupGoName -}}
 			{{range $version := .Versions -}}
 	// Group={{$group.Name}}, Version={{.Name}}
 				{{range .Resources -}}
 	case {{index $.schemeGVs $version|raw}}.WithResource("{{.|resource}}"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.{{$GroupGoName}}().{{$version.GoName}}().{{.|publicPlural}}().Informer()}, nil
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.{{$GroupGoName}}().{{$version.GoName}}().{{.|publicPlural}}().Informer()}, nil
+				{{end}}
+			{{end}}
+		{{end -}}
+	}
+
+	return nil, {{.fmtErrorf|raw}}("no informer found for %v", resource)
+}
+`
+
+var forScopedResource = `
+// ForResource gives generic access to a shared informer of the matching type
+// TODO extend this to unknown resources with a client pool
+func (f *sharedScopedInformerFactory) ForResource(resource {{.schemaGroupVersionResource|raw}}) ({{.genericInformer|raw}}, error) {
+	switch resource {
+		{{range $group := .groups -}}{{$GroupGoName := .GroupGoName -}}
+			{{range $version := .Versions -}}
+	// Group={{$group.Name}}, Version={{.Name}}
+				{{range .Resources -}}
+	case {{index $.schemeGVs $version|raw}}.WithResource("{{.|resource}}"):
+		informer := f.{{$GroupGoName}}().{{$version.GoName}}().{{.|publicPlural}}().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 				{{end}}
 			{{end}}
 		{{end -}}
