@@ -26,7 +26,7 @@ import (
 	"k8s.io/gengo/v2/types"
 	"k8s.io/klog/v2"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
 )
 
 // expansionGenerator produces a file for a expansion interfaces.

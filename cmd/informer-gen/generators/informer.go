@@ -25,8 +25,8 @@ import (
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
-	clientgentypes "github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 
 	"k8s.io/klog/v2"
 )

@@ -24,9 +24,9 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/klog/v2"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/args"
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators"
-	"github.com/kcp-dev/code-generator/v2/pkg/util"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/args"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators"
+	"github.com/kcp-dev/code-generator/v3/pkg/util"
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
 )

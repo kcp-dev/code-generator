@@ -1,4 +1,4 @@
-module github.com/kcp-dev/code-generator/v2
+module github.com/kcp-dev/code-generator/v3
 
 go 1.23.0
 

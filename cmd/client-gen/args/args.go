@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 type Args struct {

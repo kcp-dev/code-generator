@@ -26,7 +26,7 @@ import (
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
 )
 
 // genFakeForGroup produces a file for a group client, e.g. ExtensionsClient for the extension group.

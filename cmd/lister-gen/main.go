@@ -19,9 +19,9 @@ package main
 import (
 	"flag"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/lister-gen/args"
-	"github.com/kcp-dev/code-generator/v2/cmd/lister-gen/generators"
-	"github.com/kcp-dev/code-generator/v2/pkg/util"
+	"github.com/kcp-dev/code-generator/v3/cmd/lister-gen/args"
+	"github.com/kcp-dev/code-generator/v3/cmd/lister-gen/generators"
+	"github.com/kcp-dev/code-generator/v3/pkg/util"
 	"github.com/spf13/pflag"
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"

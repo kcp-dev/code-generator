@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
-	clientgentypes "github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
-	"github.com/kcp-dev/code-generator/v2/cmd/lister-gen/args"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/lister-gen/args"
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"

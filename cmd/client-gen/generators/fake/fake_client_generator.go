@@ -24,10 +24,10 @@ import (
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/types"
 
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/args"
-	scheme "github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/scheme"
-	"github.com/kcp-dev/code-generator/v2/cmd/client-gen/generators/util"
-	clientgentypes "github.com/kcp-dev/code-generator/v2/cmd/client-gen/types"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/args"
+	scheme "github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/scheme"
+	"github.com/kcp-dev/code-generator/v3/cmd/client-gen/generators/util"
+	clientgentypes "github.com/kcp-dev/code-generator/v3/cmd/client-gen/types"
 )
 
 func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, inputPkg string, applyBuilderPackage string, boilerplate []byte) generator.Target {
