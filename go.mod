@@ -9,9 +9,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/text v0.21.0
 	golang.org/x/tools v0.29.0
-	k8s.io/apimachinery v0.32.0
+	k8s.io/apimachinery v0.32.3
 	k8s.io/code-generator v0.32.0
-	k8s.io/gengo/v2 v2.0.0-20250106234829-0359904fc2a6
+	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/controller-tools v0.16.1
 )
@@ -31,7 +31,6 @@ require (
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	google.golang.org/protobuf v1.36.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
