@@ -10,7 +10,7 @@ require (
 	golang.org/x/text v0.21.0
 	golang.org/x/tools v0.29.0
 	k8s.io/apimachinery v0.32.3
-	k8s.io/code-generator v0.32.0
+	k8s.io/code-generator v0.32.3
 	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/controller-tools v0.16.1
