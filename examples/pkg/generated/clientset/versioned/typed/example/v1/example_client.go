@@ -34,7 +34,7 @@ type ExampleV1Interface interface {
 	WithoutVerbTypesGetter
 }
 
-// ExampleV1Client is used to interact with features provided by the example group.
+// ExampleV1Client is used to interact with features provided by the example.dev group.
 type ExampleV1Client struct {
 	restClient rest.Interface
 }

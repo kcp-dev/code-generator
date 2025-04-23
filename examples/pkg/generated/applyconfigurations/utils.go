@@ -23,20 +23,20 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	testing "k8s.io/client-go/testing"
 
-	v1 "acme.corp/pkg/apis/example/v1"
+	examplev1 "acme.corp/pkg/apis/example/v1"
 	v1alpha1 "acme.corp/pkg/apis/example/v1alpha1"
 	v1beta1 "acme.corp/pkg/apis/example/v1beta1"
 	v2 "acme.corp/pkg/apis/example/v2"
 	example3v1 "acme.corp/pkg/apis/example3/v1"
-	exampledashedv1 "acme.corp/pkg/apis/exampledashed/v1"
+	v1 "acme.corp/pkg/apis/exampledashed/v1"
 	existinginterfacesv1 "acme.corp/pkg/apis/existinginterfaces/v1"
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
-	examplev1 "acme.corp/pkg/generated/applyconfigurations/example/v1"
+	applyconfigurationsexamplev1 "acme.corp/pkg/generated/applyconfigurations/example/v1"
 	examplev1alpha1 "acme.corp/pkg/generated/applyconfigurations/example/v1alpha1"
 	examplev1beta1 "acme.corp/pkg/generated/applyconfigurations/example/v1beta1"
 	examplev2 "acme.corp/pkg/generated/applyconfigurations/example/v2"
 	applyconfigurationsexample3v1 "acme.corp/pkg/generated/applyconfigurations/example3/v1"
-	applyconfigurationsexampledashedv1 "acme.corp/pkg/generated/applyconfigurations/exampledashed/v1"
+	exampledashedv1 "acme.corp/pkg/generated/applyconfigurations/exampledashed/v1"
 	applyconfigurationsexistinginterfacesv1 "acme.corp/pkg/generated/applyconfigurations/existinginterfaces/v1"
 	internal "acme.corp/pkg/generated/applyconfigurations/internal"
 	applyconfigurationssecondexamplev1 "acme.corp/pkg/generated/applyconfigurations/secondexample/v1"
@@ -46,17 +46,25 @@ import (
 // apply configuration type exists for the given GroupVersionKind.
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
-	// Group=example, Version=v1
+	// Group=example-dashed.some.corp, Version=v1
 	case v1.SchemeGroupVersion.WithKind("ClusterTestType"):
-		return &examplev1.ClusterTestTypeApplyConfiguration{}
+		return &exampledashedv1.ClusterTestTypeApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
-		return &examplev1.ClusterTestTypeStatusApplyConfiguration{}
+		return &exampledashedv1.ClusterTestTypeStatusApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("TestType"):
-		return &examplev1.TestTypeApplyConfiguration{}
-	case v1.SchemeGroupVersion.WithKind("WithoutVerbType"):
-		return &examplev1.WithoutVerbTypeApplyConfiguration{}
+		return &exampledashedv1.TestTypeApplyConfiguration{}
 
-		// Group=example, Version=v1alpha1
+		// Group=example.dev, Version=v1
+	case examplev1.SchemeGroupVersion.WithKind("ClusterTestType"):
+		return &applyconfigurationsexamplev1.ClusterTestTypeApplyConfiguration{}
+	case examplev1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
+		return &applyconfigurationsexamplev1.ClusterTestTypeStatusApplyConfiguration{}
+	case examplev1.SchemeGroupVersion.WithKind("TestType"):
+		return &applyconfigurationsexamplev1.TestTypeApplyConfiguration{}
+	case examplev1.SchemeGroupVersion.WithKind("WithoutVerbType"):
+		return &applyconfigurationsexamplev1.WithoutVerbTypeApplyConfiguration{}
+
+		// Group=example.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithKind("ClusterTestType"):
 		return &examplev1alpha1.ClusterTestTypeApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
@@ -64,7 +72,7 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 	case v1alpha1.SchemeGroupVersion.WithKind("TestType"):
 		return &examplev1alpha1.TestTypeApplyConfiguration{}
 
-		// Group=example, Version=v1beta1
+		// Group=example.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterTestType"):
 		return &examplev1beta1.ClusterTestTypeApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
@@ -72,21 +80,13 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 	case v1beta1.SchemeGroupVersion.WithKind("TestType"):
 		return &examplev1beta1.TestTypeApplyConfiguration{}
 
-		// Group=example, Version=v2
+		// Group=example.dev, Version=v2
 	case v2.SchemeGroupVersion.WithKind("ClusterTestType"):
 		return &examplev2.ClusterTestTypeApplyConfiguration{}
 	case v2.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
 		return &examplev2.ClusterTestTypeStatusApplyConfiguration{}
 	case v2.SchemeGroupVersion.WithKind("TestType"):
 		return &examplev2.TestTypeApplyConfiguration{}
-
-		// Group=example-dashed.some.corp, Version=v1
-	case exampledashedv1.SchemeGroupVersion.WithKind("ClusterTestType"):
-		return &applyconfigurationsexampledashedv1.ClusterTestTypeApplyConfiguration{}
-	case exampledashedv1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
-		return &applyconfigurationsexampledashedv1.ClusterTestTypeStatusApplyConfiguration{}
-	case exampledashedv1.SchemeGroupVersion.WithKind("TestType"):
-		return &applyconfigurationsexampledashedv1.TestTypeApplyConfiguration{}
 
 		// Group=example3.some.corp, Version=v1
 	case example3v1.SchemeGroupVersion.WithKind("ClusterTestType"):
@@ -104,7 +104,7 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 	case existinginterfacesv1.SchemeGroupVersion.WithKind("TestType"):
 		return &applyconfigurationsexistinginterfacesv1.TestTypeApplyConfiguration{}
 
-		// Group=secondexample, Version=v1
+		// Group=secondexample.dev, Version=v1
 	case secondexamplev1.SchemeGroupVersion.WithKind("ClusterTestType"):
 		return &applyconfigurationssecondexamplev1.ClusterTestTypeApplyConfiguration{}
 	case secondexamplev1.SchemeGroupVersion.WithKind("ClusterTestTypeStatus"):
