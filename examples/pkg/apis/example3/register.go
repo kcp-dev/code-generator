@@ -17,5 +17,5 @@ limitations under the License.
 package example
 
 const (
-	GroupName = "example3.dev"
+	GroupName = "example3.some.corp"
 )

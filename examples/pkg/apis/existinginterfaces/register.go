@@ -17,5 +17,5 @@ limitations under the License.
 package existinginterfaces
 
 const (
-	GroupName = "existinginterfaces.dev"
+	GroupName = "existinginterfaces.acme.corp"
 )
