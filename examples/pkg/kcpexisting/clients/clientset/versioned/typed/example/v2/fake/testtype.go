@@ -39,8 +39,8 @@ import (
 	kcpexamplev2 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v2"
 )
 
-var testTypesResource = schema.GroupVersionResource{Group: "example", Version: "v2", Resource: "testtypes"}
-var testTypesKind = schema.GroupVersionKind{Group: "example", Version: "v2", Kind: "TestType"}
+var testTypesResource = schema.GroupVersionResource{Group: "example.dev", Version: "v2", Resource: "testtypes"}
+var testTypesKind = schema.GroupVersionKind{Group: "example.dev", Version: "v2", Kind: "TestType"}
 
 type testTypesClusterClient struct {
 	*kcptesting.Fake

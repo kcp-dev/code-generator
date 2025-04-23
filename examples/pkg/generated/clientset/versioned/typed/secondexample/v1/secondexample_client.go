@@ -33,7 +33,7 @@ type SecondexampleV1Interface interface {
 	TestTypesGetter
 }
 
-// SecondexampleV1Client is used to interact with features provided by the secondexample group.
+// SecondexampleV1Client is used to interact with features provided by the secondexample.dev group.
 type SecondexampleV1Client struct {
 	restClient rest.Interface
 }
