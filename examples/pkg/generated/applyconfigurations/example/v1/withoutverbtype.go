@@ -38,7 +38,7 @@ func WithoutVerbType(name, namespace string) *WithoutVerbTypeApplyConfiguration 
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("WithoutVerbType")
-	b.WithAPIVersion("example/v1")
+	b.WithAPIVersion("example.dev/v1")
 	return b
 }
 

@@ -38,8 +38,8 @@ import (
 	examplev1alpha1client "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1"
 )
 
-var clusterTestTypesResource = schema.GroupVersionResource{Group: "example", Version: "v1alpha1", Resource: "clustertesttypes"}
-var clusterTestTypesKind = schema.GroupVersionKind{Group: "example", Version: "v1alpha1", Kind: "ClusterTestType"}
+var clusterTestTypesResource = schema.GroupVersionResource{Group: "example.dev", Version: "v1alpha1", Resource: "clustertesttypes"}
+var clusterTestTypesKind = schema.GroupVersionKind{Group: "example.dev", Version: "v1alpha1", Kind: "ClusterTestType"}
 
 type clusterTestTypesClusterClient struct {
 	*kcptesting.Fake
