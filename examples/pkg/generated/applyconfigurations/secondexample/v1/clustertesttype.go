@@ -40,7 +40,7 @@ func ClusterTestType(name string) *ClusterTestTypeApplyConfiguration {
 	b := &ClusterTestTypeApplyConfiguration{}
 	b.WithName(name)
 	b.WithKind("ClusterTestType")
-	b.WithAPIVersion("secondexample/v1")
+	b.WithAPIVersion("secondexample.dev/v1")
 	return b
 }
 

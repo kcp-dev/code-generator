@@ -39,7 +39,7 @@ func TestType(name, namespace string) *TestTypeApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("TestType")
-	b.WithAPIVersion("example/v2")
+	b.WithAPIVersion("example.dev/v2")
 	return b
 }
 

@@ -98,6 +98,7 @@ lint: $(GOLANGCI_LINT)
 .PHONY: test
 test:
 	go test ./...
+	cd examples; go test ./...
 
 # Note, running this locally if you have any modified files, even those that are not generated,
 # will result in an error. This target is mostly for CI jobs.
