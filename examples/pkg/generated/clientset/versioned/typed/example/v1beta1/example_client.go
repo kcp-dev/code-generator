@@ -33,7 +33,7 @@ type ExampleV1beta1Interface interface {
 	TestTypesGetter
 }
 
-// ExampleV1beta1Client is used to interact with features provided by the example group.
+// ExampleV1beta1Client is used to interact with features provided by the example.dev group.
 type ExampleV1beta1Client struct {
 	restClient rest.Interface
 }
