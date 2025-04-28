@@ -46,9 +46,9 @@ var lister = `
 package {{.group.Version.PackageName}}
 
 import (
-	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"	
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	"github.com/kcp-dev/logicalcluster/v3"
-	
+
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/errors"

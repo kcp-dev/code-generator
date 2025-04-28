@@ -82,7 +82,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	clientset "{{.clientsetPackagePath}}"
-	{{if not .useUpstreamInterfaces -}}	
+	{{if not .useUpstreamInterfaces -}}
 	scopedclientset "{{.singleClusterClientPackagePath}}"
 	{{end -}}
 	{{if .useUpstreamInterfaces -}}
@@ -265,7 +265,7 @@ func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internal
 type ScopedDynamicSharedInformerFactory interface {
 	// ForResource gives generic access to a shared informer of the matching type.
 	ForResource(resource schema.GroupVersionResource) ({{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer, error)
-	
+
 	// Start initializes all requested informers. They are handled in goroutines
 	// which run until the stop channel gets closed.
 	Start(stopCh <-chan struct{})
@@ -353,7 +353,7 @@ func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVe
 	if err != nil {
 		return nil, err
 	}
-	return clusterInformer.Cluster(f.clusterName), nil 
+	return clusterInformer.Cluster(f.clusterName), nil
 }
 
 func (f *scopedDynamicSharedInformerFactory) Start(stopCh <-chan struct{}) {

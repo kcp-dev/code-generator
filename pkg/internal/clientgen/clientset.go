@@ -58,7 +58,7 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 
 	client "{{.singleClusterClientPackagePath}}"
-	
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
@@ -91,7 +91,7 @@ func (c *ClusterClientset) Discovery() discovery.DiscoveryInterface {
 }
 
 {{range .groups}}
-// {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}ClusterClient.  
+// {{.GroupGoName}}{{.Version}} retrieves the {{.GroupGoName}}{{.Version}}ClusterClient.
 func (c *ClusterClientset) {{.GroupGoName}}{{.Version}}() {{.GoPackageAlias}}.{{.GroupGoName}}{{.Version}}ClusterInterface {
 	return c.{{.GroupGoNameLower}}{{.Version}}
 }
@@ -106,7 +106,7 @@ func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) client.Inter
 }
 
 // NewForConfig creates a new ClusterClientset for the given config.
-// If config's RateLimiter is not set and QPS and Burst are acceptable, 
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfig will generate a rate-limiter in configShallowCopy.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).

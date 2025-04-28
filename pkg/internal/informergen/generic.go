@@ -63,6 +63,7 @@ var genericInformer = `
 package informers
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -81,6 +82,7 @@ import (
 
 type GenericClusterInformer interface {
 	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer
+	ClusterWithContext(context.Context, logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() kcpcache.GenericClusterLister
 }
@@ -111,6 +113,15 @@ func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
 func (f *genericClusterInformer) Cluster(clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer {
 	return &genericInformer{
 		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().ByCluster(clusterName),
+	}
+}
+
+// ClusterWithContext scopes to a GenericInformer and unregisters all
+// handles registered through it once the provided context is canceled.
+func (f *genericClusterInformer) ClusterWithContext(ctx context.Context, clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstreaminformers.{{end}}GenericInformer {
+	return &genericInformer{
+		informer: f.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   f.Lister().ByCluster(clusterName),
 	}
 }

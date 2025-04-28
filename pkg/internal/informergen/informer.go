@@ -108,7 +108,7 @@ import (
 	{{end -}}
 
 	clientset "{{.clientsetPackagePath}}"
-	{{if not .useUpstreamInterfaces -}}	
+	{{if not .useUpstreamInterfaces -}}
 	scopedclientset "{{.singleClusterClientPackagePath}}"
 	{{end -}}
 
@@ -119,6 +119,7 @@ import (
 // {{.kind.Plural}}.
 type {{.kind}}ClusterInformer interface {
 	Cluster(logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer
+	ClusterWithContext(context.Context, logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() {{.group.GoPackageAlias}}listers.{{.kind}}ClusterLister
 }
@@ -164,7 +165,7 @@ func (f *{{.kind.String|lowerFirst}}ClusterInformer) defaultInformer(client clie
 	return NewFiltered{{.kind}}ClusterInformer(client, resyncPeriod, cache.Indexers{
 			kcpcache.ClusterIndexName: kcpcache.ClusterIndexFunc,
 			{{if .kind.IsNamespaced}}kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,{{end -}}
-		}, 
+		},
 		f.tweakListOptions,
 	)
 }
@@ -189,6 +190,13 @@ type {{.kind}}Informer interface {
 func (f *{{.kind.String|lowerFirst}}ClusterInformer) Cluster(clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer {
 	return &{{.kind.String|lowerFirst}}Informer{
 		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().Cluster(clusterName),
+	}
+}
+
+func (f *{{.kind.String|lowerFirst}}ClusterInformer) ClusterWithContext(ctx context.Context, clusterName logicalcluster.Name) {{if .useUpstreamInterfaces}}upstream{{.group.GoPackageAlias}}informers.{{end}}{{.kind}}Informer {
+	return &{{.kind.String|lowerFirst}}Informer{
+		informer: f.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   f.Lister().Cluster(clusterName),
 	}
 }
