@@ -14,17 +14,7 @@
 
 # Dependency directories
 vendor/
+hack/tools/
 
 # IDE files
 .idea
-
-hack/tools
-
-examples/bin/applyconfiguration-gen
-examples/bin/client-gen
-examples/bin/conversion-gen
-examples/bin/deepcopy-gen
-examples/bin/defaulter-gen
-examples/bin/informer-gen
-examples/bin/lister-gen
-examples/bin/openapi-gen
