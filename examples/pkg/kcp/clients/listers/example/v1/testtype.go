@@ -22,9 +22,9 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 
 	kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"
-	labels "k8s.io/apimachinery/pkg/labels"
-	listers "k8s.io/client-go/listers"
-	cache "k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
+	"k8s.io/client-go/tools/cache"
 
 	examplev1 "acme.corp/pkg/apis/example/v1"
 )
