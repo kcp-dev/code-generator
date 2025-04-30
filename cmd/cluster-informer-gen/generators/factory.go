@@ -61,10 +61,6 @@ func (g *factoryGenerator) Namers(c *generator.Context) namer.NameSystems {
 
 func (g *factoryGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
-	imports = append(imports,
-		`"github.com/kcp-dev/logicalcluster/v3"`,
-		`kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"`,
-	)
 	return
 }
 
@@ -102,19 +98,24 @@ func (g *factoryGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 		"gvNewScopedFuncs":                  gvNewScopedFuncs,
 		"gvGoNames":                         g.gvGoNames,
 		"interfacesNewInformerFunc":         c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "NewInformerFunc"}),
+		"interfacesNewScopedInformerFunc":   c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "NewScopedInformerFunc"}),
 		"interfacesTweakListOptionsFunc":    c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
 		"informerFactoryInterface":          c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
 		"informerScopedFactoryInterface":    c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),
 		"clientSetInterface":                c.Universe.Type(types.Name{Package: g.singleClusterVersionedClientSetPackage, Name: "Interface"}),
 		"clusterClientSetInterface":         c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "ClusterInterface"}),
 		"genericInformer":                   c.Universe.Type(types.Name{Package: genericInformerPkg, Name: "GenericInformer"}),
+		"cacheWaitForCacheSync":             c.Universe.Function(cacheWaitForCacheSync),
 		"reflectType":                       c.Universe.Type(reflectType),
+		"reflectTypeOf":                     c.Universe.Type(reflectTypeOf),
 		"runtimeObject":                     c.Universe.Type(runtimeObject),
 		"schemaGroupVersionResource":        c.Universe.Type(schemaGroupVersionResource),
 		"syncMutex":                         c.Universe.Type(syncMutex),
+		"syncWaitGroup":                     c.Universe.Type(syncWaitGroup),
 		"timeDuration":                      c.Universe.Type(timeDuration),
 		"namespaceAll":                      c.Universe.Type(metav1NamespaceAll),
 		"object":                            c.Universe.Type(metav1Object),
+		"logicalclusterName":                c.Universe.Type(logicalclusterName),
 	}
 
 	sw.Do(sharedInformerFactoryStruct, m)
@@ -132,9 +133,9 @@ var sharedInformerFactoryStruct = `
 type SharedInformerOption func(*SharedInformerOptions) *SharedInformerOptions
 
 type SharedInformerOptions struct {
-	customResync     map[reflect.Type]time.Duration
-	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	transform        cache.TransformFunc
+	customResync     map[{{.reflectType|raw}}]{{.timeDuration|raw}}
+	tweakListOptions {{.interfacesTweakListOptionsFunc|raw}}
+	transform        {{.cacheTransformFunc|raw}}
 	namespace        string
 }
 
@@ -151,7 +152,7 @@ type sharedInformerFactory struct {
 	// This allows Start() to be called multiple times safely.
 	startedInformers map[{{.reflectType|raw}}]bool
 	// wg tracks how many goroutines were started.
-	wg sync.WaitGroup
+	wg {{.syncWaitGroup|raw}}
 	// shuttingDown is true when Shutdown has been called. It may still be running
 	// because it needs to wait for goroutines.
 	shuttingDown bool
@@ -161,14 +162,14 @@ type sharedInformerFactory struct {
 func WithCustomResyncConfig(resyncConfig map[{{.object|raw}}]{{.timeDuration|raw}}) SharedInformerOption {
 	return func(opts *SharedInformerOptions) *SharedInformerOptions {
 		for k, v := range resyncConfig {
-			opts.customResync[reflect.TypeOf(k)] = v
+			opts.customResync[{{.reflectTypeOf|raw}}(k)] = v
 		}
 		return opts
 	}
 }
 
 // WithTweakListOptions sets a custom filter on all listers of the configured SharedInformerFactory.
-func WithTweakListOptions(tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerOption {
+func WithTweakListOptions(tweakListOptions {{.interfacesTweakListOptionsFunc|raw}}) SharedInformerOption {
 	return func(opts *SharedInformerOptions) *SharedInformerOptions {
 		opts.tweakListOptions = tweakListOptions
 		return opts
@@ -252,7 +253,6 @@ func (f *sharedInformerFactory) Shutdown() {
 	f.shuttingDown = true
 	f.lock.Unlock()
 
-
 	// Will return immediately if there is nothing to wait for.
 	f.wg.Wait()
 }
@@ -273,7 +273,7 @@ func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[{{.
 
 	res := map[{{.reflectType|raw}}]bool{}
 	for informType, informer := range informers {
-		res[informType] = cache.WaitForCacheSync(stopCh, informer.HasSynced)
+		res[informType] = {{.cacheWaitForCacheSync|raw}}(stopCh, informer.HasSynced)
 	}
 
 	return res
@@ -284,7 +284,7 @@ func (f *sharedInformerFactory) InformerFor(obj {{.runtimeObject|raw}}, newFunc 
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	informerType := reflect.TypeOf(obj)
+	informerType := {{.reflectTypeOf|raw}}(obj)
 	informer, exists := f.informers[informerType]
 	if exists {
 		return informer
@@ -306,7 +306,7 @@ func (f *sharedInformerFactory) InformerFor(obj {{.runtimeObject|raw}}, newFunc 
 var sharedInformerFactoryInterface = `
 type ScopedDynamicSharedInformerFactory interface {
 	// ForResource gives generic access to a shared informer of the matching type.
-	ForResource(resource schema.GroupVersionResource) ({{.genericInformer|raw}}, error)
+	ForResource(resource {{.schemaGroupVersionResource|raw}}) ({{.genericInformer|raw}}, error)
 
 	// Start initializes all requested informers. They are handled in goroutines
 	// which run until the stop channel gets closed.
@@ -340,7 +340,7 @@ type ScopedDynamicSharedInformerFactory interface {
 type SharedInformerFactory interface {
 	{{.informerFactoryInterface|raw}}
 
-	Cluster(logicalcluster.Name) ScopedDynamicSharedInformerFactory
+	Cluster({{.logicalclusterName|raw}}) ScopedDynamicSharedInformerFactory
 
 	// Start initializes all requested informers. They are handled in goroutines
 	// which run until the stop channel gets closed.
@@ -361,7 +361,7 @@ type SharedInformerFactory interface {
 
 	// WaitForCacheSync blocks until all started informers' caches were synced
 	// or the stop channel gets closed.
-	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
+	WaitForCacheSync(stopCh <-chan struct{}) map[{{.reflectType|raw}}]bool
 
 	// ForResource gives generic access to a shared informer of the matching type.
 	ForResource(resource {{.schemaGroupVersionResource|raw}}) (GenericClusterInformer, error)
@@ -380,7 +380,7 @@ func (f *sharedInformerFactory) {{index $.gvGoNames $groupPkgName}}() {{index $.
 }
 {{end}}
 
-func (f *sharedInformerFactory) Cluster(clusterName logicalcluster.Name) ScopedDynamicSharedInformerFactory {
+func (f *sharedInformerFactory) Cluster(clusterName {{.logicalclusterName|raw}}) ScopedDynamicSharedInformerFactory {
 	return &scopedDynamicSharedInformerFactory{
 		sharedInformerFactory: f,
 		clusterName:           clusterName,
@@ -389,10 +389,10 @@ func (f *sharedInformerFactory) Cluster(clusterName logicalcluster.Name) ScopedD
 
 type scopedDynamicSharedInformerFactory struct {
 	*sharedInformerFactory
-	clusterName logicalcluster.Name
+	clusterName {{.logicalclusterName|raw}}
 }
 
-func (f *scopedDynamicSharedInformerFactory) ForResource(resource schema.GroupVersionResource) ({{.genericInformer|raw}}, error) {
+func (f *scopedDynamicSharedInformerFactory) ForResource(resource {{.schemaGroupVersionResource|raw}}) ({{.genericInformer|raw}}, error) {
 	clusterInformer, err := f.sharedInformerFactory.ForResource(resource)
 	if err != nil {
 		return nil, err
@@ -491,17 +491,17 @@ func (f *sharedScopedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) m
 
 	res := map[{{.reflectType|raw}}]bool{}
 	for informType, informer := range informers {
-		res[informType] = cache.WaitForCacheSync(stopCh, informer.HasSynced)
+		res[informType] = {{.cacheWaitForCacheSync|raw}}(stopCh, informer.HasSynced)
 	}
 	return res
 }
 
 // InformerFor returns the SharedIndexInformer for obj.
-func (f *sharedScopedInformerFactory) InformerFor(obj runtime.Object, newFunc internalinterfaces.NewScopedInformerFunc) {{.cacheSharedIndexInformer|raw}} {
+func (f *sharedScopedInformerFactory) InformerFor(obj {{.runtimeObject|raw}}, newFunc {{.interfacesNewScopedInformerFunc|raw}}) {{.cacheSharedIndexInformer|raw}} {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	informerType := reflect.TypeOf(obj)
+	informerType := {{.reflectTypeOf|raw}}(obj)
 	informer, exists := f.informers[informerType]
 	if exists {
 		return informer
@@ -523,7 +523,7 @@ func (f *sharedScopedInformerFactory) InformerFor(obj runtime.Object, newFunc in
 // API group versions, scoped to one workspace.
 type SharedScopedInformerFactory interface {
 	{{.informerScopedFactoryInterface|raw}}
-	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
+	ForResource(resource {{.schemaGroupVersionResource|raw}}) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[{{.reflectType|raw}}]bool
 
 	{{range $groupName, $group := .groupVersions}}{{index $.gvGoNames $groupName}}() {{index $.gvInterfaces $groupName|raw}}

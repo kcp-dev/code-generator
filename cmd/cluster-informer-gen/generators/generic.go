@@ -18,7 +18,7 @@ package generators
 
 import (
 	"io"
-	"sort"
+	"slices"
 	"strings"
 
 	codegennamer "k8s.io/code-generator/pkg/namer"
@@ -63,10 +63,6 @@ func (g *genericGenerator) Namers(c *generator.Context) namer.NameSystems {
 
 func (g *genericGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
-	imports = append(imports,
-		`"github.com/kcp-dev/logicalcluster/v3"`,
-		`kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"`,
-	)
 	return
 }
 
@@ -76,13 +72,9 @@ type group struct {
 	Versions    []*version
 }
 
-type groupSort []group
-
-func (g groupSort) Len() int { return len(g) }
-func (g groupSort) Less(i, j int) bool {
-	return strings.ToLower(g[i].Name) < strings.ToLower(g[j].Name)
+func (g *group) Compare(other group) int {
+	return strings.Compare(strings.ToLower(g.Name), strings.ToLower(other.Name))
 }
-func (g groupSort) Swap(i, j int) { g[i], g[j] = g[j], g[i] }
 
 type version struct {
 	Name      string
@@ -90,13 +82,9 @@ type version struct {
 	Resources []*types.Type
 }
 
-type versionSort []*version
-
-func (v versionSort) Len() int { return len(v) }
-func (v versionSort) Less(i, j int) bool {
-	return strings.ToLower(v[i].Name) < strings.ToLower(v[j].Name)
+func (v *version) Compare(other *version) int {
+	return strings.Compare(strings.ToLower(v.Name), strings.ToLower(other.Name))
 }
-func (v versionSort) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
 
 func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "{{", "}}")
@@ -111,6 +99,7 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 			Name:        groupVersions.Group.NonEmpty(),
 			Versions:    []*version{},
 		}
+
 		for _, v := range groupVersions.Versions {
 			gv := clientgentypes.GroupVersion{Group: groupVersions.Group, Version: v.Version}
 			version := &version{
@@ -118,15 +107,15 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 				GoName:    namer.IC(v.Version.NonEmpty()),
 				Resources: orderer.OrderTypes(g.typesForGroupVersion[gv]),
 			}
-			func() {
-				schemeGVs[version] = c.Universe.Variable(types.Name{Package: g.typesForGroupVersion[gv][0].Name.Package, Name: "SchemeGroupVersion"})
-			}()
+			schemeGVs[version] = c.Universe.Variable(types.Name{Package: g.typesForGroupVersion[gv][0].Name.Package, Name: "SchemeGroupVersion"})
 			group.Versions = append(group.Versions, version)
 		}
-		sort.Sort(versionSort(group.Versions))
+
+		slices.SortFunc(group.Versions, func(a, b *version) int { return a.Compare(b) })
 		groups = append(groups, group)
 	}
-	sort.Sort(groupSort(groups))
+
+	slices.SortFunc(groups, func(a, b group) int { return a.Compare(b) })
 
 	genericInformerPkg := g.singleClusterInformersPkg
 	generateInformerInterface := false
@@ -135,17 +124,20 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 		generateInformerInterface = true
 	}
 
-	m := map[string]interface{}{
-		"cacheGenericLister":         c.Universe.Type(cacheGenericLister),
-		"cacheNewGenericLister":      c.Universe.Function(cacheNewGenericLister),
-		"cacheSharedIndexInformer":   c.Universe.Type(cacheSharedIndexInformer),
-		"fmtErrorf":                  c.Universe.Type(fmtErrorfFunc),
-		"groups":                     groups,
-		"schemeGVs":                  schemeGVs,
-		"schemaGroupResource":        c.Universe.Type(schemaGroupResource),
-		"schemaGroupVersionResource": c.Universe.Type(schemaGroupVersionResource),
-		"genericInformer":            c.Universe.Type(types.Name{Package: genericInformerPkg, Name: "GenericInformer"}),
-		"generateInformerInterface":  generateInformerInterface,
+	m := map[string]any{
+		"cacheGenericLister":                c.Universe.Type(cacheGenericLister),
+		"kcpcacheGenericClusterLister":      c.Universe.Type(kcpcacheGenericClusterLister),
+		"kcpcacheNewGenericClusterLister":   c.Universe.Type(kcpcacheNewGenericClusterLister),
+		"cacheSharedIndexInformer":          c.Universe.Type(cacheSharedIndexInformer),
+		"scopeableCacheSharedIndexInformer": c.Universe.Type(scopeableCacheSharedIndexInformer),
+		"fmtErrorf":                         c.Universe.Type(fmtErrorfFunc),
+		"groups":                            groups,
+		"schemeGVs":                         schemeGVs,
+		"schemaGroupResource":               c.Universe.Type(schemaGroupResource),
+		"schemaGroupVersionResource":        c.Universe.Type(schemaGroupVersionResource),
+		"genericInformer":                   c.Universe.Type(types.Name{Package: genericInformerPkg, Name: "GenericInformer"}),
+		"generateInformerInterface":         generateInformerInterface,
+		"logicalclusterName":                c.Universe.Type(logicalclusterName),
 	}
 
 	sw.Do(genericClusterInformer, m)
@@ -161,9 +153,9 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 
 var genericClusterInformer = `
 type GenericClusterInformer interface {
-	Cluster(logicalcluster.Name) {{.genericInformer|raw}}
-	Informer() kcpcache.ScopeableSharedIndexInformer
-	Lister() kcpcache.GenericClusterLister
+	Cluster({{.logicalclusterName|raw}}) {{.genericInformer|raw}}
+	Informer() {{.scopeableCacheSharedIndexInformer|raw}}
+	Lister() {{.kcpcacheGenericClusterLister|raw}}
 }
 {{ if .generateInformerInterface }}
 
@@ -174,25 +166,25 @@ type GenericInformer interface {
 {{ end }}
 
 type genericClusterInformer struct {
-	informer kcpcache.ScopeableSharedIndexInformer
+	informer {{.scopeableCacheSharedIndexInformer|raw}}
 	resource {{.schemaGroupResource|raw}}
 }
 
 // Informer returns the SharedIndexInformer.
-func (f *genericClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
-	return f.informer
+func (i *genericClusterInformer) Informer() {{.scopeableCacheSharedIndexInformer|raw}} {
+	return i.informer
 }
 
 // Lister returns the GenericLister.
-func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
-	return kcpcache.NewGenericClusterLister(f.Informer().GetIndexer(), f.resource)
+func (i *genericClusterInformer) Lister() {{.kcpcacheGenericClusterLister|raw}} {
+	return {{.kcpcacheNewGenericClusterLister|raw}}(i.Informer().GetIndexer(), i.resource)
 }
 
 // Cluster scopes to a GenericInformer.
-func (f *genericClusterInformer) Cluster(clusterName logicalcluster.Name) {{.genericInformer|raw}} {
+func (i *genericClusterInformer) Cluster(clusterName {{.logicalclusterName|raw}}) {{.genericInformer|raw}} {
 	return &genericInformer{
-		informer: f.Informer().Cluster(clusterName),
-		lister:   f.Lister().ByCluster(clusterName),
+		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().ByCluster(clusterName),
 	}
 }
 `
@@ -204,13 +196,13 @@ type genericInformer struct {
 }
 
 // Informer returns the SharedIndexInformer.
-func (f *genericInformer) Informer() {{.cacheSharedIndexInformer|raw}} {
-	return f.informer
+func (i *genericInformer) Informer() {{.cacheSharedIndexInformer|raw}} {
+	return i.informer
 }
 
 // Lister returns the GenericLister.
-func (f *genericInformer) Lister() {{.cacheGenericLister|raw}} {
-	return f.lister
+func (i *genericInformer) Lister() {{.cacheGenericLister|raw}} {
+	return i.lister
 }
 `
 

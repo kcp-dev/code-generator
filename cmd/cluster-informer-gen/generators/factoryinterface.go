@@ -70,7 +70,7 @@ func (g *factoryInterfaceGenerator) GenerateType(c *generator.Context, t *types.
 		"interface":                         c.Universe.Type(types.Name{Package: g.singleClusterVersionedClientSetPackage, Name: "Interface"}),
 		"runtimeObject":                     c.Universe.Type(runtimeObject),
 		"timeDuration":                      c.Universe.Type(timeDuration),
-		"v1ListOptions":                     c.Universe.Type(v1ListOptions),
+		"metav1ListOptions":                 c.Universe.Type(metav1ListOptions),
 	}
 
 	sw.Do(externalSharedInformerFactoryInterface, m)
@@ -83,13 +83,13 @@ func (g *factoryInterfaceGenerator) GenerateType(c *generator.Context, t *types.
 }
 
 var externalSharedInformerFactoryInterface = `
-// TweakListOptionsFunc is a function that transforms a $.v1ListOptions|raw$.
-type TweakListOptionsFunc func(*$.v1ListOptions|raw$)
+// TweakListOptionsFunc is a function that transforms a $.metav1ListOptions|raw$.
+type TweakListOptionsFunc func(*$.metav1ListOptions|raw$)
 
 // NewInformerFunc takes $.clusterInterface|raw$ and $.timeDuration|raw$ to return a $.scopeableCacheSharedIndexInformer|raw$.
 type NewInformerFunc func($.clusterInterface|raw$, $.timeDuration|raw$) $.scopeableCacheSharedIndexInformer|raw$
 
-// SharedInformerFactory a small interface to allow for adding an informer without an import cycle
+// SharedInformerFactory a small interface to allow for adding an informer without an import cycle.
 type SharedInformerFactory interface {
 	Start(stopCh <-chan struct{})
 	InformerFor(obj $.runtimeObject|raw$, newFunc NewInformerFunc) $.scopeableCacheSharedIndexInformer|raw$
@@ -98,9 +98,9 @@ type SharedInformerFactory interface {
 
 var externalSharedScopedInformerFactoryInterface = `
 // NewScopedInformerFunc takes $.interface|raw$ and $.timeDuration|raw$ to return a SharedIndexInformer.
-type NewScopedInformerFunc func($.interface|raw$, time.Duration) $.cacheSharedIndexInformer|raw$
+type NewScopedInformerFunc func($.interface|raw$, $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$
 
-// SharedScopedInformerFactory a small interface to allow for adding an informer without an import cycle
+// SharedScopedInformerFactory a small interface to allow for adding an informer without an import cycle.
 type SharedScopedInformerFactory interface {
 	Start(stopCh <-chan struct{})
 	InformerFor(obj $.runtimeObject|raw$, newFunc NewScopedInformerFunc) $.cacheSharedIndexInformer|raw$

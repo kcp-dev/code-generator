@@ -63,11 +63,6 @@ func (g *informerGenerator) Namers(c *generator.Context) namer.NameSystems {
 
 func (g *informerGenerator) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
-	imports = append(imports,
-		`"github.com/kcp-dev/logicalcluster/v3"`,
-		`kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"`,
-		`kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"`,
-	)
 	return
 }
 
@@ -79,7 +74,6 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 	clusterListersPkg := fmt.Sprintf("%s/%s/%s", g.listersPackage, g.groupPkgName, strings.ToLower(g.groupVersion.Version.NonEmpty()))
 	clientSetInterface := c.Universe.Type(types.Name{Package: g.singleClusterVersionedClientSetPackage, Name: "Interface"})
 	clientSetClusterInterface := c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "ClusterInterface"})
-	informerFor := "InformerFor"
 
 	informerPkg := g.outputPackage
 	generateScopedInformer := true
@@ -100,8 +94,8 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 	}
 
 	m := map[string]interface{}{
+		"type":                                  t,
 		"namespaced":                            !tags.NonNamespaced,
-		"apiScheme":                             c.Universe.Type(apiScheme),
 		"cacheIndexers":                         c.Universe.Type(cacheIndexers),
 		"cacheListWatch":                        c.Universe.Type(cacheListWatch),
 		"cacheMetaNamespaceIndexFunc":           c.Universe.Function(cacheMetaNamespaceIndexFunc),
@@ -111,28 +105,27 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		"scopeableCacheSharedIndexInformer":     c.Universe.Type(scopeableCacheSharedIndexInformer),
 		"clientSetInterface":                    clientSetInterface,
 		"clientSetClusterInterface":             clientSetClusterInterface,
-		"contextContext":                        c.Universe.Type(contextContext),
 		"contextBackground":                     c.Universe.Function(contextBackgroundFunc),
 		"group":                                 namer.IC(g.groupGoName),
-		"informerFor":                           informerFor,
 		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
 		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
 		"interfacesSharedScopedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),
-		"listOptions":                           c.Universe.Type(listOptions),
 		"lister":                                c.Universe.Type(types.Name{Package: listersPkg, Name: t.Name.Name + "Lister"}),
 		"clusterLister":                         c.Universe.Type(types.Name{Package: clusterListersPkg, Name: t.Name.Name + "ClusterLister"}),
 		"informerInterface":                     c.Universe.Type(types.Name{Package: informerPkg, Name: t.Name.Name + "Informer"}),
-		"namespaceAll":                          c.Universe.Type(metav1NamespaceAll),
 		"newLister":                             c.Universe.Function(types.Name{Package: listersPkg, Name: "New" + t.Name.Name + "Lister"}),
-		"listerInterface":                       c.Universe.Function(types.Name{Package: g.singleClusterListersPackage, Name: t.Name.Name + "Lister"}),
 		"newClusterLister":                      c.Universe.Function(types.Name{Package: clusterListersPkg, Name: "New" + t.Name.Name + "ClusterLister"}),
+		"kcpcacheClusterIndexName":              c.Universe.Function(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/cache", Name: "ClusterIndexName"}),
+		"kcpcacheClusterIndexFunc":              c.Universe.Function(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/cache", Name: "ClusterIndexFunc"}),
+		"kcpcacheClusterAndNamespaceIndexName":  c.Universe.Function(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/cache", Name: "ClusterAndNamespaceIndexName"}),
+		"kcpcacheClusterAndNamespaceIndexFunc":  c.Universe.Function(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/cache", Name: "ClusterAndNamespaceIndexFunc"}),
 		"runtimeObject":                         c.Universe.Type(runtimeObject),
 		"timeDuration":                          c.Universe.Type(timeDuration),
-		"type":                                  t,
-		"v1ListOptions":                         c.Universe.Type(v1ListOptions),
+		"metav1ListOptions":                     c.Universe.Type(metav1ListOptions),
 		"version":                               namer.IC(g.groupVersion.Version.String()),
 		"watchInterface":                        c.Universe.Type(watchInterface),
-		"generateScopedInformer":                generateScopedInformer,
+		"logicalclusterName":                    c.Universe.Type(logicalclusterName),
+		"kcpinformersNewSharedIndexInformer":    c.Universe.Type(kcpinformersNewSharedIndexInformer),
 	}
 
 	sw.Do(typeClusterInformerInterface, m)
@@ -156,7 +149,7 @@ var typeClusterInformerInterface = `
 // $.type|public$ClusterInformer provides access to a shared informer and lister for
 // $.type|publicPlural$.
 type $.type|public$ClusterInformer interface {
-	Cluster(logicalcluster.Name) $.informerInterface|raw$
+	Cluster($.logicalclusterName|raw$) $.informerInterface|raw$
 	Informer() $.scopeableCacheSharedIndexInformer|raw$
 	Lister() $.clusterLister|raw$
 }
@@ -183,15 +176,15 @@ var typeFilteredInformerPublicConstructor = `
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewFiltered$.type|public$ClusterInformer(client $.clientSetClusterInterface|raw$, resyncPeriod $.timeDuration|raw$, indexers $.cacheIndexers|raw$, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) $.scopeableCacheSharedIndexInformer|raw$ {
-	return kcpinformers.NewSharedIndexInformer(
+	return $.kcpinformersNewSharedIndexInformer|raw$(
 		&$.cacheListWatch|raw${
-			ListFunc: func(options $.v1ListOptions|raw$) ($.runtimeObject|raw$, error) {
+			ListFunc: func(options $.metav1ListOptions|raw$) ($.runtimeObject|raw$, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.$.group$$.version$().$.type|publicPlural$().List($.contextBackground|raw$(), options)
 			},
-			WatchFunc: func(options $.v1ListOptions|raw$) ($.watchInterface|raw$, error) {
+			WatchFunc: func(options $.metav1ListOptions|raw$) ($.watchInterface|raw$, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
@@ -206,31 +199,31 @@ func NewFiltered$.type|public$ClusterInformer(client $.clientSetClusterInterface
 `
 
 var typeInformerConstructor = `
-func (f *$.type|private$ClusterInformer) defaultInformer(client $.clientSetClusterInterface|raw$, resyncPeriod $.timeDuration|raw$) $.scopeableCacheSharedIndexInformer|raw$ {
+func (i *$.type|private$ClusterInformer) defaultInformer(client $.clientSetClusterInterface|raw$, resyncPeriod $.timeDuration|raw$) $.scopeableCacheSharedIndexInformer|raw$ {
 	return NewFiltered$.type|public$ClusterInformer(client, resyncPeriod, $.cacheIndexers|raw${
-		kcpcache.ClusterIndexName:             kcpcache.ClusterIndexFunc,
-		kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,
-	}, f.tweakListOptions)
+		$.kcpcacheClusterIndexName|raw$:             $.kcpcacheClusterIndexFunc|raw$,
+		$.kcpcacheClusterAndNamespaceIndexName|raw$: $.kcpcacheClusterAndNamespaceIndexFunc|raw$,
+	}, i.tweakListOptions)
 }
 `
 
 var typeInformerInformer = `
-func (f *$.type|private$ClusterInformer) Informer() $.scopeableCacheSharedIndexInformer|raw$ {
-	return f.factory.$.informerFor$(&$.type|raw${}, f.defaultInformer)
+func (i *$.type|private$ClusterInformer) Informer() $.scopeableCacheSharedIndexInformer|raw$ {
+	return i.factory.InformerFor(&$.type|raw${}, i.defaultInformer)
 }
 `
 
 var typeInformerLister = `
-func (f *$.type|private$ClusterInformer) Lister() $.clusterLister|raw$ {
-	return $.newClusterLister|raw$(f.Informer().GetIndexer())
+func (i *$.type|private$ClusterInformer) Lister() $.clusterLister|raw$ {
+	return $.newClusterLister|raw$(i.Informer().GetIndexer())
 }
 `
 
 var typeInformerCluster = `
-func (f *$.type|private$ClusterInformer) Cluster(clusterName logicalcluster.Name) $.informerInterface|raw$ {
+func (i *$.type|private$ClusterInformer) Cluster(clusterName $.logicalclusterName|raw$) $.informerInterface|raw$ {
 	return &$.type|private$Informer{
-		informer: f.Informer().Cluster(clusterName),
-		lister:   f.Lister().Cluster(clusterName),
+		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().Cluster(clusterName),
 	}
 }
 `
@@ -241,12 +234,12 @@ type $.type|private$Informer struct {
 	lister   $.lister|raw$
 }
 
-func (f *$.type|private$Informer) Informer() $.cacheSharedIndexInformer|raw$ {
-	return f.informer
+func (i *$.type|private$Informer) Informer() $.cacheSharedIndexInformer|raw$ {
+	return i.informer
 }
 
-func (f *$.type|private$Informer) Lister() $.lister|raw$ {
-	return f.lister
+func (i *$.type|private$Informer) Lister() $.lister|raw$ {
+	return i.lister
 }
 `
 
@@ -261,13 +254,15 @@ type $.informerInterface|raw$ interface {
 type $.type|private$ScopedInformer struct {
 	factory          $.interfacesSharedScopedInformerFactory|raw$
 	tweakListOptions $.interfacesTweakListOptionsFunc|raw$
-	$if .namespaced$namespace        string$end -$
+	$if .namespaced -$
+	namespace        string
+	$end -$
 }
 
 // New$.type|public$Informer constructs a new informer for $.type|public$ type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func New$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$$if .namespaced$, namespace string$end$, indexers cache.Indexers) $.cacheSharedIndexInformer|raw$ {
+func New$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$$if .namespaced$, namespace string$end$, indexers $.cacheIndexers|raw$) $.cacheSharedIndexInformer|raw$ {
 	return NewFiltered$.type|public$Informer(client, resyncPeriod$if .namespaced$, namespace$end$, indexers, nil)
 }
 
@@ -277,13 +272,13 @@ func New$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.
 func NewFiltered$.type|public$Informer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$$if .namespaced$, namespace string$end$, indexers $.cacheIndexers|raw$, tweakListOptions $.interfacesTweakListOptionsFunc|raw$) $.cacheSharedIndexInformer|raw$ {
 	return $.cacheNewSharedIndexInformer|raw$(
 		&$.cacheListWatch|raw${
-			ListFunc: func(options $.v1ListOptions|raw$) ($.runtimeObject|raw$, error) {
+			ListFunc: func(options $.metav1ListOptions|raw$) ($.runtimeObject|raw$, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.$.group$$.version$().$.type|publicPlural$($if .namespaced$namespace$end$).List($.contextBackground|raw$(), options)
 			},
-			WatchFunc: func(options $.v1ListOptions|raw$) ($.watchInterface|raw$, error) {
+			WatchFunc: func(options $.metav1ListOptions|raw$) ($.watchInterface|raw$, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
@@ -296,21 +291,21 @@ func NewFiltered$.type|public$Informer(client $.clientSetInterface|raw$, resyncP
 	)
 }
 
-func (f *$.type|private$ScopedInformer) Informer() $.cacheSharedIndexInformer|raw$ {
-	return f.factory.InformerFor(&$.type|raw${}, f.defaultInformer)
+func (i *$.type|private$ScopedInformer) Informer() $.cacheSharedIndexInformer|raw$ {
+	return i.factory.InformerFor(&$.type|raw${}, i.defaultInformer)
 }
 
-func (f *$.type|private$ScopedInformer) Lister() $.lister|raw$ {
-	return $.newLister|raw$(f.Informer().GetIndexer())
+func (i *$.type|private$ScopedInformer) Lister() $.lister|raw$ {
+	return $.newLister|raw$(i.Informer().GetIndexer())
 }
 
-func (f *$.type|private$ScopedInformer) defaultInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$ {
+func (i *$.type|private$ScopedInformer) defaultInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$ {
 $if .namespaced -$
-	return NewFiltered$.type|public$Informer(client, resyncPeriod, f.namespace, $.cacheIndexers|raw${
+	return NewFiltered$.type|public$Informer(client, resyncPeriod, i.namespace, $.cacheIndexers|raw${
 		$.cacheNamespaceIndex|raw$: $.cacheMetaNamespaceIndexFunc|raw$,
-	}, f.tweakListOptions)
+	}, i.tweakListOptions)
 $else -$
-	return NewFiltered$.type|public$Informer(client, resyncPeriod, $.cacheIndexers|raw${}, f.tweakListOptions)
+	return NewFiltered$.type|public$Informer(client, resyncPeriod, $.cacheIndexers|raw${}, i.tweakListOptions)
 $end -$
 }
 `

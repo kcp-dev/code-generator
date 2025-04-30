@@ -73,19 +73,18 @@ func (g *groupInterfaceGenerator) GenerateType(c *generator.Context, t *types.Ty
 
 	versions := make([]versionData, 0, len(g.groupVersions.Versions))
 	for _, version := range g.groupVersions.Versions {
-		gv := clientgentypes.GroupVersion{Group: g.groupVersions.Group, Version: version.Version}
-		versionPackage := path.Join(g.outputPackage, strings.ToLower(gv.Version.NonEmpty()))
-		iface := c.Universe.Type(types.Name{Package: versionPackage, Name: "Interface"})
-		clusterIface := c.Universe.Type(types.Name{Package: versionPackage, Name: "ClusterInterface"})
+		versionPackage := path.Join(g.outputPackage, strings.ToLower(version.Version.NonEmpty()))
+
 		versions = append(versions, versionData{
 			Name:             namer.IC(version.Version.NonEmpty()),
-			Interface:        iface,
-			ClusterInterface: clusterIface,
+			Interface:        c.Universe.Type(types.Name{Package: versionPackage, Name: "Interface"}),
+			ClusterInterface: c.Universe.Type(types.Name{Package: versionPackage, Name: "ClusterInterface"}),
 			New:              c.Universe.Function(types.Name{Package: versionPackage, Name: "New"}),
 			NewScoped:        c.Universe.Function(types.Name{Package: versionPackage, Name: "NewScoped"}),
 		})
 	}
-	m := map[string]interface{}{
+
+	m := map[string]any{
 		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
 		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
 		"interfacesSharedScopedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),
