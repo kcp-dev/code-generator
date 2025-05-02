@@ -19,6 +19,7 @@ limitations under the License.
 package informers
 
 import (
+	"context"
 	"fmt"
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
@@ -40,6 +41,7 @@ import (
 
 type GenericClusterInformer interface {
 	Cluster(logicalcluster.Name) upstreaminformers.GenericInformer
+	ClusterWithContext(context.Context, logicalcluster.Name) upstreaminformers.GenericInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() kcpcache.GenericClusterLister
 }
@@ -63,6 +65,15 @@ func (f *genericClusterInformer) Lister() kcpcache.GenericClusterLister {
 func (f *genericClusterInformer) Cluster(clusterName logicalcluster.Name) upstreaminformers.GenericInformer {
 	return &genericInformer{
 		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().ByCluster(clusterName),
+	}
+}
+
+// ClusterWithContext scopes to a GenericInformer and unregisters all
+// handles registered through it once the provided context is canceled.
+func (f *genericClusterInformer) ClusterWithContext(ctx context.Context, clusterName logicalcluster.Name) upstreaminformers.GenericInformer {
+	return &genericInformer{
+		informer: f.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   f.Lister().ByCluster(clusterName),
 	}
 }

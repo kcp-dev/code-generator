@@ -42,6 +42,7 @@ import (
 // ClusterTestTypes.
 type ClusterTestTypeClusterInformer interface {
 	Cluster(logicalcluster.Name) ClusterTestTypeInformer
+	ClusterWithContext(context.Context, logicalcluster.Name) ClusterTestTypeInformer
 	Informer() kcpcache.ScopeableSharedIndexInformer
 	Lister() examplev1listers.ClusterTestTypeClusterLister
 }
@@ -109,6 +110,13 @@ type ClusterTestTypeInformer interface {
 func (f *clusterTestTypeClusterInformer) Cluster(clusterName logicalcluster.Name) ClusterTestTypeInformer {
 	return &clusterTestTypeInformer{
 		informer: f.Informer().Cluster(clusterName),
+		lister:   f.Lister().Cluster(clusterName),
+	}
+}
+
+func (f *clusterTestTypeClusterInformer) ClusterWithContext(ctx context.Context, clusterName logicalcluster.Name) ClusterTestTypeInformer {
+	return &clusterTestTypeInformer{
+		informer: f.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   f.Lister().Cluster(clusterName),
 	}
 }
