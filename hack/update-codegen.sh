@@ -72,6 +72,10 @@ cluster::codegen::gen_client \
   --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
   --output-dir pkg/kcpexisting/clients \
   --output-pkg acme.corp/pkg/kcpexisting/clients \
+  --versioned-clientset-dir pkg/kcpexisting/clients/clientset/versioned \
+  --versioned-clientset-pkg acme.corp/pkg/kcpexisting/clients/clientset/versioned \
+  --informers-dir pkg/kcpexisting/clients/informers/externalversions \
+  --informers-pkg acme.corp/pkg/kcpexisting/clients/informers/externalversions \
   --with-watch \
   --single-cluster-versioned-clientset-pkg acme.corp/pkg/generated/clientset/versioned \
   --single-cluster-applyconfigurations-pkg acme.corp/pkg/generated/applyconfigurations \
@@ -84,6 +88,10 @@ cluster::codegen::gen_client \
   --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
   --output-dir pkg/kcp/clients \
   --output-pkg acme.corp/pkg/kcp/clients \
+  --versioned-clientset-dir pkg/kcp/clients/clientset/versioned \
+  --versioned-clientset-pkg acme.corp/pkg/kcp/clients/clientset/versioned \
+  --informers-dir pkg/kcp/clients/informers/externalversions \
+  --informers-pkg acme.corp/pkg/kcp/clients/informers/externalversions \
   --with-watch \
   --single-cluster-versioned-clientset-pkg acme.corp/pkg/generated/clientset/versioned \
   --single-cluster-applyconfigurations-pkg acme.corp/pkg/generated/applyconfigurations \

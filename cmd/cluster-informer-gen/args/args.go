@@ -28,9 +28,7 @@ type Args struct {
 	OutputPackage             string // must be a Go import-path
 	GoHeaderFile              string
 	VersionedClientSetPackage string // must be a Go import-path
-	InternalClientSetPackage  string // must be a Go import-path
 	ListersPackage            string // must be a Go import-path
-	SingleDirectory           bool
 
 	// Path to the generated Kubernetes single-cluster versioned clientset package.
 	SingleClusterVersionedClientSetPackage string
@@ -46,9 +44,7 @@ type Args struct {
 
 // New returns default arguments for the generator.
 func New() *Args {
-	return &Args{
-		SingleDirectory: false,
-	}
+	return &Args{}
 }
 
 // AddFlags add the generator flags to the flag set.
@@ -59,14 +55,10 @@ func (args *Args) AddFlags(fs *pflag.FlagSet) {
 		"the Go import-path of the generated results")
 	fs.StringVar(&args.GoHeaderFile, "go-header-file", "",
 		"the path to a file containing boilerplate header text; the string \"YEAR\" will be replaced with the current 4-digit year")
-	fs.StringVar(&args.InternalClientSetPackage, "internal-clientset-pkg", args.InternalClientSetPackage,
-		"the Go import-path of the internal clientset to use")
 	fs.StringVar(&args.VersionedClientSetPackage, "versioned-clientset-pkg", args.VersionedClientSetPackage,
 		"the Go import-path of the versioned clientset to use")
 	fs.StringVar(&args.ListersPackage, "listers-pkg", args.ListersPackage,
 		"the Go import-path of the listers to use")
-	fs.BoolVar(&args.SingleDirectory, "single-directory", args.SingleDirectory,
-		"if true, omit the intermediate \"internalversion\" and \"externalversions\" subdirectories")
 	fs.StringVar(&args.SingleClusterVersionedClientSetPackage, "single-cluster-versioned-clientset-pkg", args.SingleClusterVersionedClientSetPackage,
 		"package path to the generated Kubernetes single-cluster versioned clientset package")
 	fs.StringVar(&args.SingleClusterInformersPackage, "single-cluster-informers-pkg", args.SingleClusterInformersPackage,

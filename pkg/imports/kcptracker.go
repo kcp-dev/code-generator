@@ -42,6 +42,10 @@ func goTrackerLocalName(tracker namer.ImportTracker, localPkg string, t types.Na
 	path := t.Package
 	isKcp := strings.HasPrefix(path, "github.com/kcp-dev/")
 
+	if path == "github.com/kcp-dev/logicalcluster/v3" {
+		return "logicalcluster"
+	}
+
 	// Using backslashes in package names causes gengo to produce Go code which
 	// will not compile with the gc compiler. See the comment on GoSeperator.
 	if strings.ContainsRune(path, '\\') {

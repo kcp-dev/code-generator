@@ -129,7 +129,7 @@ func DefaultNameSystem() string {
 	return "public"
 }
 
-func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, apiPath string, inputPkg string, applyBuilderPkg string, singleClusterClientPkg string, boilerplate []byte, prefersProtobuf bool) generator.Target {
+func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clientsetDir, clientsetPkg string, groupPkgName string, groupGoName string, apiPath string, inputPkg string, applyBuilderPkg string, singleClusterClientPkg string, boilerplate []byte) generator.Target {
 	subdir := []string{"typed", strings.ToLower(groupPkgName), strings.ToLower(gv.Version.NonEmpty())}
 	gvDir := filepath.Join(clientsetDir, filepath.Join(subdir...))
 	gvPkg := path.Join(clientsetPkg, path.Join(subdir...))
@@ -161,7 +161,6 @@ func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 					group:                      gv.Group.NonEmpty(),
 					version:                    gv.Version.String(),
 					groupGoName:                groupGoName,
-					prefersProtobuf:            prefersProtobuf,
 					typeToMatch:                t,
 					imports:                    imports.NewImportTrackerForPackage(gvPkg),
 					singleClusterClientPackage: singleClusterClientPkg,
@@ -203,7 +202,7 @@ func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 
 func targetForClientset(args *args.Args, clientsetDir, clientsetPkg string, groupGoNames map[clientgentypes.GroupVersion]string, boilerplate []byte) generator.Target {
 	return &generator.SimpleTarget{
-		PkgName:       args.ClientsetName,
+		PkgName:       "clientset",
 		PkgPath:       clientsetPkg,
 		PkgDir:        clientsetDir,
 		HeaderComment: boilerplate,
@@ -399,8 +398,8 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		}
 	}
 
-	clientsetDir := filepath.Join(args.OutputDir, args.ClientsetName)
-	clientsetPkg := path.Join(args.OutputPkg, args.ClientsetName)
+	clientsetDir := args.OutputDir
+	clientsetPkg := args.OutputPkg
 
 	var targetList []generator.Target
 
@@ -410,7 +409,7 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		targetForScheme(args, clientsetDir, clientsetPkg, groupGoNames, boilerplate))
 	if args.FakeClient {
 		targetList = append(targetList,
-			fake.TargetForClientset(args, clientsetDir, clientsetPkg, args.SingleClusterClientPackage, args.ApplyConfigurationPackage, groupGoNames, boilerplate))
+			fake.TargetForClientset(args, clientsetDir, clientsetPkg, args.SingleClusterClientPackage, args.SingleClusterApplyConfigurationsPackage, groupGoNames, boilerplate))
 	}
 
 	// If --clientset-only=true, we don't regenerate the individual typed clients.
@@ -430,10 +429,10 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 				targetForGroup(
 					gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg,
 					group.PackageName, groupGoNames[gv], args.ClientsetAPIPath,
-					inputPath, args.ApplyConfigurationPackage, singleClusterClientPkg, boilerplate, args.PrefersProtobuf))
+					inputPath, args.SingleClusterApplyConfigurationsPackage, singleClusterClientPkg, boilerplate))
 			if args.FakeClient {
 				targetList = append(targetList,
-					fake.TargetForGroup(gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg, group.PackageName, groupGoNames[gv], inputPath, args.ApplyConfigurationPackage, singleClusterClientPkg, boilerplate))
+					fake.TargetForGroup(gv, orderer.OrderTypes(types), clientsetDir, clientsetPkg, group.PackageName, groupGoNames[gv], inputPath, args.SingleClusterApplyConfigurationsPackage, singleClusterClientPkg, boilerplate))
 			}
 		}
 	}

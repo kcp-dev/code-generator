@@ -95,27 +95,18 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		klog.Fatalf("Failed loading boilerplate: %v", err)
 	}
 
-	internalVersionOutputDir := args.OutputDir
-	internalVersionOutputPkg := args.OutputPackage
 	externalVersionOutputDir := args.OutputDir
 	externalVersionOutputPkg := args.OutputPackage
-	if !args.SingleDirectory {
-		internalVersionOutputDir = filepath.Join(internalVersionOutputDir, "internalversion")
-		internalVersionOutputPkg = path.Join(internalVersionOutputPkg, "internalversion")
-		externalVersionOutputDir = filepath.Join(externalVersionOutputDir, "externalversions")
-		externalVersionOutputPkg = path.Join(externalVersionOutputPkg, "externalversions")
-	}
 
 	var targetList []generator.Target
 	typesForGroupVersion := make(map[clientgentypes.GroupVersion][]*types.Type)
 
 	externalGroupVersions := make(map[string]clientgentypes.GroupVersions)
-	internalGroupVersions := make(map[string]clientgentypes.GroupVersions)
 	groupGoNames := make(map[string]string)
 	for _, inputPkg := range context.Inputs {
 		pkg := context.Universe.Package(inputPkg)
 
-		objectMeta, internal, err := objectMetaForPackage(pkg)
+		objectMeta, _, err := objectMetaForPackage(pkg)
 		if err != nil {
 			klog.Fatal(err)
 		}
@@ -129,18 +120,9 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 			targetGroupVersions map[string]clientgentypes.GroupVersions
 		)
 
-		if internal {
-			group := path.Base(pkg.Path)
-			if group == "." {
-				klog.Fatalf("error constructing internal group version for package %q", pkg.Path)
-			}
-			gv.Group = clientgentypes.Group(group)
-			targetGroupVersions = internalGroupVersions
-		} else {
-			gv.Group = clientgentypes.Group(path.Base(path.Dir(pkg.Path)))
-			gv.Version = clientgentypes.Version(path.Base(pkg.Path))
-			targetGroupVersions = externalGroupVersions
-		}
+		gv.Group = clientgentypes.Group(path.Base(path.Dir(pkg.Path)))
+		gv.Version = clientgentypes.Version(path.Base(pkg.Path))
+		targetGroupVersions = externalGroupVersions
 
 		groupPkgName := gv.Group.NonEmpty()
 		gvPkg := path.Clean(pkg.Path)
@@ -190,12 +172,6 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		outputPkgBase := externalVersionOutputPkg
 		clientSetPkg := args.VersionedClientSetPackage
 
-		if internal {
-			outputDirBase = internalVersionOutputDir
-			outputPkgBase = internalVersionOutputPkg
-			clientSetPkg = args.InternalClientSetPackage
-		}
-
 		targetList = append(targetList, versionTarget(outputDirBase, outputPkgBase, groupPkgName, gv, groupGoNames[groupPkgName], boilerplate, typesToGenerate, clientSetPkg, args))
 	}
 
@@ -207,17 +183,6 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 
 		for _, gvs := range externalGroupVersions {
 			targetList = append(targetList, groupTarget(externalVersionOutputDir, externalVersionOutputPkg, gvs, boilerplate, args))
-		}
-	}
-
-	if len(internalGroupVersions) != 0 {
-		targetList = append(targetList,
-			factoryInterfaceTarget(internalVersionOutputDir, internalVersionOutputPkg, boilerplate, args),
-			factoryTarget(internalVersionOutputDir, internalVersionOutputPkg, boilerplate, groupGoNames, genutil.PluralExceptionListToMapOrDie(args.PluralExceptions), internalGroupVersions, typesForGroupVersion, args),
-		)
-
-		for _, gvs := range internalGroupVersions {
-			targetList = append(targetList, groupTarget(internalVersionOutputDir, internalVersionOutputPkg, gvs, boilerplate, args))
 		}
 	}
 
@@ -242,7 +207,7 @@ func factoryTarget(
 				outputPackage:                          outputPkgBase,
 				imports:                                imports.NewImportTrackerForPackage(outputPkgBase),
 				groupVersions:                          groupVersions,
-				clientSetPackage:                       args.InternalClientSetPackage,
+				clientSetPackage:                       args.VersionedClientSetPackage,
 				internalInterfacesPackage:              path.Join(outputPkgBase, subdirForInternalInterfaces),
 				gvGoNames:                              groupGoNames,
 				singleClusterVersionedClientSetPackage: args.SingleClusterVersionedClientSetPackage,
@@ -283,7 +248,7 @@ func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []b
 				},
 				outputPackage:                          outputPkg,
 				imports:                                imports.NewImportTrackerForPackage(outputPkg),
-				clientSetPackage:                       args.InternalClientSetPackage,
+				clientSetPackage:                       args.VersionedClientSetPackage,
 				singleClusterVersionedClientSetPackage: args.SingleClusterVersionedClientSetPackage,
 				singleClusterInformersPackage:          args.SingleClusterInformersPackage,
 			})

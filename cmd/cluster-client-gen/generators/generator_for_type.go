@@ -42,7 +42,6 @@ type genClientForType struct {
 	group                      string
 	version                    string
 	groupGoName                string
-	prefersProtobuf            bool
 	typeToMatch                *types.Type
 	imports                    namer.ImportTracker
 }
@@ -115,7 +114,6 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 		"subresource":                      false,
 		"subresourcePath":                  "",
 		"GroupGoName":                      g.groupGoName,
-		"prefersProtobuf":                  g.prefersProtobuf,
 		"Version":                          namer.IC(g.version),
 		"GetOptions":                       c.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "GetOptions"}),
 		"ListOptions":                      c.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "ListOptions"}),
