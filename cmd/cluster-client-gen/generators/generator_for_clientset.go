@@ -77,7 +77,7 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	allGroups := clientgentypes.ToGroupVersionInfo(g.groups, g.groupGoNames)
-	m := map[string]interface{}{
+	m := map[string]any{
 		"allGroups":                            allGroups,
 		"fmtErrorf":                            c.Universe.Type(types.Name{Package: "fmt", Name: "Errorf"}),
 		"Config":                               c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Config"}),
@@ -89,10 +89,10 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		"httpClient":                           c.Universe.Type(types.Name{Package: "net/http", Name: "Client"}),
 		"NewDiscoveryClientForConfigAndClient": c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClientForConfigAndClient"}),
 		"NewDiscoveryClientForConfigOrDie":     c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClientForConfigOrDie"}),
-		"NewDiscoveryClient":                   c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClient"}),
 		"flowcontrolNewTokenBucketRateLimiter": c.Universe.Function(types.Name{Package: "k8s.io/client-go/util/flowcontrol", Name: "NewTokenBucketRateLimiter"}),
 		"kcpclientCache":                       c.Universe.Type(types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/client", Name: "Cache"}),
 	}
+
 	sw.Do(clientsetInterface, m)
 	sw.Do(clientsetTemplate, m)
 	sw.Do(getDiscoveryTemplate, m)

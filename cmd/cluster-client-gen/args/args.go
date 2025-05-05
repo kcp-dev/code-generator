@@ -148,12 +148,3 @@ func (args *Args) GroupVersionPackages() map[types.GroupVersion]string {
 	}
 	return res
 }
-
-func mapFlagName(from, to string, old func(fs *pflag.FlagSet, name string) pflag.NormalizedName) func(fs *pflag.FlagSet, name string) pflag.NormalizedName {
-	return func(fs *pflag.FlagSet, name string) pflag.NormalizedName {
-		if name == from {
-			name = to
-		}
-		return old(fs, name)
-	}
-}
