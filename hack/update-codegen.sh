@@ -24,50 +24,36 @@ if [[ -z "${MAKELEVEL:-}" ]]; then
   exit 1
 fi
 
+SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
+CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; go list -f '{{.Dir}}' -m k8s.io/code-generator)}
+
+source "${CODEGEN_PKG}/kube_codegen.sh"
 source cluster_codegen.sh
 
 pushd ./examples
 
 # Generate deepcopy functions
-${CONTROLLER_GEN} object paths=./pkg/apis/...
+kube::codegen::gen_helpers \
+  --boilerplate ./../hack/boilerplate/boilerplate.generatego.txt \
+  ./pkg/apis
 
-# Generate standard clientset
-${KUBE_CLIENT_GEN} \
-  --clientset-name versioned \
-  --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --input-base acme.corp/pkg/apis \
-  --input example/v1 \
-  --input example/v1alpha1 \
-  --input example/v1beta1 \
-  --input example/v2 \
-  --input example3/v1 \
-  --input exampledashed/v1 \
-  --input secondexample/v1 \
-  --input existinginterfaces/v1 \
-  --output-dir ./pkg/generated/clientset \
-  --output-pkg acme.corp/pkg/generated/clientset
+# Generate standard clientset, listers and informers
+rm -rf pkg/generated
+mkdir -p pkg/generated/{clientset,applyconfigurations,listers,informers}
 
-${KUBE_APPLYCONFIGURATION_GEN} \
-  --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --output-dir ./pkg/generated/applyconfigurations \
-  --output-pkg acme.corp/pkg/generated/applyconfigurations \
-  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/exampledashed/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
-
-${KUBE_LISTER_GEN} \
-  --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --output-dir ./pkg/generated/listers \
-  --output-pkg acme.corp/pkg/generated/listers \
-  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/exampledashed/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
-
-${KUBE_INFORMER_GEN} \
-  --versioned-clientset-package acme.corp/pkg/generated/clientset/versioned \
-  --listers-package acme.corp/pkg/generated/listers \
-  --go-header-file ./../hack/boilerplate/boilerplate.generatego.txt \
-  --output-dir ./pkg/generated/informers \
-  --output-pkg acme.corp/pkg/generated/informers \
-  acme.corp/pkg/apis/example/v1 acme.corp/pkg/apis/example/v1alpha1 acme.corp/pkg/apis/example/v1beta1 acme.corp/pkg/apis/example/v2 acme.corp/pkg/apis/example3/v1 acme.corp/pkg/apis/exampledashed/v1 acme.corp/pkg/apis/secondexample/v1 acme.corp/pkg/apis/existinginterfaces/v1
+kube::codegen::gen_client \
+  --boilerplate ./../hack/boilerplate/boilerplate.generatego.txt \
+  --output-dir pkg/generated \
+  --output-pkg acme.corp/pkg/generated \
+  --with-applyconfig \
+  --applyconfig-name applyconfigurations \
+  --with-watch \
+  ./pkg/apis
 
 # Generate cluster-aware clients, informers and listers using generated single-cluster code
+rm -rf pkg/kcpexisting
+mkdir -p pkg/kcpexisting/clients/{clientset/versioned,listers,informers/externalversions}
+
 cluster::codegen::gen_client \
   --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
   --output-dir pkg/kcpexisting/clients \
@@ -84,6 +70,9 @@ cluster::codegen::gen_client \
   pkg/apis
 
 # Generate cluster-aware clients, informers and listers assuming no single-cluster listers or informers
+rm -rf pkg/kcp
+mkdir -p pkg/kcp/clients/{clientset/versioned,listers,informers/externalversions}
+
 cluster::codegen::gen_client \
   --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
   --output-dir pkg/kcp/clients \
