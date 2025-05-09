@@ -24,7 +24,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	"github.com/kcp-dev/logicalcluster/v3"
+	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -83,25 +83,25 @@ func NewFilteredTestTypeClusterInformer(client versioned.ClusterInterface, resyn
 	)
 }
 
-func (f *testTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
+func (i *testTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
 	return NewFilteredTestTypeClusterInformer(client, resyncPeriod, cache.Indexers{
 		kcpcache.ClusterIndexName:             kcpcache.ClusterIndexFunc,
 		kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,
-	}, f.tweakListOptions)
+	}, i.tweakListOptions)
 }
 
-func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
-	return f.factory.InformerFor(&apissecondexamplev1.TestType{}, f.defaultInformer)
+func (i *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
+	return i.factory.InformerFor(&apissecondexamplev1.TestType{}, i.defaultInformer)
 }
 
-func (f *testTypeClusterInformer) Lister() secondexamplev1.TestTypeClusterLister {
-	return secondexamplev1.NewTestTypeClusterLister(f.Informer().GetIndexer())
+func (i *testTypeClusterInformer) Lister() secondexamplev1.TestTypeClusterLister {
+	return secondexamplev1.NewTestTypeClusterLister(i.Informer().GetIndexer())
 }
 
-func (f *testTypeClusterInformer) Cluster(clusterName logicalcluster.Name) TestTypeInformer {
+func (i *testTypeClusterInformer) Cluster(clusterName logicalcluster.Name) TestTypeInformer {
 	return &testTypeInformer{
-		informer: f.Informer().Cluster(clusterName),
-		lister:   f.Lister().Cluster(clusterName),
+		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().Cluster(clusterName),
 	}
 }
 
@@ -110,12 +110,12 @@ type testTypeInformer struct {
 	lister   secondexamplev1.TestTypeLister
 }
 
-func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.informer
+func (i *testTypeInformer) Informer() cache.SharedIndexInformer {
+	return i.informer
 }
 
-func (f *testTypeInformer) Lister() secondexamplev1.TestTypeLister {
-	return f.lister
+func (i *testTypeInformer) Lister() secondexamplev1.TestTypeLister {
+	return i.lister
 }
 
 // TestTypeInformer provides access to a shared informer and lister for
@@ -163,16 +163,16 @@ func NewFilteredTestTypeInformer(client clientsetversioned.Interface, resyncPeri
 	)
 }
 
-func (f *testTypeScopedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apissecondexamplev1.TestType{}, f.defaultInformer)
+func (i *testTypeScopedInformer) Informer() cache.SharedIndexInformer {
+	return i.factory.InformerFor(&apissecondexamplev1.TestType{}, i.defaultInformer)
 }
 
-func (f *testTypeScopedInformer) Lister() secondexamplev1.TestTypeLister {
-	return secondexamplev1.NewTestTypeLister(f.Informer().GetIndexer())
+func (i *testTypeScopedInformer) Lister() secondexamplev1.TestTypeLister {
+	return secondexamplev1.NewTestTypeLister(i.Informer().GetIndexer())
 }
 
-func (f *testTypeScopedInformer) defaultInformer(client clientsetversioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredTestTypeInformer(client, resyncPeriod, f.namespace, cache.Indexers{
+func (i *testTypeScopedInformer) defaultInformer(client clientsetversioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredTestTypeInformer(client, resyncPeriod, i.namespace, cache.Indexers{
 		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
-	}, f.tweakListOptions)
+	}, i.tweakListOptions)
 }

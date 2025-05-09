@@ -24,7 +24,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	"github.com/kcp-dev/logicalcluster/v3"
+	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -84,25 +84,25 @@ func NewFilteredTestTypeClusterInformer(client versioned.ClusterInterface, resyn
 	)
 }
 
-func (f *testTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
+func (i *testTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
 	return NewFilteredTestTypeClusterInformer(client, resyncPeriod, cache.Indexers{
 		kcpcache.ClusterIndexName:             kcpcache.ClusterIndexFunc,
 		kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,
-	}, f.tweakListOptions)
+	}, i.tweakListOptions)
 }
 
-func (f *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
-	return f.factory.InformerFor(&apisexamplev1alpha1.TestType{}, f.defaultInformer)
+func (i *testTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
+	return i.factory.InformerFor(&apisexamplev1alpha1.TestType{}, i.defaultInformer)
 }
 
-func (f *testTypeClusterInformer) Lister() listersexamplev1alpha1.TestTypeClusterLister {
-	return listersexamplev1alpha1.NewTestTypeClusterLister(f.Informer().GetIndexer())
+func (i *testTypeClusterInformer) Lister() listersexamplev1alpha1.TestTypeClusterLister {
+	return listersexamplev1alpha1.NewTestTypeClusterLister(i.Informer().GetIndexer())
 }
 
-func (f *testTypeClusterInformer) Cluster(clusterName logicalcluster.Name) examplev1alpha1.TestTypeInformer {
+func (i *testTypeClusterInformer) Cluster(clusterName logicalcluster.Name) examplev1alpha1.TestTypeInformer {
 	return &testTypeInformer{
-		informer: f.Informer().Cluster(clusterName),
-		lister:   f.Lister().Cluster(clusterName),
+		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().Cluster(clusterName),
 	}
 }
 
@@ -111,10 +111,10 @@ type testTypeInformer struct {
 	lister   generatedlistersexamplev1alpha1.TestTypeLister
 }
 
-func (f *testTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.informer
+func (i *testTypeInformer) Informer() cache.SharedIndexInformer {
+	return i.informer
 }
 
-func (f *testTypeInformer) Lister() generatedlistersexamplev1alpha1.TestTypeLister {
-	return f.lister
+func (i *testTypeInformer) Lister() generatedlistersexamplev1alpha1.TestTypeLister {
+	return i.lister
 }

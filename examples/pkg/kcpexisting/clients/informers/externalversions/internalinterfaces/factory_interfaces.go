@@ -35,7 +35,7 @@ type TweakListOptionsFunc func(*v1.ListOptions)
 // NewInformerFunc takes versioned.ClusterInterface and time.Duration to return a kcpcache.ScopeableSharedIndexInformer.
 type NewInformerFunc func(versioned.ClusterInterface, time.Duration) kcpcache.ScopeableSharedIndexInformer
 
-// SharedInformerFactory a small interface to allow for adding an informer without an import cycle
+// SharedInformerFactory a small interface to allow for adding an informer without an import cycle.
 type SharedInformerFactory interface {
 	Start(stopCh <-chan struct{})
 	InformerFor(obj runtime.Object, newFunc NewInformerFunc) kcpcache.ScopeableSharedIndexInformer

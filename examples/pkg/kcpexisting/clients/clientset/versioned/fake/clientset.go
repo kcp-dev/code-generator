@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 
+	applyconfigurations "acme.corp/pkg/generated/applyconfigurations"
 	clientset "acme.corp/pkg/generated/clientset/versioned"
 	examplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
 	examplev1alpha1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1alpha1"
@@ -167,6 +168,26 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 func (c *Clientset) Tracker() kcptesting.ScopedObjectTracker {
 	return c.tracker
+}
+
+// NewClientset returns a clientset that will respond with the provided objects.
+// It's backed by a very simple object tracker that processes creates, updates and deletions as-is,
+// without applying any validations and/or defaults. It shouldn't be considered a replacement
+// for a real clientset and is mostly useful in simple unit tests.
+func NewClientset(objects ...runtime.Object) *ClusterClientset {
+	o := kcptesting.NewFieldManagedObjectTracker(
+		kcpclientscheme.Scheme,
+		kcpclientscheme.Codecs.UniversalDecoder(),
+		applyconfigurations.NewTypeConverter(kcpclientscheme.Scheme),
+	)
+	o.AddAll(objects...)
+
+	cs := &ClusterClientset{Fake: kcptesting.Fake{}, tracker: o}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: &cs.Fake, ClusterPath: logicalcluster.Wildcard}
+	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
+	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
+
+	return cs
 }
 
 // ExampleV1 retrieves the ExampleV1Client

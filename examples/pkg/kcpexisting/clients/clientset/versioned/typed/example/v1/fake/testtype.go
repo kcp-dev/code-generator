@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	examplev1 "acme.corp/pkg/apis/example/v1"
-	v1 "acme.corp/pkg/apis/example/v1"
+	v1 "acme.corp/pkg/generated/applyconfigurations/example/v1"
 	typedexamplev1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1"
 	typedkcpexamplev1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1"
 )
@@ -72,14 +72,14 @@ func (n *testTypeNamespacer) Namespace(namespace string) typedexamplev1.TestType
 
 // testTypeScopedClient implements TestTypeInterface
 type testTypeScopedClient struct {
-	*kcpgentype.FakeClientWithList[*examplev1.TestType, *examplev1.TestTypeList]
+	*kcpgentype.FakeClientWithListAndApply[*examplev1.TestType, *examplev1.TestTypeList, *v1.TestTypeApplyConfiguration]
 	Fake        *kcptesting.Fake
 	ClusterPath logicalcluster.Path
 }
 
 func newFakeTestTypeClient(fake *kcptesting.Fake, namespace string, clusterPath logicalcluster.Path) typedexamplev1.TestTypeInterface {
 	return &testTypeScopedClient{
-		kcpgentype.NewFakeClientWithList[*examplev1.TestType, *examplev1.TestTypeList](
+		kcpgentype.NewFakeClientWithListAndApply[*examplev1.TestType, *examplev1.TestTypeList, *v1.TestTypeApplyConfiguration](
 			fake,
 			clusterPath,
 			namespace,
@@ -99,31 +99,31 @@ func newFakeTestTypeClient(fake *kcptesting.Fake, namespace string, clusterPath 
 }
 
 // CreateField takes the representation of a field and creates it. Returns the server's representation of the field, and an error, if there is any.
-func (c *testTypeScopedClient) CreateField(ctx context.Context, testTypeName string, field *v1.Field, _ metav1.CreateOptions) (result *v1.Field, err error) {
-	emptyResult := &v1.Field{}
+func (c *testTypeScopedClient) CreateField(ctx context.Context, testTypeName string, field *examplev1.Field, _ metav1.CreateOptions) (result *examplev1.Field, err error) {
+	emptyResult := &examplev1.Field{}
 	obj, err := c.Fake.Invokes(kcptesting.NewCreateSubresourceAction(c.Resource(), c.ClusterPath, testTypeName, "field", c.Namespace(), field), emptyResult)
 	if obj == nil {
 		return emptyResult, err
 	}
-	return obj.(*v1.Field), err
+	return obj.(*examplev1.Field), err
 }
 
 // UpdateField takes the representation of a field and updates it. Returns the server's representation of the field, and an error, if there is any.
-func (c *testTypeScopedClient) UpdateField(ctx context.Context, testTypeName string, field *v1.Field, _ metav1.UpdateOptions) (result *v1.Field, err error) {
-	emptyResult := &v1.Field{}
-	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(c.Resource(), c.ClusterPath, "field", c.Namespace(), field), &v1.Field{})
+func (c *testTypeScopedClient) UpdateField(ctx context.Context, testTypeName string, field *examplev1.Field, _ metav1.UpdateOptions) (result *examplev1.Field, err error) {
+	emptyResult := &examplev1.Field{}
+	obj, err := c.Fake.Invokes(kcptesting.NewUpdateSubresourceAction(c.Resource(), c.ClusterPath, "field", c.Namespace(), field), &examplev1.Field{})
 	if obj == nil {
 		return emptyResult, err
 	}
-	return obj.(*v1.Field), err
+	return obj.(*examplev1.Field), err
 }
 
 // GetField takes name of the testType, and returns the corresponding field object, and an error if there is any.
-func (c *testTypeScopedClient) GetField(ctx context.Context, testTypeName string, _ metav1.GetOptions) (result *v1.Field, err error) {
-	emptyResult := &v1.Field{}
+func (c *testTypeScopedClient) GetField(ctx context.Context, testTypeName string, _ metav1.GetOptions) (result *examplev1.Field, err error) {
+	emptyResult := &examplev1.Field{}
 	obj, err := c.Fake.Invokes(kcptesting.NewGetSubresourceAction(c.Resource(), c.ClusterPath, c.Namespace(), "field", testTypeName), emptyResult)
 	if obj == nil {
 		return emptyResult, err
 	}
-	return obj.(*v1.Field), err
+	return obj.(*examplev1.Field), err
 }

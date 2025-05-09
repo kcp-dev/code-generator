@@ -25,6 +25,7 @@ import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
+	v1beta1 "acme.corp/pkg/generated/applyconfigurations/example/v1beta1"
 	typedexamplev1beta1 "acme.corp/pkg/generated/clientset/versioned/typed/example/v1beta1"
 	typedkcpexamplev1beta1 "acme.corp/pkg/kcpexisting/clients/clientset/versioned/typed/example/v1beta1"
 )
@@ -70,14 +71,14 @@ func (n *testTypeNamespacer) Namespace(namespace string) typedexamplev1beta1.Tes
 
 // testTypeScopedClient implements TestTypeInterface
 type testTypeScopedClient struct {
-	*kcpgentype.FakeClientWithList[*examplev1beta1.TestType, *examplev1beta1.TestTypeList]
+	*kcpgentype.FakeClientWithListAndApply[*examplev1beta1.TestType, *examplev1beta1.TestTypeList, *v1beta1.TestTypeApplyConfiguration]
 	Fake        *kcptesting.Fake
 	ClusterPath logicalcluster.Path
 }
 
 func newFakeTestTypeClient(fake *kcptesting.Fake, namespace string, clusterPath logicalcluster.Path) typedexamplev1beta1.TestTypeInterface {
 	return &testTypeScopedClient{
-		kcpgentype.NewFakeClientWithList[*examplev1beta1.TestType, *examplev1beta1.TestTypeList](
+		kcpgentype.NewFakeClientWithListAndApply[*examplev1beta1.TestType, *examplev1beta1.TestTypeList, *v1beta1.TestTypeApplyConfiguration](
 			fake,
 			clusterPath,
 			namespace,

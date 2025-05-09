@@ -24,7 +24,7 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
-	"github.com/kcp-dev/logicalcluster/v3"
+	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -83,25 +83,25 @@ func NewFilteredClusterTestTypeClusterInformer(client versioned.ClusterInterface
 	)
 }
 
-func (f *clusterTestTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
+func (i *clusterTestTypeClusterInformer) defaultInformer(client versioned.ClusterInterface, resyncPeriod time.Duration) kcpcache.ScopeableSharedIndexInformer {
 	return NewFilteredClusterTestTypeClusterInformer(client, resyncPeriod, cache.Indexers{
 		kcpcache.ClusterIndexName:             kcpcache.ClusterIndexFunc,
 		kcpcache.ClusterAndNamespaceIndexName: kcpcache.ClusterAndNamespaceIndexFunc,
-	}, f.tweakListOptions)
+	}, i.tweakListOptions)
 }
 
-func (f *clusterTestTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
-	return f.factory.InformerFor(&apisexampledashedv1.ClusterTestType{}, f.defaultInformer)
+func (i *clusterTestTypeClusterInformer) Informer() kcpcache.ScopeableSharedIndexInformer {
+	return i.factory.InformerFor(&apisexampledashedv1.ClusterTestType{}, i.defaultInformer)
 }
 
-func (f *clusterTestTypeClusterInformer) Lister() exampledashedv1.ClusterTestTypeClusterLister {
-	return exampledashedv1.NewClusterTestTypeClusterLister(f.Informer().GetIndexer())
+func (i *clusterTestTypeClusterInformer) Lister() exampledashedv1.ClusterTestTypeClusterLister {
+	return exampledashedv1.NewClusterTestTypeClusterLister(i.Informer().GetIndexer())
 }
 
-func (f *clusterTestTypeClusterInformer) Cluster(clusterName logicalcluster.Name) ClusterTestTypeInformer {
+func (i *clusterTestTypeClusterInformer) Cluster(clusterName logicalcluster.Name) ClusterTestTypeInformer {
 	return &clusterTestTypeInformer{
-		informer: f.Informer().Cluster(clusterName),
-		lister:   f.Lister().Cluster(clusterName),
+		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().Cluster(clusterName),
 	}
 }
 
@@ -110,12 +110,12 @@ type clusterTestTypeInformer struct {
 	lister   exampledashedv1.ClusterTestTypeLister
 }
 
-func (f *clusterTestTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.informer
+func (i *clusterTestTypeInformer) Informer() cache.SharedIndexInformer {
+	return i.informer
 }
 
-func (f *clusterTestTypeInformer) Lister() exampledashedv1.ClusterTestTypeLister {
-	return f.lister
+func (i *clusterTestTypeInformer) Lister() exampledashedv1.ClusterTestTypeLister {
+	return i.lister
 }
 
 // ClusterTestTypeInformer provides access to a shared informer and lister for
@@ -162,14 +162,14 @@ func NewFilteredClusterTestTypeInformer(client clientsetversioned.Interface, res
 	)
 }
 
-func (f *clusterTestTypeScopedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisexampledashedv1.ClusterTestType{}, f.defaultInformer)
+func (i *clusterTestTypeScopedInformer) Informer() cache.SharedIndexInformer {
+	return i.factory.InformerFor(&apisexampledashedv1.ClusterTestType{}, i.defaultInformer)
 }
 
-func (f *clusterTestTypeScopedInformer) Lister() exampledashedv1.ClusterTestTypeLister {
-	return exampledashedv1.NewClusterTestTypeLister(f.Informer().GetIndexer())
+func (i *clusterTestTypeScopedInformer) Lister() exampledashedv1.ClusterTestTypeLister {
+	return exampledashedv1.NewClusterTestTypeLister(i.Informer().GetIndexer())
 }
 
-func (f *clusterTestTypeScopedInformer) defaultInformer(client clientsetversioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterTestTypeInformer(client, resyncPeriod, cache.Indexers{}, f.tweakListOptions)
+func (i *clusterTestTypeScopedInformer) defaultInformer(client clientsetversioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredClusterTestTypeInformer(client, resyncPeriod, cache.Indexers{}, i.tweakListOptions)
 }
