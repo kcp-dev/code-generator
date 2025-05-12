@@ -70,7 +70,7 @@ func goTrackerLocalName(tracker namer.ImportTracker, localPkg string, t types.Na
 
 		if _, found := tracker.PathOf(name); found || name == localLeaf {
 			// This name collides with some other package.
-			// Or, this name is tne same name as the local package,
+			// Or, this name is the same name as the local package,
 			// which we avoid because it can be confusing. For example,
 			// if the local package is v1, we to avoid importing
 			// another package using the v1 name, and instead import
