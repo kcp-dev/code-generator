@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2022 The KCP Authors.
+# Copyright 2025 The KCP Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ pushd ./examples
 
 # Generate deepcopy functions
 kube::codegen::gen_helpers \
-  --boilerplate ./../hack/boilerplate/boilerplate.generatego.txt \
+  --boilerplate ./../hack/boilerplate/examples/boilerplate.generatego.txt \
   ./pkg/apis
 
 # Generate standard clientset, listers and informers
@@ -42,7 +42,7 @@ rm -rf pkg/generated
 mkdir -p pkg/generated/{clientset,applyconfigurations,listers,informers}
 
 kube::codegen::gen_client \
-  --boilerplate ./../hack/boilerplate/boilerplate.generatego.txt \
+  --boilerplate ./../hack/boilerplate/examples/boilerplate.generatego.txt \
   --output-dir pkg/generated \
   --output-pkg acme.corp/pkg/generated \
   --with-applyconfig \
@@ -55,7 +55,7 @@ rm -rf pkg/kcpexisting
 mkdir -p pkg/kcpexisting/clients/{clientset/versioned,listers,informers/externalversions}
 
 cluster::codegen::gen_client \
-  --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
+  --boilerplate ../hack/boilerplate/examples/boilerplate.generatego.txt \
   --output-dir pkg/kcpexisting/clients \
   --output-pkg acme.corp/pkg/kcpexisting/clients \
   --versioned-clientset-dir pkg/kcpexisting/clients/clientset/versioned \
@@ -74,7 +74,7 @@ rm -rf pkg/kcp
 mkdir -p pkg/kcp/clients/{clientset/versioned,listers,informers/externalversions}
 
 cluster::codegen::gen_client \
-  --boilerplate ../hack/boilerplate/boilerplate.generatego.txt \
+  --boilerplate ../hack/boilerplate/examples/boilerplate.generatego.txt \
   --output-dir pkg/kcp/clients \
   --output-pkg acme.corp/pkg/kcp/clients \
   --versioned-clientset-dir pkg/kcp/clients/clientset/versioned \
