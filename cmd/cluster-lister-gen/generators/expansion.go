@@ -39,11 +39,11 @@ type expansionGenerator struct {
 }
 
 // We only want to call GenerateType() once per group.
-func (g *expansionGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *expansionGenerator) Filter(_ *generator.Context, t *types.Type) bool {
 	return t == g.types[0]
 }
 
-func (g *expansionGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *expansionGenerator) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 	for _, t := range g.types {
 		manualFile := filepath.Join(g.outputPath, strings.ToLower(t.Name.Name+"_expansion.go"))

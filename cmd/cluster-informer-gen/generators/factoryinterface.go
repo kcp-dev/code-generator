@@ -27,7 +27,7 @@ import (
 )
 
 // factoryInterfaceGenerator produces a file of interfaces used to break a dependency cycle for
-// informer registration
+// informer registration.
 type factoryInterfaceGenerator struct {
 	generator.GoGenerator
 	outputPackage                          string
@@ -40,7 +40,7 @@ type factoryInterfaceGenerator struct {
 
 var _ generator.Generator = &factoryInterfaceGenerator{}
 
-func (g *factoryInterfaceGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *factoryInterfaceGenerator) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.filtered {
 		g.filtered = true
 		return true
@@ -48,13 +48,13 @@ func (g *factoryInterfaceGenerator) Filter(c *generator.Context, t *types.Type) 
 	return false
 }
 
-func (g *factoryInterfaceGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *factoryInterfaceGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *factoryInterfaceGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *factoryInterfaceGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }

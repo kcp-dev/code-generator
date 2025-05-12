@@ -20,10 +20,7 @@ package main
 
 import (
 	"flag"
-	"log"
-	"os"
 	"slices"
-	"time"
 
 	"github.com/spf13/pflag"
 
@@ -40,14 +37,8 @@ func main() {
 	klog.InitFlags(nil)
 	args := args.New()
 
-	if os.Getenv("DEBUG") != "" {
-		delay := 5 * time.Second
-		log.Printf("Waiting %v to attach debugger...", delay)
-		time.Sleep(delay)
-	}
-
 	args.AddFlags(pflag.CommandLine, "k8s.io/kubernetes/pkg/apis") // TODO: move this input path out of client-gen
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 

@@ -39,7 +39,9 @@ func NewInputBasePathValue(builder *groupVersionsBuilder, def string) *inputBase
 	v := &inputBasePathValue{
 		builder: builder,
 	}
-	v.Set(def)
+	if err := v.Set(def); err != nil {
+		panic(err)
+	}
 	return v
 }
 

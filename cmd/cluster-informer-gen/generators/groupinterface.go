@@ -42,7 +42,7 @@ type groupInterfaceGenerator struct {
 
 var _ generator.Generator = &groupInterfaceGenerator{}
 
-func (g *groupInterfaceGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *groupInterfaceGenerator) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.filtered {
 		g.filtered = true
 		return true
@@ -50,13 +50,13 @@ func (g *groupInterfaceGenerator) Filter(c *generator.Context, t *types.Type) bo
 	return false
 }
 
-func (g *groupInterfaceGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *groupInterfaceGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *groupInterfaceGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *groupInterfaceGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }
@@ -69,7 +69,7 @@ type versionData struct {
 	NewScoped        *types.Type
 }
 
-func (g *groupInterfaceGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *groupInterfaceGenerator) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	versions := make([]versionData, 0, len(g.groupVersions.Versions))

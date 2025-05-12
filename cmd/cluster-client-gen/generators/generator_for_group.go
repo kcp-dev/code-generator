@@ -20,7 +20,6 @@ package generators
 import (
 	"io"
 	"path"
-	"strings"
 
 	"k8s.io/gengo/v2"
 	"k8s.io/gengo/v2/generator"
@@ -49,7 +48,7 @@ type genGroup struct {
 var _ generator.Generator = &genGroup{}
 
 // We only want to call GenerateType() once per group.
-func (g *genGroup) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genGroup) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.called {
 		g.called = true
 		return true
@@ -57,20 +56,13 @@ func (g *genGroup) Filter(c *generator.Context, t *types.Type) bool {
 	return false
 }
 
-func (g *genGroup) Namers(c *generator.Context) namer.NameSystems {
+func (g *genGroup) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func groupVersionFromPackage(pkg string) string {
-	version := path.Base(pkg)
-	group := path.Base(path.Dir(pkg))
-
-	return strings.ToLower(group + version)
-}
-
-func (g *genGroup) Imports(c *generator.Context) (imports []string) {
+func (g *genGroup) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	imports = append(imports,
 		"github.com/kcp-dev/logicalcluster/v3",

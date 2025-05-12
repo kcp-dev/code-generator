@@ -278,7 +278,7 @@ NextGroup:
 // comment of the form "// +groupName=somegroup" or "// +groupName=somegroup.foo.bar.io", use the
 // first field (somegroup) as the name of the group in Go code, e.g. as the func name in a clientset.
 //
-// If the first field of the groupName is not unique within the clientset, use "// +groupName=unique
+// If the first field of the groupName is not unique within the clientset, use "// +groupName=unique".
 func applyGroupOverrides(universe types.Universe, args *args.Args) {
 	// Create a map from "old GV" to "new GV" so we know what changes we need to make.
 	changes := make(map[clientgentypes.GroupVersion]clientgentypes.GroupVersion)
@@ -415,7 +415,7 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 
 	// If --clientset-only=true, we don't regenerate the individual typed clients.
 	if args.ClientsetOnly {
-		return []generator.Target(targetList)
+		return targetList
 	}
 
 	orderer := namer.Orderer{Namer: namer.NewPrivateNamer(0)}

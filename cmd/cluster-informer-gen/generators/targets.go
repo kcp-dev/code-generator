@@ -48,7 +48,7 @@ func NameSystems(pluralExceptions map[string]string) namer.NameSystems {
 	}
 }
 
-// lowercaseSingularNamer implements Namer
+// lowercaseSingularNamer implements Namer.
 type lowercaseSingularNamer struct{}
 
 // Name returns t's name in all lowercase.
@@ -82,7 +82,7 @@ func objectMetaForPackage(pkg *types.Package) (*types.Type, bool, error) {
 	return nil, false, nil
 }
 
-// isInternal returns true if the tags for a member do not contain a json tag
+// isInternal returns true if the tags for a member do not contain a json tag.
 func isInternal(m types.Member) bool {
 	return !strings.Contains(m.Tags, "json")
 }
@@ -200,7 +200,7 @@ func factoryTarget(
 		PkgPath:       outputPkgBase,
 		PkgDir:        outputDirBase,
 		HeaderComment: boilerplate,
-		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+		GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 			generators = append(generators, &factoryGenerator{
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "factory.go",
@@ -242,7 +242,7 @@ func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []b
 		PkgPath:       outputPkg,
 		PkgDir:        outputDir,
 		HeaderComment: boilerplate,
-		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+		GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 			generators = append(generators, &factoryInterfaceGenerator{
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "factory_interfaces.go",
@@ -262,14 +262,14 @@ func factoryInterfaceTarget(outputDirBase, outputPkgBase string, boilerplate []b
 func groupTarget(outputDirBase, outputPackageBase string, groupVersions clientgentypes.GroupVersions, boilerplate []byte, args *args.Args) generator.Target {
 	outputDir := filepath.Join(outputDirBase, groupVersions.PackageName)
 	outputPkg := path.Join(outputPackageBase, groupVersions.PackageName)
-	groupPkgName := strings.Split(string(groupVersions.PackageName), ".")[0]
+	groupPkgName := strings.Split(groupVersions.PackageName, ".")[0]
 
 	return &generator.SimpleTarget{
 		PkgName:       groupPkgName,
 		PkgPath:       outputPkg,
 		PkgDir:        outputDir,
 		HeaderComment: boilerplate,
-		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+		GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 			generators = append(generators, &groupInterfaceGenerator{
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "interface.go",
@@ -302,7 +302,7 @@ func versionTarget(
 		PkgPath:       outputPkg,
 		PkgDir:        outputDir,
 		HeaderComment: boilerplate,
-		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+		GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 			generators = append(generators, &versionInterfaceGenerator{
 				GoGenerator: generator.GoGenerator{
 					OutputFilename: "interface.go",

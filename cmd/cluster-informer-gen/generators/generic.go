@@ -45,7 +45,7 @@ type genericGenerator struct {
 
 var _ generator.Generator = &genericGenerator{}
 
-func (g *genericGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genericGenerator) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.filtered {
 		g.filtered = true
 		return true
@@ -53,7 +53,7 @@ func (g *genericGenerator) Filter(c *generator.Context, t *types.Type) bool {
 	return false
 }
 
-func (g *genericGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *genericGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw":                namer.NewRawNamer(g.outputPackage, g.imports),
 		"allLowercasePlural": namer.NewAllLowercasePluralNamer(g.pluralExceptions),
@@ -62,7 +62,7 @@ func (g *genericGenerator) Namers(c *generator.Context) namer.NameSystems {
 	}
 }
 
-func (g *genericGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *genericGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }

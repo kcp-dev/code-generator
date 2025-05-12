@@ -48,7 +48,7 @@ type genFakeForGroup struct {
 var _ generator.Generator = &genFakeForGroup{}
 
 // We only want to call GenerateType() once per group.
-func (g *genFakeForGroup) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genFakeForGroup) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.called {
 		g.called = true
 		return true
@@ -56,7 +56,7 @@ func (g *genFakeForGroup) Filter(c *generator.Context, t *types.Type) bool {
 	return false
 }
 
-func (g *genFakeForGroup) Namers(c *generator.Context) namer.NameSystems {
+func (g *genFakeForGroup) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
@@ -69,7 +69,7 @@ func groupVersionFromPackage(pkg string) string {
 	return strings.ToLower(group + version)
 }
 
-func (g *genFakeForGroup) Imports(c *generator.Context) (imports []string) {
+func (g *genFakeForGroup) Imports(_ *generator.Context) (imports []string) {
 	imports = g.imports.ImportLines()
 	if len(g.types) != 0 {
 		imports = append(imports,
@@ -81,7 +81,7 @@ func (g *genFakeForGroup) Imports(c *generator.Context) (imports []string) {
 	return imports
 }
 
-func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *genFakeForGroup) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 	gv := groupVersionFromPackage(g.realClientPackage)
 

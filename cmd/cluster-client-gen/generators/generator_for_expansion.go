@@ -36,11 +36,11 @@ type genExpansion struct {
 }
 
 // We only want to call GenerateType() once per group.
-func (g *genExpansion) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genExpansion) Filter(_ *generator.Context, t *types.Type) bool {
 	return len(g.types) == 0 || t == g.types[0]
 }
 
-func (g *genExpansion) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *genExpansion) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 	for _, t := range g.types {
 		if _, err := os.Stat(filepath.Join(g.groupPackagePath, strings.ToLower(t.Name.Name+"_expansion.go"))); os.IsNotExist(err) {

@@ -52,17 +52,17 @@ type informerGenerator struct {
 
 var _ generator.Generator = &informerGenerator{}
 
-func (g *informerGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *informerGenerator) Filter(_ *generator.Context, t *types.Type) bool {
 	return t == g.typeToGenerate
 }
 
-func (g *informerGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *informerGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *informerGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *informerGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }

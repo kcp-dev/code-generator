@@ -46,20 +46,20 @@ type GenScheme struct {
 	schemeGenerated bool
 }
 
-func (g *GenScheme) Namers(c *generator.Context) namer.NameSystems {
+func (g *GenScheme) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.OutputPkg, g.ImportTracker),
 	}
 }
 
 // We only want to call GenerateType() once.
-func (g *GenScheme) Filter(c *generator.Context, t *types.Type) bool {
+func (g *GenScheme) Filter(_ *generator.Context, _ *types.Type) bool {
 	ret := !g.schemeGenerated
 	g.schemeGenerated = true
 	return ret
 }
 
-func (g *GenScheme) Imports(c *generator.Context) (imports []string) {
+func (g *GenScheme) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.ImportTracker.ImportLines()...)
 	for _, group := range g.Groups {
 		for _, version := range group.Versions {
@@ -74,15 +74,15 @@ func (g *GenScheme) Imports(c *generator.Context) (imports []string) {
 
 				imports = append(imports, fmt.Sprintf("%s \"%s\"", groupAlias, packagePath))
 				break
-			} else {
-				imports = append(imports, fmt.Sprintf("%s%s \"%s\"", groupAlias, strings.ToLower(version.Version.NonEmpty()), packagePath))
 			}
+
+			imports = append(imports, fmt.Sprintf("%s%s \"%s\"", groupAlias, strings.ToLower(version.Version.NonEmpty()), packagePath))
 		}
 	}
 	return
 }
 
-func (g *GenScheme) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *GenScheme) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
 	allGroupVersions := clientgentypes.ToGroupVersionInfo(g.Groups, g.GroupGoNames)

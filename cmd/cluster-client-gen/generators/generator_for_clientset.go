@@ -43,14 +43,14 @@ type genClientset struct {
 
 var _ generator.Generator = &genClientset{}
 
-func (g *genClientset) Namers(c *generator.Context) namer.NameSystems {
+func (g *genClientset) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.clientsetPackage, g.imports),
 	}
 }
 
 // We only want to call GenerateType() once.
-func (g *genClientset) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genClientset) Filter(_ *generator.Context, _ *types.Type) bool {
 	ret := !g.clientsetGenerated
 	g.clientsetGenerated = true
 	return ret
@@ -72,7 +72,7 @@ func (g *genClientset) Imports(c *generator.Context) (imports []string) {
 	return
 }
 
-func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *genClientset) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	// TODO: We actually don't need any type information to generate the clientset,
 	// perhaps we can adapt the go2ild framework to this kind of usage.
 	sw := generator.NewSnippetWriter(w, c, "$", "$")

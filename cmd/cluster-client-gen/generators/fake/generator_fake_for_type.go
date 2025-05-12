@@ -52,15 +52,17 @@ var _ generator.Generator = &genFakeForType{}
 var titler = cases.Title(language.Und)
 
 // Filter ignores all but one type because we're making a single file per type.
-func (g *genFakeForType) Filter(c *generator.Context, t *types.Type) bool { return t == g.typeToMatch }
+func (g *genFakeForType) Filter(_ *generator.Context, t *types.Type) bool {
+	return t == g.typeToMatch
+}
 
-func (g *genFakeForType) Namers(c *generator.Context) namer.NameSystems {
+func (g *genFakeForType) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *genFakeForType) Imports(c *generator.Context) (imports []string) {
+func (g *genFakeForType) Imports(_ *generator.Context) (imports []string) {
 	gvAlias := util.GroupVersionAliasFromPackage(g.realClientPackage)
 
 	imports = append(imports, g.imports.ImportLines()...)
@@ -297,7 +299,7 @@ func adjustTemplate(name, verbType, template string) string {
 	return strings.ReplaceAll(template, " "+titler.String(verbType), " "+name)
 }
 
-// struct and constructor variants
+// struct and constructor variants.
 const (
 	// The following values are bits in a bitmask.
 	// The values which can be set indicate list support and apply support;
@@ -317,7 +319,7 @@ const (
 // * withList, withApply: index 3.
 // Go enforces index unicity in these kinds of declarations.
 
-// cluster struct declarations
+// cluster struct declarations.
 var listableClusterClientType = `
 // $.type|private$ClusterClient implements $.type|singularKind$ClusterInterface
 type $.type|private$ClusterClient struct {
@@ -334,7 +336,7 @@ type $.type|private$ClusterClient struct {
 }
 `
 
-// Constructors for the cluster struct, in all variants
+// Constructors for the cluster struct, in all variants.
 var newListableClusterClient = `
 func newFake$.type|public$ClusterClient(fake *$.GroupGoName$$.Version$ClusterClient) typedkcp$.groupVersion$.$.type|singularKind$ClusterInterface {
 	return &$.type|private$ClusterClient{
@@ -388,7 +390,7 @@ func (n *$.type|private$Namespacer) Namespace(namespace string) typed$.groupVers
 }
 `
 
-// scoped struct declarations
+// scoped struct declarations.
 var clientStructType = []string{
 	noList | noApply: `
 	// $.type|private$ScopedClient implements $.type|public$Interface
@@ -424,7 +426,7 @@ var clientStructType = []string{
 	`,
 }
 
-// Constructors for the scoped struct, in all variants
+// Constructors for the scoped struct, in all variants.
 var newClientStruct = []string{
 	noList | noApply: `
 	func newFake$.type|public$Client(fake *kcptesting.Fake$if .namespaced$, namespace string$end$, clusterPath logicalcluster.Path) typed$.groupVersion$.$.type|singularKind$Interface {

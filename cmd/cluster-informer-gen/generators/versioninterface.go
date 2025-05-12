@@ -40,7 +40,7 @@ type versionInterfaceGenerator struct {
 
 var _ generator.Generator = &versionInterfaceGenerator{}
 
-func (g *versionInterfaceGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *versionInterfaceGenerator) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.filtered {
 		g.filtered = true
 		return true
@@ -48,21 +48,21 @@ func (g *versionInterfaceGenerator) Filter(c *generator.Context, t *types.Type) 
 	return false
 }
 
-func (g *versionInterfaceGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *versionInterfaceGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *versionInterfaceGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *versionInterfaceGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }
 
-func (g *versionInterfaceGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+func (g *versionInterfaceGenerator) GenerateType(c *generator.Context, _ *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "$", "$")
 
-	m := map[string]interface{}{
+	m := map[string]any{
 		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
 		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
 		"interfacesSharedScopedInformerFactory": c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedScopedInformerFactory"}),

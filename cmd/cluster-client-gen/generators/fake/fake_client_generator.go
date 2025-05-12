@@ -85,7 +85,7 @@ func TargetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 			})
 			return generators
 		},
-		FilterFunc: func(c *generator.Context, t *types.Type) bool {
+		FilterFunc: func(_ *generator.Context, t *types.Type) bool {
 			return util.MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...)).GenerateClient
 		},
 	}
@@ -102,7 +102,7 @@ func TargetForClientset(args *args.Args, clientsetDir, clientsetPkg string, sing
 		PkgDocComment: []byte("// This package has the automatically generated fake clientset.\n"),
 		// GeneratorsFunc returns a list of generators. Each generator generates a
 		// single file.
-		GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+		GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 			generators = []generator.Generator{
 				// Always generate a "doc.go" file.
 				generator.GoGenerator{OutputFilename: "doc.go"},

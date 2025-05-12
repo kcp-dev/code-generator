@@ -46,7 +46,7 @@ type factoryGenerator struct {
 
 var _ generator.Generator = &factoryGenerator{}
 
-func (g *factoryGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *factoryGenerator) Filter(_ *generator.Context, _ *types.Type) bool {
 	if !g.filtered {
 		g.filtered = true
 		return true
@@ -54,13 +54,13 @@ func (g *factoryGenerator) Filter(c *generator.Context, t *types.Type) bool {
 	return false
 }
 
-func (g *factoryGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *factoryGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *factoryGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *factoryGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	return
 }

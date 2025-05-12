@@ -36,7 +36,7 @@ func main() {
 	args := args.New()
 
 	args.AddFlags(pflag.CommandLine)
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 

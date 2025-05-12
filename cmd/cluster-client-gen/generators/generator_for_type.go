@@ -22,9 +22,6 @@ import (
 	"path"
 	"strings"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
 	"k8s.io/gengo/v2/generator"
 	"k8s.io/gengo/v2/namer"
 	"k8s.io/gengo/v2/types"
@@ -49,40 +46,23 @@ type genClientForType struct {
 
 var _ generator.Generator = &genClientForType{}
 
-var titler = cases.Title(language.Und)
-
 // Filter ignores all but one type because we're making a single file per type.
-func (g *genClientForType) Filter(c *generator.Context, t *types.Type) bool {
+func (g *genClientForType) Filter(_ *generator.Context, t *types.Type) bool {
 	return t == g.typeToMatch
 }
 
-func (g *genClientForType) Namers(c *generator.Context) namer.NameSystems {
+func (g *genClientForType) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *genClientForType) Imports(c *generator.Context) (imports []string) {
+func (g *genClientForType) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	imports = append(imports,
 		"github.com/kcp-dev/logicalcluster/v3",
 	)
 	return
-}
-
-// Ideally, we'd like genStatus to return true if there is a subresource path
-// registered for "status" in the API server, but we do not have that
-// information, so genStatus returns true if the type has a status field.
-func genStatus(t *types.Type) bool {
-	// Default to true if we have a Status member
-	hasStatus := false
-	for _, m := range t.Members {
-		if m.Name == "Status" {
-			hasStatus = true
-			break
-		}
-	}
-	return hasStatus && !util.MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...)).NoStatus
 }
 
 // GenerateType makes the body of a file implementing the individual typed client for type t.
@@ -94,10 +74,6 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 	tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 	if err != nil {
 		return err
-	}
-	type extendedInterfaceMethod struct {
-		template string
-		args     map[string]interface{}
 	}
 
 	typedInterfaceName := c.Namers["public"].Name(t) + "Interface"
@@ -157,7 +133,6 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 	if !tags.NoVerbs {
 		tags.SkipVerbs = append(tags.SkipVerbs, "updateStatus", "applyStatus")
 		sw.Do(generateInterface(defaultVerbTemplates, tags), m)
-
 	}
 	sw.Do(interfaceTemplate4, m)
 

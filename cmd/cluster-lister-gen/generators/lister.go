@@ -47,7 +47,7 @@ func NameSystems(pluralExceptions map[string]string) namer.NameSystems {
 	}
 }
 
-// lowercaseSingularNamer implements Namer
+// lowercaseSingularNamer implements Namer.
 type lowercaseSingularNamer struct{}
 
 // Name returns t's name in all lowercase.
@@ -126,11 +126,11 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 			PkgPath:       outputPkg,
 			PkgDir:        outputDir,
 			HeaderComment: boilerplate,
-			FilterFunc: func(c *generator.Context, t *types.Type) bool {
+			FilterFunc: func(_ *generator.Context, t *types.Type) bool {
 				tags := util.MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
 				return tags.GenerateClient && tags.HasVerb("list") && tags.HasVerb("get")
 			},
-			GeneratorsFunc: func(c *generator.Context) (generators []generator.Generator) {
+			GeneratorsFunc: func(_ *generator.Context) (generators []generator.Generator) {
 				var singleClusterListersPkg string
 				if args.SingleClusterListersPackage != "" {
 					singleClusterListersPkg = path.Join(args.SingleClusterListersPackage, groupPackageName, string(gv.Version))
@@ -187,7 +187,7 @@ func objectMetaForPackage(p *types.Package) (*types.Type, bool, error) {
 	return nil, false, nil
 }
 
-// isInternal returns true if the tags for a member do not contain a json tag
+// isInternal returns true if the tags for a member do not contain a json tag.
 func isInternal(m types.Member) bool {
 	return !strings.Contains(m.Tags, "json")
 }
@@ -204,17 +204,17 @@ type listerGenerator struct {
 
 var _ generator.Generator = &listerGenerator{}
 
-func (g *listerGenerator) Filter(c *generator.Context, t *types.Type) bool {
+func (g *listerGenerator) Filter(_ *generator.Context, t *types.Type) bool {
 	return t == g.typeToGenerate
 }
 
-func (g *listerGenerator) Namers(c *generator.Context) namer.NameSystems {
+func (g *listerGenerator) Namers(_ *generator.Context) namer.NameSystems {
 	return namer.NameSystems{
 		"raw": namer.NewRawNamer(g.outputPackage, g.imports),
 	}
 }
 
-func (g *listerGenerator) Imports(c *generator.Context) (imports []string) {
+func (g *listerGenerator) Imports(_ *generator.Context) (imports []string) {
 	imports = append(imports, g.imports.ImportLines()...)
 	imports = append(imports,
 		`"github.com/kcp-dev/logicalcluster/v3"`,

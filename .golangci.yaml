@@ -10,11 +10,11 @@ linters:
   - bidichk
   - bodyclose
   - containedctx
+  - copyloopvar
   - dupword
   - durationcheck
   - errcheck
   - errchkjson
-  - exportloopref
   - gocritic
   - godot
   - gofmt
@@ -29,10 +29,17 @@ linters:
   - noctx
   - nolintlint
   - nosprintfhostport
-  - prealloc
   - revive
   - staticcheck
   - unconvert
   - unused
   - usestdlibvars
   - whitespace
+
+linters-settings:
+  revive:
+    rules:
+    # That is just how the Kubernetes code-generators are written.
+    # We'd rather stay closer to upstream than fixing this.
+    - name: unexported-return
+      disabled: true

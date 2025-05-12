@@ -79,9 +79,9 @@ type GroupVersionKind struct {
 func (gv GroupVersion) ToAPIVersion() string {
 	if len(gv.Group) > 0 && gv.Group != "" {
 		return gv.Group.String() + "/" + gv.Version.String()
-	} else {
-		return gv.Version.String()
 	}
+
+	return gv.Version.String()
 }
 
 func (gv GroupVersion) WithKind(kind Kind) GroupVersionKind {
