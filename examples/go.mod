@@ -2,15 +2,13 @@ module acme.corp
 
 go 1.23.0
 
-toolchain go1.24.2
+toolchain go1.23.7
 
 replace acme.corp/pkg => ./pkg
 
-replace github.com/kcp-dev/client-go => /home/xrstf/gospace/src/github.com/kcp-dev/client-go
-
 require (
 	github.com/kcp-dev/apimachinery/v2 v2.0.1-0.20250425065633-635c2a0fbaba
-	github.com/kcp-dev/client-go v0.0.0-20230927101349-0416c830e3b1
+	github.com/kcp-dev/client-go v0.0.0-20250512170835-5457a0f4bd98
 	github.com/kcp-dev/logicalcluster/v3 v3.0.5
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -20,7 +18,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
-	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -39,6 +36,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.29.0 // indirect
@@ -46,6 +44,7 @@ require (
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/protobuf v1.36.2 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
