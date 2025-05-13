@@ -107,6 +107,7 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 		"clientSetInterface":                    clientSetInterface,
 		"clientSetClusterInterface":             clientSetClusterInterface,
 		"contextBackground":                     c.Universe.Function(contextBackgroundFunc),
+		"contextContext":                        c.Universe.Type(contextContext),
 		"group":                                 namer.IC(g.groupGoName),
 		"interfacesTweakListOptionsFunc":        c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "TweakListOptionsFunc"}),
 		"interfacesSharedInformerFactory":       c.Universe.Type(types.Name{Package: g.internalInterfacesPackage, Name: "SharedInformerFactory"}),
@@ -151,6 +152,7 @@ var typeClusterInformerInterface = `
 // $.type|publicPlural$.
 type $.type|public$ClusterInformer interface {
 	Cluster($.logicalclusterName|raw$) $.informerInterface|raw$
+	ClusterWithContext($.contextContext|raw$, $.logicalclusterName|raw$) $.informerInterface|raw$
 	Informer() $.scopeableCacheSharedIndexInformer|raw$
 	Lister() $.clusterLister|raw$
 }
@@ -224,6 +226,13 @@ var typeInformerCluster = `
 func (i *$.type|private$ClusterInformer) Cluster(clusterName $.logicalclusterName|raw$) $.informerInterface|raw$ {
 	return &$.type|private$Informer{
 		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().Cluster(clusterName),
+	}
+}
+
+func (i *$.type|private$ClusterInformer) ClusterWithContext(ctx $.contextContext|raw$, clusterName $.logicalclusterName|raw$) $.informerInterface|raw$ {
+	return &$.type|private$Informer{
+		informer: i.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   i.Lister().Cluster(clusterName),
 	}
 }
