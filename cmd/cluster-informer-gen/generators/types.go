@@ -33,6 +33,7 @@ var (
 	kcpcacheNewGenericClusterLister    = types.Name{Package: "github.com/kcp-dev/apimachinery/v2/pkg/cache", Name: "NewGenericClusterLister"}
 	kcpinformersNewSharedIndexInformer = types.Name{Package: "github.com/kcp-dev/apimachinery/v2/third_party/informers", Name: "NewSharedIndexInformer"}
 	cacheTransformFunc                 = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "TransformFunc"}
+	contextContext                     = types.Name{Package: "context", Name: "Context"}
 	contextBackgroundFunc              = types.Name{Package: "context", Name: "Background"}
 	fmtErrorfFunc                      = types.Name{Package: "fmt", Name: "Errorf"}
 	reflectType                        = types.Name{Package: "reflect", Name: "Type"}

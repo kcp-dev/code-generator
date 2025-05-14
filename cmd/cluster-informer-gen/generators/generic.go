@@ -132,6 +132,7 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 		"cacheSharedIndexInformer":          c.Universe.Type(cacheSharedIndexInformer),
 		"scopeableCacheSharedIndexInformer": c.Universe.Type(scopeableCacheSharedIndexInformer),
 		"fmtErrorf":                         c.Universe.Type(fmtErrorfFunc),
+		"contextContext":                    c.Universe.Type(contextContext),
 		"groups":                            groups,
 		"schemeGVs":                         schemeGVs,
 		"schemaGroupResource":               c.Universe.Type(schemaGroupResource),
@@ -155,6 +156,7 @@ func (g *genericGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 var genericClusterInformer = `
 type GenericClusterInformer interface {
 	Cluster({{.logicalclusterName|raw}}) {{.genericInformer|raw}}
+	ClusterWithContext({{.contextContext|raw}}, {{.logicalclusterName|raw}}) {{.genericInformer|raw}}
 	Informer() {{.scopeableCacheSharedIndexInformer|raw}}
 	Lister() {{.kcpcacheGenericClusterLister|raw}}
 }
@@ -185,6 +187,15 @@ func (i *genericClusterInformer) Lister() {{.kcpcacheGenericClusterLister|raw}} 
 func (i *genericClusterInformer) Cluster(clusterName {{.logicalclusterName|raw}}) {{.genericInformer|raw}} {
 	return &genericInformer{
 		informer: i.Informer().Cluster(clusterName),
+		lister:   i.Lister().ByCluster(clusterName),
+	}
+}
+
+// ClusterWithContext scopes to a GenericInformer and unregisters all
+// handles registered through it once the provided context is canceled.
+func (i *genericClusterInformer) ClusterWithContext(ctx {{.contextContext|raw}}, clusterName {{.logicalclusterName|raw}}) {{.genericInformer|raw}} {
+	return &genericInformer{
+		informer: i.Informer().ClusterWithContext(ctx, clusterName),
 		lister:   i.Lister().ByCluster(clusterName),
 	}
 }
