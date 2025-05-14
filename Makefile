@@ -1,4 +1,4 @@
-# Copyright 2022 The KCP Authors.
+# Copyright 2025 The KCP Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,37 +15,17 @@
 SHELL := /usr/bin/env bash
 
 GO_INSTALL = ./hack/go-install.sh
+BUILD_DEST ?= _build
+BUILDFLAGS ?=
+CMD ?= $(notdir $(wildcard ./cmd/*))
 
 TOOLS_DIR=hack/tools
 GOBIN_DIR := $(abspath $(TOOLS_DIR))
 TMPDIR := $(shell mktemp -d)
 
-CONTROLLER_GEN_VER := v0.17.0
-CONTROLLER_GEN_BIN := controller-gen
-CONTROLLER_GEN := $(GOBIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
-export CONTROLLER_GEN
-
 GOLANGCI_LINT_VER := v1.62.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(GOBIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER)
-
-KUBE_CLIENT_GEN_VER := v0.32.3
-KUBE_CLIENT_GEN_BIN := client-gen
-KUBE_LISTER_GEN_VER := v0.32.3
-KUBE_LISTER_GEN_BIN := lister-gen
-KUBE_INFORMER_GEN_VER := v0.32.3
-KUBE_INFORMER_GEN_BIN := informer-gen
-KUBE_APPLYCONFIGURATION_GEN_VER := v0.32.3
-KUBE_APPLYCONFIGURATION_GEN_BIN := applyconfiguration-gen
-
-KUBE_CLIENT_GEN := $(GOBIN_DIR)/$(KUBE_CLIENT_GEN_BIN)-$(KUBE_CLIENT_GEN_VER)
-export KUBE_CLIENT_GEN
-KUBE_LISTER_GEN := $(GOBIN_DIR)/$(KUBE_LISTER_GEN_BIN)-$(KUBE_LISTER_GEN_VER)
-export KUBE_LISTER_GEN
-KUBE_INFORMER_GEN := $(GOBIN_DIR)/$(KUBE_INFORMER_GEN_BIN)-$(KUBE_INFORMER_GEN_VER)
-export KUBE_INFORMER_GEN
-KUBE_APPLYCONFIGURATION_GEN := $(GOBIN_DIR)/$(KUBE_APPLYCONFIGURATION_GEN_BIN)-$(KUBE_APPLYCONFIGURATION_GEN_VER)
-export KUBE_APPLYCONFIGURATION_GEN
 
 OPENSHIFT_GOIMPORTS_VER := c70783e636f2213cac683f6865d88c5edace3157
 OPENSHIFT_GOIMPORTS_BIN := openshift-goimports
@@ -60,30 +40,26 @@ imports: $(OPENSHIFT_GOIMPORTS)
 	$(OPENSHIFT_GOIMPORTS) --path ./examples -m acme.corp
 .PHONY: imports
 
-$(CONTROLLER_GEN):
-	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/$(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_VER)
-
-$(KUBE_CLIENT_GEN):
-	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/$(KUBE_CLIENT_GEN_BIN) $(KUBE_CLIENT_GEN_BIN) $(KUBE_CLIENT_GEN_VER)
-$(KUBE_LISTER_GEN):
-	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/$(KUBE_LISTER_GEN_BIN) $(KUBE_LISTER_GEN_BIN) $(KUBE_LISTER_GEN_VER)
-$(KUBE_INFORMER_GEN):
-	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/$(KUBE_INFORMER_GEN_BIN) $(KUBE_INFORMER_GEN_BIN) $(KUBE_INFORMER_GEN_VER)
-$(KUBE_APPLYCONFIGURATION_GEN):
-	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) k8s.io/code-generator/cmd/$(KUBE_APPLYCONFIGURATION_GEN_BIN) $(KUBE_APPLYCONFIGURATION_GEN_BIN) $(KUBE_APPLYCONFIGURATION_GEN_VER)
-
+.PHONY: clean
+clean:
+	rm -rf $(BUILD_DEST)
+	@echo "Cleaned $(BUILD_DEST)"
 
 .PHONY: build
-build: ## Build the project
-	mkdir -p bin
-	go build -o bin
+build: $(CMD)
+
+.PHONY: $(CMD)
+$(CMD): %: $(BUILD_DEST)/%
+
+$(BUILD_DEST)/%: cmd/%
+	go build $(BUILDFLAGS) -o $@ ./cmd/$*
 
 .PHONY: install
 install:
 	go install
 
 .PHONY: codegen
-codegen: $(CONTROLLER_GEN) $(KUBE_CLIENT_GEN) $(KUBE_LISTER_GEN) $(KUBE_INFORMER_GEN) $(KUBE_APPLYCONFIGURATION_GEN) build
+codegen: build
 	./hack/update-codegen.sh
 	$(MAKE) imports
 
@@ -124,4 +100,5 @@ $(TOOLS_DIR)/verify_boilerplate.py:
 
 .PHONY: verify-boilerplate
 verify-boilerplate: $(TOOLS_DIR)/verify_boilerplate.py
-	$(TOOLS_DIR)/verify_boilerplate.py --boilerplate-dir=hack/boilerplate
+	$(TOOLS_DIR)/verify_boilerplate.py --boilerplate-dir=hack/boilerplate --skip examples
+	$(TOOLS_DIR)/verify_boilerplate.py --boilerplate-dir=hack/boilerplate/examples examples
