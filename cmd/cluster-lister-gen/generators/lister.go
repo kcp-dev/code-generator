@@ -99,7 +99,7 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		// If there's a comment of the form "// +groupName=somegroup" or
 		// "// +groupName=somegroup.foo.bar.io", use the first field (somegroup) as the name of the
 		// group when generating.
-		if override := gengo.ExtractCommentTags("+", p.Comments)["groupName"]; override != nil {
+		if override := gengo.ExtractCommentTags("+", p.Comments)["groupName"]; override != nil { //nolint:staticcheck
 			gv.Group = clientgentypes.Group(strings.SplitN(override[0], ".", 2)[0])
 		}
 

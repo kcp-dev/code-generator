@@ -193,7 +193,7 @@ func MustParseClientGenTags(lines []string) Tags {
 // tags are provided.
 func ParseClientGenTags(lines []string) (Tags, error) {
 	ret := Tags{}
-	values := gengo.ExtractCommentTags("+", lines)
+	values := gengo.ExtractCommentTags("+", lines) //nolint:staticcheck
 	var value []string
 	value, ret.GenerateClient = values["genclient"]
 	// Check the old format and error when used to avoid generating client when //+genclient=false

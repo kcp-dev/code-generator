@@ -284,7 +284,7 @@ func applyGroupOverrides(universe types.Universe, args *args.Args) {
 	changes := make(map[clientgentypes.GroupVersion]clientgentypes.GroupVersion)
 	for gv, inputDir := range args.GroupVersionPackages() {
 		p := universe.Package(inputDir)
-		if override := gengo.ExtractCommentTags("+", p.Comments)["groupName"]; override != nil {
+		if override := gengo.ExtractCommentTags("+", p.Comments)["groupName"]; override != nil { //nolint:staticcheck
 			newGV := clientgentypes.GroupVersion{
 				Group:   clientgentypes.Group(override[0]),
 				Version: gv.Version,
@@ -367,7 +367,7 @@ func GetTargets(context *generator.Context, args *args.Args) []generator.Target 
 		// If there's a comment of the form "// +groupGoName=SomeUniqueShortName", use that as
 		// the Go group identifier in CamelCase. It defaults
 		groupGoNames[gv] = namer.IC(strings.Split(gv.Group.NonEmpty(), ".")[0])
-		if override := gengo.ExtractCommentTags("+", p.Comments)["groupGoName"]; override != nil {
+		if override := gengo.ExtractCommentTags("+", p.Comments)["groupGoName"]; override != nil { //nolint:staticcheck
 			groupGoNames[gv] = namer.IC(override[0])
 		}
 
