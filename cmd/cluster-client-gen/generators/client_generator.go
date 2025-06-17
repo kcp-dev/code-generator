@@ -203,7 +203,7 @@ func targetForGroup(gv clientgentypes.GroupVersion, typeList []*types.Type, clie
 
 func targetForClientset(args *args.Args, clientsetDir, clientsetPkg string, groupGoNames map[clientgentypes.GroupVersion]string, boilerplate []byte) generator.Target {
 	return &generator.SimpleTarget{
-		PkgName:       "clientset",
+		PkgName:       path.Base(clientsetPkg),
 		PkgPath:       clientsetPkg,
 		PkgDir:        clientsetDir,
 		HeaderComment: boilerplate,
