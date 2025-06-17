@@ -144,8 +144,12 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 		sw.Do(nonNamespacedClusterInterfaceImpl, m)
 	}
 
-	if !tags.NoVerbs {
-		sw.Do(clusterInterfaceVerbs, m)
+	if !tags.NoVerbs && tags.HasVerb("list") {
+		sw.Do(listClusterInterfaceImpl, m)
+	}
+
+	if !tags.NoVerbs && tags.HasVerb("watch") {
+		sw.Do(watchClusterInterfaceImpl, m)
 	}
 
 	if !tags.NonNamespaced {
@@ -228,12 +232,14 @@ func (c *$.type|privatePlural$ClusterInterface) Cluster(clusterPath logicalclust
 }
 `
 
-var clusterInterfaceVerbs = `
+var listClusterInterfaceImpl = `
 // List returns the entire collection of all $.type|publicPlural$ across all clusters.
 func (c *$.type|privatePlural$ClusterInterface) List(ctx context.Context, opts $.ListOptions|raw$) (*$.resultType|raw$List, error) {
 	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).$.type|publicPlural$($if .namespaced$$.NamespaceAll|raw$$end$).List(ctx, opts)
 }
+`
 
+var watchClusterInterfaceImpl = `
 // Watch begins to watch all $.type|publicPlural$ across all clusters.
 func (c *$.type|privatePlural$ClusterInterface) Watch(ctx context.Context, opts $.ListOptions|raw$) (watch.Interface, error) {
 	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).$.type|publicPlural$($if .namespaced$$.NamespaceAll|raw$$end$).Watch(ctx, opts)
