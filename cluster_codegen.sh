@@ -126,6 +126,10 @@ function cluster::codegen::internal::grep() {
 #   --plural-exceptions <string = "">
 #     An optional list of comma separated plural exception definitions in Type:PluralizedType form.
 #
+#   --exclude-group-versions <string = "">
+#     An optional list of comma separate group versions to exclude from
+#     client generation.
+#
 function cluster::codegen::gen_client() {
     local in_dir=""
     local one_input_api=""
@@ -144,6 +148,7 @@ function cluster::codegen::gen_client() {
     local single_cluster_listers_pkg=""
     local watchable="false"
     local plural_exceptions=""
+    local exclude_group_versions=""
     local v="${KUBE_VERBOSE:-0}"
 
     while [ "$#" -gt 0 ]; do
@@ -212,6 +217,10 @@ function cluster::codegen::gen_client() {
                 plural_exceptions="$2"
                 shift 2
                 ;;
+            "--exclude-group-versions")
+                exclude_group_versions="$2"
+                shift 2
+                ;;
             *)
                 if [[ "$1" =~ ^-- ]]; then
                     echo "unknown argument: $1" >&2
@@ -265,7 +274,13 @@ function cluster::codegen::gen_client() {
 
             dir2="$(dirname "${dir}")"
             leaf2="$(basename "${dir2}")"
-            group_versions+=("${leaf2}/${leaf}")
+            gv="${leaf2}/${leaf}"
+
+            if [[ " ${exclude_group_versions} " == *" ${gv} "* ]]; then
+              continue
+            fi
+
+            group_versions+=("${gv}")
         fi
     done < <(
         ( cluster::codegen::internal::grep -l --null \
