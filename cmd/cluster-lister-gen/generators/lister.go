@@ -221,7 +221,6 @@ func (g *listerGenerator) Imports(_ *generator.Context) (imports []string) {
 		`kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"`,
 		`"k8s.io/apimachinery/pkg/labels"`,
 		`"k8s.io/client-go/tools/cache"`,
-		`"k8s.io/client-go/listers"`,
 	)
 	return
 }
@@ -264,8 +263,6 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 		if g.singleClusterListersPkg == "" {
 			sw.Do(namespaceListerInterface, m)
 		}
-
-		sw.Do(namespaceListerConstructor, m)
 	}
 
 	sw.Do(scopedLister, m)
@@ -289,7 +286,6 @@ type $.type|public$ClusterLister interface {
 // $.type|private$ClusterLister implements the $.type|public$ClusterLister interface.
 type $.type|private$ClusterLister struct {
 	kcplisters.ResourceClusterIndexer[*$.type|raw$]
-	indexer cache.Indexer
 }
 
 var _ $.type|public$ClusterLister = new($.type|private$ClusterLister)
@@ -302,19 +298,16 @@ var _ $.type|public$ClusterLister = new($.type|private$ClusterLister)
 $if .namespaced -$
 // - has the kcpcache.ClusterAndNamespaceIndex as an index
 $end -$
-func New$.type|public$ClusterLister(indexer cache.Indexer) *$.type|private$ClusterLister {
+func New$.type|public$ClusterLister(indexer cache.Indexer) $.type|public$ClusterLister {
 	return &$.type|private$ClusterLister{
 		kcplisters.NewCluster[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$")),
-		indexer,
 	}
 }
 
 // Cluster scopes the lister to one workspace, allowing users to list and get $.type|publicPlural$.
 func (l *$.type|private$ClusterLister) Cluster(clusterName logicalcluster.Name) $.listerInterface|raw$ {
 	return &$.type|private$Lister{
-		kcplisters.New[*$.type|raw$](l.indexer, clusterName, $.Resource|raw$("$.type|lowercaseSingular$")),
-		l.indexer,
-		clusterName,
+		l.ResourceClusterIndexer.WithCluster(clusterName),
 	}
 }
 `
@@ -347,8 +340,6 @@ var typeListerStruct = `
 // or scope down to a $.namespaceListerInterface|raw$ for one namespace.
 type $.type|private$Lister struct {
 	kcplisters.ResourceIndexer[*$.type|raw$]
-	indexer     cache.Indexer
-	clusterName logicalcluster.Name
 }
 
 var _ $.listerInterface|raw$ = new($.type|private$Lister)
@@ -357,7 +348,9 @@ var _ $.listerInterface|raw$ = new($.type|private$Lister)
 var typeListerNamespaceLister = `
 // $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$ in one namespace.
 func (l *$.type|private$Lister) $.type|publicPlural$(namespace string) $.namespaceListerInterface|raw$ {
-	return new$.type|public$NamespaceLister(l.ResourceIndexer, namespace)
+	return &$.type|private$NamespaceLister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }
 `
 
@@ -385,41 +378,33 @@ type $.type|private$NamespaceLister struct {
 var _ $.namespaceListerInterface|raw$ = new($.type|private$NamespaceLister)
 `
 
-var namespaceListerConstructor = `
-// new$.type|public$NamespaceLister returns a new $.namespaceListerInterface|raw$.
-func new$.type|public$NamespaceLister(indexer kcplisters.ResourceIndexer[*$.type|raw$], namespace string) $.namespaceListerInterface|raw$ {
-	return &$.type|private$NamespaceLister{
-		kcplisters.NewNamespaced(indexer, namespace),
-	}
-}
-`
-
 var scopedLister = `
-// New$.type|public$Lister returns a new $.listerInterface|raw$.
+// New$.type|public$Lister returns a new $.type|public$Lister.
 // We assume that the indexer:
-// - is fed by a workspace-scoped LIST+WATCH
-// - uses cache.MetaNamespaceKeyFunc as the key function
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 $if .namespaced -$
-// - has the cache.NamespaceIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 $end -$
 func New$.type|public$Lister(indexer cache.Indexer) $.listerInterface|raw$ {
-	return &$.type|private$ScopedLister{
-		listers.New[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$")),
-		indexer,
+	return &$.type|private$Lister{
+		kcplisters.New[*$.type|raw$](indexer, $.Resource|raw$("$.type|lowercaseSingular$")),
 	}
 }
 
 // $.type|private$ScopedLister can list all $.type|publicPlural$ inside a workspace
 // or scope down to a $.namespaceListerInterface|raw$$if .namespaced$ for one namespace$end$.
 type $.type|private$ScopedLister struct {
-	listers.ResourceIndexer[*$.type|raw$]
-	indexer cache.Indexer
+	kcplisters.ResourceIndexer[*$.type|raw$]
 }
 
 $if .namespaced -$
 // $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$ in one namespace.
-func (l *$.type|private$ScopedLister) $.type|publicPlural$(namespace string) $.namespaceListerInterface|raw$ {
-	return listers.NewNamespaced(l.ResourceIndexer, namespace)
+func (l *$.type|private$ScopedLister) $.type|publicPlural$(namespace string) $.listerInterface|raw$ {
+	return &$.type|private$Lister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }
 $end -$
 `

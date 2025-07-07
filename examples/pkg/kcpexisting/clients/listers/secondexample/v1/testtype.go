@@ -23,7 +23,6 @@ import (
 
 	kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 
 	secondexamplev1 "acme.corp/pkg/apis/secondexample/v1"
@@ -45,7 +44,6 @@ type TestTypeClusterLister interface {
 // testTypeClusterLister implements the TestTypeClusterLister interface.
 type testTypeClusterLister struct {
 	kcplisters.ResourceClusterIndexer[*secondexamplev1.TestType]
-	indexer cache.Indexer
 }
 
 var _ TestTypeClusterLister = new(testTypeClusterLister)
@@ -56,19 +54,16 @@ var _ TestTypeClusterLister = new(testTypeClusterLister)
 // - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
 // - has the kcpcache.ClusterIndex as an index
 // - has the kcpcache.ClusterAndNamespaceIndex as an index
-func NewTestTypeClusterLister(indexer cache.Indexer) *testTypeClusterLister {
+func NewTestTypeClusterLister(indexer cache.Indexer) TestTypeClusterLister {
 	return &testTypeClusterLister{
 		kcplisters.NewCluster[*secondexamplev1.TestType](indexer, secondexamplev1.Resource("testtype")),
-		indexer,
 	}
 }
 
 // Cluster scopes the lister to one workspace, allowing users to list and get TestTypes.
 func (l *testTypeClusterLister) Cluster(clusterName logicalcluster.Name) listerssecondexamplev1.TestTypeLister {
 	return &testTypeLister{
-		kcplisters.New[*secondexamplev1.TestType](l.indexer, clusterName, secondexamplev1.Resource("testtype")),
-		l.indexer,
-		clusterName,
+		l.ResourceClusterIndexer.WithCluster(clusterName),
 	}
 }
 
@@ -76,15 +71,15 @@ func (l *testTypeClusterLister) Cluster(clusterName logicalcluster.Name) listers
 // or scope down to a listerssecondexamplev1.TestTypeNamespaceLister for one namespace.
 type testTypeLister struct {
 	kcplisters.ResourceIndexer[*secondexamplev1.TestType]
-	indexer     cache.Indexer
-	clusterName logicalcluster.Name
 }
 
 var _ listerssecondexamplev1.TestTypeLister = new(testTypeLister)
 
 // TestTypes returns an object that can list and get TestTypes in one namespace.
 func (l *testTypeLister) TestTypes(namespace string) listerssecondexamplev1.TestTypeNamespaceLister {
-	return newTestTypeNamespaceLister(l.ResourceIndexer, namespace)
+	return &testTypeNamespaceLister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }
 
 // testTypeNamespaceLister implements the listerssecondexamplev1.TestTypeNamespaceLister
@@ -95,33 +90,27 @@ type testTypeNamespaceLister struct {
 
 var _ listerssecondexamplev1.TestTypeNamespaceLister = new(testTypeNamespaceLister)
 
-// newTestTypeNamespaceLister returns a new listerssecondexamplev1.TestTypeNamespaceLister.
-func newTestTypeNamespaceLister(indexer kcplisters.ResourceIndexer[*secondexamplev1.TestType], namespace string) listerssecondexamplev1.TestTypeNamespaceLister {
-	return &testTypeNamespaceLister{
-		kcplisters.NewNamespaced(indexer, namespace),
-	}
-}
-
-// NewTestTypeLister returns a new listerssecondexamplev1.TestTypeLister.
+// NewTestTypeLister returns a new TestTypeLister.
 // We assume that the indexer:
-// - is fed by a workspace-scoped LIST+WATCH
-// - uses cache.MetaNamespaceKeyFunc as the key function
-// - has the cache.NamespaceIndex as an index
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewTestTypeLister(indexer cache.Indexer) listerssecondexamplev1.TestTypeLister {
-	return &testTypeScopedLister{
-		listers.New[*secondexamplev1.TestType](indexer, secondexamplev1.Resource("testtype")),
-		indexer,
+	return &testTypeLister{
+		kcplisters.New[*secondexamplev1.TestType](indexer, secondexamplev1.Resource("testtype")),
 	}
 }
 
 // testTypeScopedLister can list all TestTypes inside a workspace
 // or scope down to a listerssecondexamplev1.TestTypeNamespaceLister for one namespace.
 type testTypeScopedLister struct {
-	listers.ResourceIndexer[*secondexamplev1.TestType]
-	indexer cache.Indexer
+	kcplisters.ResourceIndexer[*secondexamplev1.TestType]
 }
 
 // TestTypes returns an object that can list and get TestTypes in one namespace.
-func (l *testTypeScopedLister) TestTypes(namespace string) listerssecondexamplev1.TestTypeNamespaceLister {
-	return listers.NewNamespaced(l.ResourceIndexer, namespace)
+func (l *testTypeScopedLister) TestTypes(namespace string) listerssecondexamplev1.TestTypeLister {
+	return &testTypeLister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }

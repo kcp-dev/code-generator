@@ -23,7 +23,6 @@ import (
 
 	kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 
 	examplev1beta1 "acme.corp/pkg/apis/example/v1beta1"
@@ -45,7 +44,6 @@ type ClusterTestTypeClusterLister interface {
 // clusterTestTypeClusterLister implements the ClusterTestTypeClusterLister interface.
 type clusterTestTypeClusterLister struct {
 	kcplisters.ResourceClusterIndexer[*examplev1beta1.ClusterTestType]
-	indexer cache.Indexer
 }
 
 var _ ClusterTestTypeClusterLister = new(clusterTestTypeClusterLister)
@@ -55,19 +53,16 @@ var _ ClusterTestTypeClusterLister = new(clusterTestTypeClusterLister)
 // - is fed by a cross-workspace LIST+WATCH
 // - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
 // - has the kcpcache.ClusterIndex as an index
-func NewClusterTestTypeClusterLister(indexer cache.Indexer) *clusterTestTypeClusterLister {
+func NewClusterTestTypeClusterLister(indexer cache.Indexer) ClusterTestTypeClusterLister {
 	return &clusterTestTypeClusterLister{
 		kcplisters.NewCluster[*examplev1beta1.ClusterTestType](indexer, examplev1beta1.Resource("clustertesttype")),
-		indexer,
 	}
 }
 
 // Cluster scopes the lister to one workspace, allowing users to list and get ClusterTestTypes.
 func (l *clusterTestTypeClusterLister) Cluster(clusterName logicalcluster.Name) listersexamplev1beta1.ClusterTestTypeLister {
 	return &clusterTestTypeLister{
-		kcplisters.New[*examplev1beta1.ClusterTestType](l.indexer, clusterName, examplev1beta1.Resource("clustertesttype")),
-		l.indexer,
-		clusterName,
+		l.ResourceClusterIndexer.WithCluster(clusterName),
 	}
 }
 
@@ -75,26 +70,23 @@ func (l *clusterTestTypeClusterLister) Cluster(clusterName logicalcluster.Name) 
 // or scope down to a listersexamplev1beta1.ClusterTestTypeNamespaceLister for one namespace.
 type clusterTestTypeLister struct {
 	kcplisters.ResourceIndexer[*examplev1beta1.ClusterTestType]
-	indexer     cache.Indexer
-	clusterName logicalcluster.Name
 }
 
 var _ listersexamplev1beta1.ClusterTestTypeLister = new(clusterTestTypeLister)
 
-// NewClusterTestTypeLister returns a new listersexamplev1beta1.ClusterTestTypeLister.
+// NewClusterTestTypeLister returns a new ClusterTestTypeLister.
 // We assume that the indexer:
-// - is fed by a workspace-scoped LIST+WATCH
-// - uses cache.MetaNamespaceKeyFunc as the key function
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewClusterTestTypeLister(indexer cache.Indexer) listersexamplev1beta1.ClusterTestTypeLister {
-	return &clusterTestTypeScopedLister{
-		listers.New[*examplev1beta1.ClusterTestType](indexer, examplev1beta1.Resource("clustertesttype")),
-		indexer,
+	return &clusterTestTypeLister{
+		kcplisters.New[*examplev1beta1.ClusterTestType](indexer, examplev1beta1.Resource("clustertesttype")),
 	}
 }
 
 // clusterTestTypeScopedLister can list all ClusterTestTypes inside a workspace
 // or scope down to a listersexamplev1beta1.ClusterTestTypeNamespaceLister.
 type clusterTestTypeScopedLister struct {
-	listers.ResourceIndexer[*examplev1beta1.ClusterTestType]
-	indexer cache.Indexer
+	kcplisters.ResourceIndexer[*examplev1beta1.ClusterTestType]
 }

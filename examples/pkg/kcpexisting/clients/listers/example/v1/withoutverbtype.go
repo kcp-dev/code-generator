@@ -23,7 +23,6 @@ import (
 
 	kcplisters "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/listers"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 
 	examplev1 "acme.corp/pkg/apis/example/v1"
@@ -45,7 +44,6 @@ type WithoutVerbTypeClusterLister interface {
 // withoutVerbTypeClusterLister implements the WithoutVerbTypeClusterLister interface.
 type withoutVerbTypeClusterLister struct {
 	kcplisters.ResourceClusterIndexer[*examplev1.WithoutVerbType]
-	indexer cache.Indexer
 }
 
 var _ WithoutVerbTypeClusterLister = new(withoutVerbTypeClusterLister)
@@ -56,19 +54,16 @@ var _ WithoutVerbTypeClusterLister = new(withoutVerbTypeClusterLister)
 // - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
 // - has the kcpcache.ClusterIndex as an index
 // - has the kcpcache.ClusterAndNamespaceIndex as an index
-func NewWithoutVerbTypeClusterLister(indexer cache.Indexer) *withoutVerbTypeClusterLister {
+func NewWithoutVerbTypeClusterLister(indexer cache.Indexer) WithoutVerbTypeClusterLister {
 	return &withoutVerbTypeClusterLister{
 		kcplisters.NewCluster[*examplev1.WithoutVerbType](indexer, examplev1.Resource("withoutverbtype")),
-		indexer,
 	}
 }
 
 // Cluster scopes the lister to one workspace, allowing users to list and get WithoutVerbTypes.
 func (l *withoutVerbTypeClusterLister) Cluster(clusterName logicalcluster.Name) listersexamplev1.WithoutVerbTypeLister {
 	return &withoutVerbTypeLister{
-		kcplisters.New[*examplev1.WithoutVerbType](l.indexer, clusterName, examplev1.Resource("withoutverbtype")),
-		l.indexer,
-		clusterName,
+		l.ResourceClusterIndexer.WithCluster(clusterName),
 	}
 }
 
@@ -76,15 +71,15 @@ func (l *withoutVerbTypeClusterLister) Cluster(clusterName logicalcluster.Name) 
 // or scope down to a listersexamplev1.WithoutVerbTypeNamespaceLister for one namespace.
 type withoutVerbTypeLister struct {
 	kcplisters.ResourceIndexer[*examplev1.WithoutVerbType]
-	indexer     cache.Indexer
-	clusterName logicalcluster.Name
 }
 
 var _ listersexamplev1.WithoutVerbTypeLister = new(withoutVerbTypeLister)
 
 // WithoutVerbTypes returns an object that can list and get WithoutVerbTypes in one namespace.
 func (l *withoutVerbTypeLister) WithoutVerbTypes(namespace string) listersexamplev1.WithoutVerbTypeNamespaceLister {
-	return newWithoutVerbTypeNamespaceLister(l.ResourceIndexer, namespace)
+	return &withoutVerbTypeNamespaceLister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }
 
 // withoutVerbTypeNamespaceLister implements the listersexamplev1.WithoutVerbTypeNamespaceLister
@@ -95,33 +90,27 @@ type withoutVerbTypeNamespaceLister struct {
 
 var _ listersexamplev1.WithoutVerbTypeNamespaceLister = new(withoutVerbTypeNamespaceLister)
 
-// newWithoutVerbTypeNamespaceLister returns a new listersexamplev1.WithoutVerbTypeNamespaceLister.
-func newWithoutVerbTypeNamespaceLister(indexer kcplisters.ResourceIndexer[*examplev1.WithoutVerbType], namespace string) listersexamplev1.WithoutVerbTypeNamespaceLister {
-	return &withoutVerbTypeNamespaceLister{
-		kcplisters.NewNamespaced(indexer, namespace),
-	}
-}
-
-// NewWithoutVerbTypeLister returns a new listersexamplev1.WithoutVerbTypeLister.
+// NewWithoutVerbTypeLister returns a new WithoutVerbTypeLister.
 // We assume that the indexer:
-// - is fed by a workspace-scoped LIST+WATCH
-// - uses cache.MetaNamespaceKeyFunc as the key function
-// - has the cache.NamespaceIndex as an index
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewWithoutVerbTypeLister(indexer cache.Indexer) listersexamplev1.WithoutVerbTypeLister {
-	return &withoutVerbTypeScopedLister{
-		listers.New[*examplev1.WithoutVerbType](indexer, examplev1.Resource("withoutverbtype")),
-		indexer,
+	return &withoutVerbTypeLister{
+		kcplisters.New[*examplev1.WithoutVerbType](indexer, examplev1.Resource("withoutverbtype")),
 	}
 }
 
 // withoutVerbTypeScopedLister can list all WithoutVerbTypes inside a workspace
 // or scope down to a listersexamplev1.WithoutVerbTypeNamespaceLister for one namespace.
 type withoutVerbTypeScopedLister struct {
-	listers.ResourceIndexer[*examplev1.WithoutVerbType]
-	indexer cache.Indexer
+	kcplisters.ResourceIndexer[*examplev1.WithoutVerbType]
 }
 
 // WithoutVerbTypes returns an object that can list and get WithoutVerbTypes in one namespace.
-func (l *withoutVerbTypeScopedLister) WithoutVerbTypes(namespace string) listersexamplev1.WithoutVerbTypeNamespaceLister {
-	return listers.NewNamespaced(l.ResourceIndexer, namespace)
+func (l *withoutVerbTypeScopedLister) WithoutVerbTypes(namespace string) listersexamplev1.WithoutVerbTypeLister {
+	return &withoutVerbTypeLister{
+		l.ResourceIndexer.WithNamespace(namespace),
+	}
 }
